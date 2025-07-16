@@ -1,10 +1,13 @@
-# Airport class for flight simulator
+# Airport and runway class for flight simulator
 
 class Runway:
     def __init__(self, start_point, end_point, hdg, length, is_occupied=False):
         """Initilize a runway with the following attributes:
             start_point (tuple) : latitude, longitude of start point
-            end_point (tuple) : 
+            end_point (tuple) : latitude, longitude of end point
+            hdg (int) : heading in degrees of the runway side that faces between 0 and 180 degrees
+            length (int) : length of runway in feet
+            is_occupied (bool) : if the runway is occupied by a plane being on it
         """
         self.start_point = start_point
         self.end_point = end_point
