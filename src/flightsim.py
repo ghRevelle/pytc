@@ -27,9 +27,8 @@ class FlightSimulator:
 		self.planes.append(plane)
 
 	def command_plane(self, command: dict):
-		"""Send a command to a specific plane.
+		"""Send a command to a specific plane instantly.
 		Args:
-			plane_id (str): The ID/callsign of the plane to command.
 			command (dict): The command to send (e.g., 'turn').
 		"""
 		for plane in self.planes:

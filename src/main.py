@@ -20,7 +20,7 @@ for i in range(5):
 
 fs = FlightSimulator(display_size=(640, 480), planes=planes)
 
-fs.add_command({
+fs.add_command({ # sample command to turn a plane
 	'id': 'UA1',
 	'cmd': 'turn',
 	'args': {'hdg': 90},
