@@ -14,12 +14,17 @@ class Pygame_Display:
 		self.h = h
 		self.x_c = self.w // 2
 		self.y_c = self.h // 2
+		self.lon = 0
+		self.lat = 0
+		self.zoom = 100
+
 
 		self.screen = pygame.display.set_mode((self.w, self.h))
-		self.bg = pygame.Surface((self.w, self.h))  # Create a black background surface
-		self.bg.fill((0, 0, 0))  # Fill the background with black
+		self.bg = pygame.Surface((self.w, self.h))
+		self.airport_surface = pygame.Surface((self.w, self.h))
 		self.trail_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for trails
 		self.fg = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for drawing
+		self.airport_surface.fill((0, 0, 0, 0))
 
 	def update_plane_state(self, state):
 		"""Update a single plane's state without redrawing the entire display."""
@@ -127,10 +132,10 @@ class Pygame_Display:
 			start_x, start_y = self.wgs84_to_xy(runway.start_point[1], runway.start_point[0])
 			end_x, end_y = self.wgs84_to_xy(runway.end_point[1], runway.end_point[0])
 			color = (255, 255, 255) if not runway.is_occupied else (255, 0, 0)
-			pygame.draw.line(self.bg, color, (start_x, start_y), (end_x, end_y), 10)	
+			pygame.draw.line(self.airport_surface, color, (start_x, start_y), (end_x, end_y), 10)	
 		
 		# Layer surfaces and update the display
-		self.screen.blit(self.bg, (0, 0))  # Draw the background
+		self.screen.blit(self.airport_surface, (0, 0))  # Draw the background
 		self.screen.blit(self.trail_surface, (0, 0))  # Draw the trails
 		self.screen.blit(self.fg, (0, 0))
 		pygame.display.flip()
@@ -162,8 +167,8 @@ class Pygame_Display:
 
 	def wgs84_to_xy(self, lon, lat) -> tuple:
 		"""Convert WGS84 coordinates to display coordinates."""
-		x = int(lon * 100 + self.x_c)
-		y = int(lat * 100 + self.y_c)
+		x = int((lon - self.lon) * self.zoom + self.x_c)
+		y = int((lat + self.lat) * self.zoom + self.y_c)
 		return x, y
 	
 	def state_to_display(self, state) -> dict:
