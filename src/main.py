@@ -1,5 +1,4 @@
 from plane import Plane
-from display import *
 from pygame_display import *
 import time
 
