@@ -30,8 +30,10 @@ planes.append(SimPlane(
 	}
 ))
 test_runways = {
-	'Runway1': Runway((0, 0), (1, 1), 90, 1000)
+	'Runway1': Runway((0, 0), (0.05, 0.05))
 }
+
+print(f"Test runway length: {test_runways['Runway1'].length} ft")
 
 test_airport = Airport(test_runways)
 

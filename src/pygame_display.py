@@ -1,6 +1,6 @@
 import pygame
 import numpy as np
-import geopy.distance
+from geopy import units, distance
 
 class Pygame_Display:
 	"""Center coordinates for the display."""
@@ -21,7 +21,7 @@ class Pygame_Display:
 
 
 		self.screen = pygame.display.set_mode((self.w, self.h))
-		self.bg = pygame.Surface((self.w, self.h))
+		self.bg = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent background
 		self.airport_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for the airport
 		self.trail_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for trails
 		self.fg = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for drawing
@@ -75,7 +75,7 @@ class Pygame_Display:
 			# Draw trail dots (excluding the last/current position)
 			for pos in trail[:-1]:
 				x, y = self.wgs84_to_xy(pos[0], pos[1])
-				pygame.draw.circle(self.fg, color, (x, y), 2)
+				pygame.draw.circle(self.fg, color, (x, y), 1)
 
 			# Draw the plane's trajectory
 			##for pos in plane_id.get_state("traj")[:-1]:
@@ -94,7 +94,7 @@ class Pygame_Display:
 					
 				angle = np.deg2rad(hdg-90)
 				# Triangle points
-				size = 13
+				size = 8
 				points = [
 					(x + size * np.cos(angle), y + size * np.sin(angle)),
 					(x + size * np.cos(angle + 2.5), y + size * np.sin(angle + 2.5)),
@@ -134,15 +134,35 @@ class Pygame_Display:
 			start_x, start_y = self.wgs84_to_xy(runway.start_point[1], runway.start_point[0])
 			end_x, end_y = self.wgs84_to_xy(runway.end_point[1], runway.end_point[0])
 			color = (255, 255, 255) if not runway.is_occupied else (255, 0, 0)
-			pygame.draw.line(self.airport_surface, color, (start_x, start_y), (end_x, end_y), 10)
+			# Calculate the angle of the runway
+			dx = end_x - start_x
+			dy = end_y - start_y
+			length = np.hypot(dx, dy)
+			if length == 0:
+				continue  # Avoid division by zero
+
+			runway_width = self.nm_to_xy(units.nautical(feet=200))  # pixels, adjust as needed
+			angle = np.arctan2(dy, dx)
+
+			# Calculate the four corners of the rectangle
+			offset_x = (runway_width / 2) * np.sin(angle)
+			offset_y = (runway_width / 2) * -np.cos(angle)
+
+			points = [
+				(start_x - offset_x, start_y - offset_y),
+				(start_x + offset_x, start_y + offset_y),
+				(end_x + offset_x, end_y + offset_y),
+				(end_x - offset_x, end_y - offset_y),
+			]
+			pygame.draw.polygon(self.airport_surface, color, points)
 
 		# Draw nautical mile circles
 		for i in range(1, 6):  # Draw 5 circles at 1, 2, 3, 4, and 5 NM
-			radius = i * 0.0168  # I have no idea why this is the conversion factor, but it works
-			pygame.draw.circle(self.bg, (0, 255, 0, 150), (self.x_c, self.y_c), int(radius * self.zoom), 1)
+			radius = self.nm_to_xy(i)  # I have no idea why this is the conversion factor, but it works
+			pygame.draw.circle(self.bg, (0, 255, 0, 150), (self.x_c, self.y_c), radius, 1)
 			# Draw the radius label
 			radius_label = pygame.font.Font(None, 18).render(f"{i} NM", True, (0, 255, 0))
-			self.bg.blit(radius_label, (self.x_c + radius * self.zoom - radius_label.get_width() // 2 + 5, self.y_c - radius_label.get_height() // 2))
+			self.bg.blit(radius_label, (self.x_c + radius - radius_label.get_width() // 2 + 5, self.y_c - radius_label.get_height() // 2))
 		# Draw the center point
 		pygame.draw.circle(self.bg, (255, 0, 0), (self.x_c, self.y_c), 5)
 
@@ -200,3 +220,7 @@ class Pygame_Display:
 			self.airport = airport
 		else:
 			self.airport.runways.update(airport.runways)
+
+	def nm_to_xy(self, dist):
+		"""Convert distance in nautical miles to pixels."""
+		return int(dist * 0.0168 * self.zoom)
