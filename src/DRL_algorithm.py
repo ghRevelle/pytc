@@ -29,59 +29,62 @@ model.evaluate(x_test, y_test)
 """
 import gymnasium as gym
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras import layers
+import gymnasium as gym  # Changed from 'gym' to 'gymnasium'
+from collections import deque
+import random
 
-# 1. Create Environment
-env = gym.make("CartPole-v1")
+import torch
+print(torch.cuda.is_available())
+print(torch.cuda.device_count())  # Shows how many CUDA devices (GPUs) are available
 
-num_actions = env.action_space.n
-state_shape = env.observation_space.shape
 
-# 2. Build Q-Network Model
-def create_q_model():
-    inputs = layers.Input(shape=state_shape)
-    layer1 = layers.Dense(24, activation='relu')(inputs)
-    layer2 = layers.Dense(24, activation='relu')(layer1)
-    outputs = layers.Dense(num_actions)(layer2)
-    return tf.keras.Model(inputs=inputs, outputs=outputs)
+# 1. Define the neural network for Q-value approximation
+class QNetwork(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(QNetwork, self).__init__()
+        self.fc1 = nn.Linear(input_dim, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, output_dim)
 
-model = create_q_model()
-target_model = create_q_model()
-target_model.set_weights(model.get_weights())
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
 
-# 3. Define Optimizer and Loss
-optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-loss_function = tf.keras.losses.Huber()
+# 2. Experience Replay Buffer
+class ReplayBuffer:
+    def __init__(self, capacity=10000):
+        self.buffer = deque(maxlen=capacity)
 
-# 4. Hyperparameters
-gamma = 0.99
-epsilon = 1.0  # Exploration rate
-epsilon_min = 0.1
-epsilon_decay = 0.995
-batch_size = 64
-memory = []
+    def push(self, experience):
+        self.buffer.append(experience)
 
-# 5. Experience Replay Memory Buffer
-max_memory_length = 100000
+    def sample(self, batch_size):
+        return random.sample(self.buffer, batch_size)
 
-# 6. Helper function to sample from memory
-def sample_memory(batch_size):
-    indices = np.random.choice(len(memory), batch_size)
-    states, actions, rewards, next_states, dones = zip(*[memory[i] for i in indices])
-    return np.array(states), np.array(actions), np.array(rewards), np.array(next_states), np.array(dones)
+    def size(self):
+        return len(self.buffer)
 
-# 7. Training Loop
-episodes = 500
-for episode in range(episodes):
-    state, info = env.reset()
-    state = np.array(state)
-    episode_reward = 0
-    
-    done = False
-    while not done:
-        if np.random.rand() < epsilon:
-            action = env.action_space.sample()
+# 3. DQN Agent Class
+class DQNAgent:
+    def __init__(self, state_dim, action_dim, gamma=0.99, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, learning_rate=1e-3, batch_size=64):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.batch_size = batch_size
+
+        self.q_network = QNetwork(state_dim, action_dim)
+        self.target_network = QNetwork(state_dim, action_dim)
+        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.optimizer = optim.Adam(self.q_network.parameters(), lr=learning_rate)
+        self.replay_buffer = ReplayBuffer()
+
+    def act(self, state):
+        if np.random.rand() < self.epsilon:
+            return np.random.choice(self.action_dim)  # Explore: Random action
         else:
             state_tensor = tf.convert_to_tensor(state[None, :], dtype=tf.float32)
             q_values = model(state_tensor)
