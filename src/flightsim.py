@@ -1,3 +1,4 @@
+# Flight simulator class
 from plane import Plane
 from pygame_display import *
 import time
@@ -11,14 +12,18 @@ class FlightSimulator:
 	"""Number of ticks per second for the simulation."""
 	command_queue = []
 	
-	def __init__(self, display_size=(640, 480), planes=None):
-		"""Initialize the flight simulator with a display size and optional planes.
+	def __init__(self, display_size=(640, 480), planes=None, airport=None):
+		"""Initialize the flight simulator with a display size, optional planes, optional airport layout.
 		Args:
 			display_size (tuple): Size of the display window (width, height).
 			planes (list): Optional list of Plane objects to simulate.
+
 		"""
 		# Initialize the list of planes
 		self.planes = planes if planes is not None else []
+		# Initialize the airport layout
+		## TODO: MAKE AIRPORT CLASS
+		self.airport 
 		# Initialize the Pygame display
 		self.pg_display = Pygame_Display(*display_size)
 
