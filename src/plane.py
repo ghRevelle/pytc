@@ -1,6 +1,7 @@
 # Plane class for flight simulator
 import math
 import geopy.distance
+import numpy as np
 
 class Plane:
 	"""Plane class to represent a single aircraft in a flight simulation environment."""
@@ -48,14 +49,23 @@ class Plane:
 		"""Update the plane's position based on its ground speed and heading."""
 		# Calculate the next position based on ground speed and heading
 		self.state['vel'] = geopy.distance.distance(meters=self.state['gspd']).destination((self.state['lat'],self.state['lon']), bearing=self.state['hdg'])
+
 		# Update the plane's state with the new position and altitude
 		self.state['lat'] = self.state['vel'].latitude
 		self.state['lon'] = self.state['vel'].longitude
 		self.state['alt'] += self.state['v_z']
 		if self.state['alt'] < 0:
 			self.state['alt'] = 0
+
+		# Compute the heading unit vector by changing heading to radians
+		hdg_rads = math.radians(self.state['hdg'])
+		ux = math.cos(hdg_rads)
+		uy = math.sin(hdg_rads)
+
+		hdg_vec = (ux, uy)
+		print(hdg_vec)
 		
-		self.state['traj'] = [(self.state['lon'] + self.state['vel'].longitude * i, self.state['lat'] + self.state['vel'].latitude * i) for i in range(0, 11)]
+		self.state['traj'] = [(self.state['lon'] + hdg_vec[1] / 500 * i, self.state['lat'] + hdg_vec[0] / 500 * i) for i in range(0, 11)]
 
 class SimPlane(Plane):
 	"""Simulated plane class to represent a plane in a flight simulation environment, able to be commanded to change its state."""
