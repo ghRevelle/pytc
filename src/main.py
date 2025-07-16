@@ -10,22 +10,32 @@ for i in range(5):
 	planes.append(SimPlane(
 		{
 			'id': f"UA{i+1}",
-			'lat': np.random.uniform(-1, 1),  # random latitude
-			'lon': np.random.uniform(-1, 1),  # random longitude
+			'lat': np.random.uniform(-0.01, 0.01),  # random latitude
+			'lon': np.random.uniform(-0.01, 0.01),  # random longitude
 			'alt': np.random.uniform(0, 12000),  # random altitude in meters
 			'v_z': np.random.uniform(-10, 10),  # random vertical speed in meters per second
-			'gspd': np.random.uniform(200, 900),  # random ground speed in meters per second
+			'gspd': np.random.uniform(60, 100),  # random ground speed in meters per second
 			'hdg': np.random.uniform(0, 360)  # random heading in degrees
 		}
 	))
-
+planes.append(SimPlane(
+	{
+		'id': 'UA0',
+		'lat': 0.0,
+		'lon': 0.0,
+		'alt': 1000,
+		'v_z': 0,
+		'gspd': 100,
+		'hdg': 0
+	}
+))
 test_runways = {
 	'Runway1': Runway((0, 0), (1, 1), 90, 1000)
 }
 
 test_airport = Airport(test_runways)
 
-fs = FlightSimulator(display_size=(640, 480), planes=planes, airport=test_airport)
+fs = FlightSimulator(display_size=(900, 900), planes=planes, airport=test_airport)
 
 fs.add_command({ # sample command to turn a plane
 	'id': 'UA1',

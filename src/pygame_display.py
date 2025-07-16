@@ -1,5 +1,6 @@
 import pygame
 import numpy as np
+import geopy.distance
 
 class Pygame_Display:
 	"""Center coordinates for the display."""
@@ -14,17 +15,16 @@ class Pygame_Display:
 		self.h = h
 		self.x_c = self.w // 2
 		self.y_c = self.h // 2
-		self.lon = 0
-		self.lat = 0
-		self.zoom = 100
+		self.lon_c = 0
+		self.lat_c = 0
+		self.zoom = 5000
 
 
 		self.screen = pygame.display.set_mode((self.w, self.h))
 		self.bg = pygame.Surface((self.w, self.h))
-		self.airport_surface = pygame.Surface((self.w, self.h))
+		self.airport_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for the airport
 		self.trail_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for trails
 		self.fg = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for drawing
-		self.airport_surface.fill((0, 0, 0, 0))
 
 	def update_plane_state(self, state):
 		"""Update a single plane's state without redrawing the entire display."""
@@ -58,6 +58,8 @@ class Pygame_Display:
 		# Clear the surfaces
 		self.fg.fill((0, 0, 0, 0))
 		self.trail_surface.fill((0, 0, 0, 0))
+		self.airport_surface.fill((0, 0, 0, 0))
+		self.bg.fill((0, 0, 0))
 
 		# Draw all trails and planes
 		for plane_id, trail in self.trails.items():
@@ -90,7 +92,7 @@ class Pygame_Display:
 				else:
 					hdg = 0  # Default heading north
 					
-				angle = np.deg2rad(90 - hdg)
+				angle = np.deg2rad(hdg-90)
 				# Triangle points
 				size = 13
 				points = [
@@ -132,10 +134,24 @@ class Pygame_Display:
 			start_x, start_y = self.wgs84_to_xy(runway.start_point[1], runway.start_point[0])
 			end_x, end_y = self.wgs84_to_xy(runway.end_point[1], runway.end_point[0])
 			color = (255, 255, 255) if not runway.is_occupied else (255, 0, 0)
-			pygame.draw.line(self.airport_surface, color, (start_x, start_y), (end_x, end_y), 10)	
-		
+			pygame.draw.line(self.airport_surface, color, (start_x, start_y), (end_x, end_y), 10)
+
+		# Draw nautical mile circles
+		for i in range(1, 6):  # Draw 5 circles at 1, 2, 3, 4, and 5 NM
+			radius = i * 0.0168  # I have no idea why this is the conversion factor, but it works
+			pygame.draw.circle(self.bg, (0, 255, 0, 150), (self.x_c, self.y_c), int(radius * self.zoom), 1)
+			# Draw the radius label
+			radius_label = pygame.font.Font(None, 18).render(f"{i} NM", True, (0, 255, 0))
+			self.bg.blit(radius_label, (self.x_c + radius * self.zoom - radius_label.get_width() // 2 + 5, self.y_c - radius_label.get_height() // 2))
+		# Draw the center point
+		pygame.draw.circle(self.bg, (255, 0, 0), (self.x_c, self.y_c), 5)
+
+		# +X = right, +Y = down
+		# +lon = east, +lat = north
+
 		# Layer surfaces and update the display
-		self.screen.blit(self.airport_surface, (0, 0))  # Draw the background
+		self.screen.blit(self.bg, (0, 0))  # Draw the background
+		self.screen.blit(self.airport_surface, (0, 0))
 		self.screen.blit(self.trail_surface, (0, 0))  # Draw the trails
 		self.screen.blit(self.fg, (0, 0))
 		pygame.display.flip()
@@ -167,8 +183,8 @@ class Pygame_Display:
 
 	def wgs84_to_xy(self, lon, lat) -> tuple:
 		"""Convert WGS84 coordinates to display coordinates."""
-		x = int((lon - self.lon) * self.zoom + self.x_c)
-		y = int((lat + self.lat) * self.zoom + self.y_c)
+		x = int((lon - self.lon_c) * self.zoom + self.x_c)
+		y = int((self.lat_c - lat) * self.zoom + self.y_c) # y is inverted in display coordinates
 		return x, y
 	
 	def state_to_display(self, state) -> dict:
