@@ -1,5 +1,6 @@
 name: pytc
 dependencies:
+- python=3.11
 - numpy
 - pandas
 - seaborn
