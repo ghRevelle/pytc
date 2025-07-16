@@ -2,15 +2,18 @@ import pygame
 import numpy as np
 
 class Pygame_Display:
-	h, w = 800, 600
-	x_c, y_c = w // 2, h // 2
+	"""Center coordinates for the display."""
 	plane_colors = {}
 	"""A class to handle the Pygame display for the plane simulation."""
-	def __init__(self):
+	def __init__(self, w=1280, h=720):
 		pygame.init()
+		self.w = w
+		self.h = h
+		self.x_c = self.w // 2
+		self.y_c = self.h // 2
 		self.screen = pygame.display.set_mode((self.w, self.h))
 		self.clock = pygame.time.Clock()
-		self.screen.fill((255, 255, 255))
+		self.screen.fill((0, 0, 0))  # Fill the screen with black
 
 	def update_display(self, state):
 		for event in pygame.event.get():
