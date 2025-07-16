@@ -32,9 +32,8 @@ class FlightSimulator:
 		self.planes.append(plane)
 
 	def command_plane(self, command: dict):
-		"""Send a command to a specific plane.
+		"""Send a command to a specific plane instantly.
 		Args:
-			plane_id (str): The ID/callsign of the plane to command.
 			command (dict): The command to send (e.g., 'turn').
 		"""
 		for plane in self.planes:
@@ -45,6 +44,8 @@ class FlightSimulator:
 		Args:
 			command (dict): Command to be added to the queue.
 		"""
+		if 'id' not in command or 'cmd' not in command or 'args' not in command or 'last_updated' not in command:
+			raise ValueError("Command must contain 'id', 'cmd', 'args', and 'last_updated' keys.")
 		self.command_queue.append(command)
 
 	def run(self, ticks=500):

@@ -5,6 +5,8 @@ class Pygame_Display:
 	"""Center coordinates for the display."""
 	plane_colors = {}
 	trails = {}
+	last_states = {}
+	debug_labels = True
 	"""A class to handle the Pygame display for the plane simulation."""
 	def __init__(self, w=1280, h=720):
 		pygame.init()
@@ -36,7 +38,7 @@ class Pygame_Display:
 		self.trails[state['id']].append((state['lon'], state['lat']))
 		
 		# Limit trail length
-		max_trail_length = 500
+		max_trail_length = 200
 		if len(self.trails[state['id']]) > max_trail_length:
 			self.trails[state['id']] = self.trails[state['id']][-max_trail_length:]
 
@@ -52,23 +54,23 @@ class Pygame_Display:
 				continue
 				
 			color = self.plane_colors[plane_id]
-			
+			plane_x, plane_y = self.wgs84_to_xy(
+				self.last_states.get(plane_id, {}).get('lon', self.x_c),
+				self.last_states.get(plane_id, {}).get('lat', self.y_c)
+			)
+
 			# Draw trail dots (excluding the last/current position)
 			for pos in trail[:-1]:
-				x = int(pos[0] * 100 + self.x_c)
-				y = int(pos[1] * 100 + self.y_c)
-				pygame.draw.circle(self.fg, color, (x, y), 3)
+				x, y = self.wgs84_to_xy(pos[0], pos[1])
+				pygame.draw.circle(self.fg, color, (x, y), 2)
 
 			# Draw triangle at the current position
 			if trail:
 				lon, lat = trail[-1]
-				x = int(lon * 100 + self.x_c)
-				y = int(lat * 100 + self.y_c)
-				
-				# We need the heading for the triangle, so we'll store it
-				# For now, we'll use a default pointing north if heading is not available
-				if hasattr(self, 'plane_headings') and plane_id in self.plane_headings:
-					hdg = self.plane_headings[plane_id]
+				x, y = self.wgs84_to_xy(lon, lat)
+
+				if hasattr(self, 'last_states') and plane_id in self.last_states:
+					hdg = self.last_states[plane_id]['hdg']
 				else:
 					hdg = 0  # Default heading north
 					
@@ -83,6 +85,28 @@ class Pygame_Display:
 				]
 				pygame.draw.polygon(self.fg, color, points)
 
+			# Draw labels
+
+			# ID label
+			id_font = pygame.font.Font(None, 24)
+			id_label = id_font.render(plane_id, True, color)
+			self.fg.blit(id_label, (plane_x - id_label.get_width() // 2, plane_y - id_label.get_height() // 2 + 25))
+
+			# Debug labels
+			if self.debug_labels:
+				# Draw labels only if debug_labels is True
+				# Altitude label
+				alt_font = pygame.font.Font(None, 18)
+				alt_label = alt_font.render(f"Alt: {self.last_states[plane_id]['alt']:.0f}m", True, color)
+				# Heading label
+				heading_label = alt_font.render(f"Hdg: {self.last_states[plane_id]['hdg']:.0f}°", True, color)
+				# Velocity label
+				vel_label = alt_font.render(f"Gspd: {self.last_states[plane_id]['gspd']:.0f} m/s", True, color)
+				# Blit labels at the position
+				self.fg.blit(vel_label, (plane_x - vel_label.get_width() // 2, plane_y - vel_label.get_height() // 2 + 65))
+				self.fg.blit(alt_label, (plane_x - alt_label.get_width() // 2, plane_y - alt_label.get_height() // 2 + 45))
+				self.fg.blit(heading_label, (plane_x - heading_label.get_width() // 2, plane_y - heading_label.get_height() // 2 - 25))
+
 		# Blit the foreground onto the background and update display
 		self.bg.blit(self.fg, (0, 0))
 		pygame.display.flip()
@@ -95,19 +119,25 @@ class Pygame_Display:
 		# Handle both single state and list of states
 		if isinstance(states, dict):
 			states = [states]
-			
-		# Initialize plane_headings if it doesn't exist
-		if not hasattr(self, 'plane_headings'):
-			self.plane_headings = {}
-			
+
+		# Initialize last_states if it doesn't exist
+		if not hasattr(self, 'last_states'):
+			self.last_states = {}
+
 		# Update all plane states
 		for state in states:
 			self.update_plane_state(state)
-			# Store the heading for triangle rendering
-			self.plane_headings[state['id']] = state['hdg']
+			# Store the last state for each plane
+			self.last_states[state['id']] = state
 			
 		# Render everything once
 		self.render()
 
 	def stop_display(self):
 		pygame.quit()
+
+	def wgs84_to_xy(self, lon, lat):
+		"""Convert WGS84 coordinates to display coordinates."""
+		x = int(lon * 100 + self.x_c)
+		y = int(lat * 100 + self.y_c)
+		return x, y
