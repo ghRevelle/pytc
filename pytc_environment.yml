@@ -6,8 +6,8 @@ dependencies:
 - seaborn
 - matplotlib
 - scikit-learn
-- tensorflow
 - geopy
 - pip
 - pip:
   - pygame
+  - tensorflow
