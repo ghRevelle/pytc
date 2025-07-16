@@ -1,4 +1,4 @@
-from plane import Plane
+from plane import *
 import numpy as np
 from flightsim import FlightSimulator
 
@@ -6,7 +6,7 @@ from flightsim import FlightSimulator
 planes = []
 for i in range(5):
 	# Create 5 planes with random positions and speeds
-	planes.append(Plane(
+	planes.append(SimPlane(
 		{
 			'id': f"UA{i+1}",
 			'lat': np.random.uniform(-1, 1),  # random latitude
@@ -20,4 +20,11 @@ for i in range(5):
 
 fs = FlightSimulator(display_size=(640, 480), planes=planes)
 
-fs.run(ticks=250)  # Run the simulation for 250 ticks
+fs.add_command({
+	'id': 'UA1',
+	'cmd': 'turn',
+	'args': {'hdg': 90},
+	'last_updated': 100
+})
+
+fs.run(ticks=500)  # Run the simulation for 500 ticks

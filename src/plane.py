@@ -37,7 +37,7 @@ class Plane:
 		if self.state['alt'] < 0:
 			self.state['alt'] = 0
 
-class SimulatedPlane(Plane):
+class SimPlane(Plane):
 	"""Simulated plane class to represent a plane in a flight simulation environment, able to be commanded to change its state."""
 	def __init__(self, init_state: dict):
 		"""Create a simulated plane with no initial command."""
@@ -72,3 +72,19 @@ class SimulatedPlane(Plane):
 			})
 		else:
 			raise ValueError("Heading must be between 0 and 360 degrees.")
+		
+	def tick(self):
+		super().tick()
+		if self.state['command']['cmd'] == 'turn':
+			# If the command is to turn, update the heading
+			current_hdg = self.state['hdg']
+			desired_hdg = self.state['command']['args'].get('hdg', current_hdg)
+			if 0 <= desired_hdg < 360:
+				if desired_hdg < current_hdg:
+					self.state['hdg'] = current_hdg - 1 # Turn left
+				elif desired_hdg > current_hdg:
+					self.state['hdg'] = current_hdg + 1 # Turn right
+				else:
+					self.state['command']['cmd'] = None # Command completed
+			else:
+				raise ValueError("Heading must be between 0 and 360 degrees.")

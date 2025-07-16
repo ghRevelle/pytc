@@ -9,6 +9,7 @@ class FlightSimulator:
 	"""Current tick of the simulation."""
 	ticks_per_second = 60
 	"""Number of ticks per second for the simulation."""
+	command_queue = []
 	
 	def __init__(self, display_size=(640, 480), planes=None):
 		"""Initialize the flight simulator with a display size and optional planes.
@@ -25,19 +26,21 @@ class FlightSimulator:
 		"""Add a plane to the simulator."""
 		self.planes.append(plane)
 
-	def command_plane(self, plane_id: str, command: str, **kwargs):
+	def command_plane(self, command: dict):
 		"""Send a command to a specific plane.
 		Args:
 			plane_id (str): The ID/callsign of the plane to command.
-			command (str): The command to send (e.g., 'turn').
-			**kwargs: Additional arguments for the command.
+			command (dict): The command to send (e.g., 'turn').
 		"""
 		for plane in self.planes:
-			if plane.get_state()['id'] == plane_id:
-				if command == 'turn' and 'hdg' in kwargs:
-					plane.turn(kwargs['hdg'], self.tick)
-				# Add more commands here as needed
-				break
+			if plane.get_state()['id'] == command['id']:
+				plane.change_command(command)
+	def add_command(self, command: dict):
+		"""Add a command to the command queue.
+		Args:
+			command (dict): Command to be added to the queue.
+		"""
+		self.command_queue.append(command)
 
 	def run(self, ticks=500):
 		"""Run the flight simulation for a specified number of ticks."""
@@ -48,7 +51,9 @@ class FlightSimulator:
 					self.pg_display.stop_display()
 					self.tick = 0
 					return
-			
+			for command in self.command_queue:  # Process all commands in the queue
+				if self.tick == command['last_updated']:
+					self.command_plane(command)
 			# Update all plane states
 			plane_states = []
 			for plane in self.planes:
