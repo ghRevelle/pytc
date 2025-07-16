@@ -2,13 +2,13 @@ import pygame
 import numpy as np
 from geopy import units, distance
 
-class Pygame_Display:
-	"""Center coordinates for the display."""
+class Pygame_Display:	
+	"""A class to handle the Pygame display for the plane simulation."""
 	plane_colors = {}
 	trails = {}
 	last_states = {}
 	debug_labels = True
-	"""A class to handle the Pygame display for the plane simulation."""
+	trail_length = 100  # Maximum length of the trail in number of points
 	def __init__(self, w=1280, h=720):
 		pygame.init()
 		self.w = w
@@ -47,11 +47,9 @@ class Pygame_Display:
 			
 		# Add current position to trail
 		self.trails[state['id']].append((state['lon'], state['lat']))
-		
-		# Limit trail length
-		max_trail_length = 200
-		if len(self.trails[state['id']]) > max_trail_length:
-			self.trails[state['id']] = self.trails[state['id']][-max_trail_length:]
+
+		if len(self.trails[state['id']]) > self.trail_length:
+			self.trails[state['id']] = self.trails[state['id']][-self.trail_length:]
 
 	def render(self):
 		"""Render all planes, their trails, and their trajectories to the display."""
@@ -159,7 +157,7 @@ class Pygame_Display:
 		# Draw nautical mile circles
 		for i in range(1, 6):  # Draw 5 circles at 1, 2, 3, 4, and 5 NM
 			radius = self.nm_to_xy(i)  # I have no idea why this is the conversion factor, but it works
-			pygame.draw.circle(self.bg, (0, 255, 0, 150), (self.x_c, self.y_c), radius, 1)
+			pygame.draw.circle(self.bg, (0, 255, 0, 255), (self.x_c, self.y_c), radius, 1)
 			# Draw the radius label
 			radius_label = pygame.font.Font(None, 18).render(f"{i} NM", True, (0, 255, 0))
 			self.bg.blit(radius_label, (self.x_c + radius - radius_label.get_width() // 2 + 5, self.y_c - radius_label.get_height() // 2))
