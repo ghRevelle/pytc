@@ -104,13 +104,15 @@ class Pygame_Display:
 			# Debug labels
 			if self.debug_labels:
 				# Draw labels only if debug_labels is True
+				# Convert state to display units
+				display_state = self.state_to_display(self.last_states[plane_id])
 				# Altitude label
 				alt_font = pygame.font.Font(None, 18)
-				alt_label = alt_font.render(f"Alt: {self.last_states[plane_id]['alt']:.0f}m", True, color)
+				alt_label = alt_font.render(f"Alt: {display_state['alt']:.0f}ft", True, color)
 				# Heading label
-				heading_label = alt_font.render(f"Hdg: {self.last_states[plane_id]['hdg']:.0f}°", True, color)
+				heading_label = alt_font.render(f"Hdg: {display_state['hdg']:.0f}°", True, color)
 				# Velocity label
-				vel_label = alt_font.render(f"Gspd: {self.last_states[plane_id]['gspd']:.0f} m/s", True, color)
+				vel_label = alt_font.render(f"Gspd: {display_state['gspd']:.0f} kts", True, color)
 				# Blit labels at the position
 				self.fg.blit(vel_label, (plane_x - vel_label.get_width() // 2, plane_y - vel_label.get_height() // 2 + 65))
 				self.fg.blit(alt_label, (plane_x - alt_label.get_width() // 2, plane_y - alt_label.get_height() // 2 + 45))
@@ -145,8 +147,15 @@ class Pygame_Display:
 	def stop_display(self):
 		pygame.quit()
 
-	def wgs84_to_xy(self, lon, lat):
+	def wgs84_to_xy(self, lon, lat) -> tuple:
 		"""Convert WGS84 coordinates to display coordinates."""
 		x = int(lon * 100 + self.x_c)
 		y = int(lat * 100 + self.y_c)
 		return x, y
+	
+	def state_to_display(self, state) -> dict:
+		"""Convert a plane state to display units."""
+		display_state = state.copy()
+		display_state['gspd'] = int(state['gspd'] * 1.94384)  # Convert m/s to kts
+		display_state['alt'] = int(state['alt'] * 3.28084)  # Convert meters to feet
+		return display_state
