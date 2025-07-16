@@ -14,9 +14,11 @@ class Pygame_Display:
 		self.h = h
 		self.x_c = self.w // 2
 		self.y_c = self.h // 2
-		self.bg = pygame.display.set_mode((self.w, self.h))
-		self.clock = pygame.time.Clock()
-		self.bg.fill((0, 0, 0))  # Fill the screen with black
+
+		self.screen = pygame.display.set_mode((self.w, self.h))
+		self.bg = pygame.Surface((self.w, self.h))  # Create a black background surface
+		self.bg.fill((0, 0, 0))  # Fill the background with black
+		self.trail_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for trails
 		self.fg = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for drawing
 
 	def update_plane_state(self, state):
@@ -50,7 +52,7 @@ class Pygame_Display:
 		"""Render all planes, their trails, and their trajectories to the display."""
 		# Clear the surfaces
 		self.fg.fill((0, 0, 0, 0))
-		self.bg.fill((0, 0, 0))
+		self.trail_surface.fill((0, 0, 0, 0))
 
 		# Draw all trails and planes
 		for plane_id, trail in self.trails.items():
@@ -118,8 +120,19 @@ class Pygame_Display:
 				self.fg.blit(alt_label, (plane_x - alt_label.get_width() // 2, plane_y - alt_label.get_height() // 2 + 45))
 				self.fg.blit(heading_label, (plane_x - heading_label.get_width() // 2, plane_y - heading_label.get_height() // 2 - 25))		
 
-		# Blit the foreground onto the background and update display
-		self.bg.blit(self.fg, (0, 0))
+		# Draw airport
+		
+		# Draw runways
+		for runway in self.airport.runways.values():
+			start_x, start_y = self.wgs84_to_xy(runway.start_point[1], runway.start_point[0])
+			end_x, end_y = self.wgs84_to_xy(runway.end_point[1], runway.end_point[0])
+			color = (255, 255, 255) if not runway.is_occupied else (255, 0, 0)
+			pygame.draw.line(self.bg, color, (start_x, start_y), (end_x, end_y), 10)	
+		
+		# Layer surfaces and update the display
+		self.screen.blit(self.bg, (0, 0))  # Draw the background
+		self.screen.blit(self.trail_surface, (0, 0))  # Draw the trails
+		self.screen.blit(self.fg, (0, 0))
 		pygame.display.flip()
 
 	def update_display(self, states):
@@ -140,7 +153,7 @@ class Pygame_Display:
 			self.update_plane_state(state)
 			# Store the last state for each plane
 			self.last_states[state['id']] = state
-			
+		
 		# Render everything once
 		self.render()
 
@@ -159,3 +172,10 @@ class Pygame_Display:
 		display_state['gspd'] = int(state['gspd'] * 1.94384)  # Convert m/s to kts
 		display_state['alt'] = int(state['alt'] * 3.28084)  # Convert meters to feet
 		return display_state
+	
+	def setup_airport(self, airport):
+		"""Setup the airport layout on the display."""
+		if not hasattr(self, 'airport'):
+			self.airport = airport
+		else:
+			self.airport.runways.update(airport.runways)

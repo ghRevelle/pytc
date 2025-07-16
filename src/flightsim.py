@@ -12,8 +12,8 @@ class FlightSimulator:
 	ticks_per_second = 60
 	"""Number of ticks per second for the simulation."""
 	command_queue = []
-	
-	def __init__(self, display_size=(640, 480), planes=None, runways=None):
+
+	def __init__(self, display_size=(640, 480), planes=None, airport=None):
 		"""Initialize the flight simulator with a display size, optional planes, optional airport layout.
 		Args:
 			display_size (tuple): Size of the display window (width, height).
@@ -23,9 +23,12 @@ class FlightSimulator:
 		# Initialize the list of planes
 		self.planes = planes if planes is not None else []
 		# Initialize the airport layout
-		self.airport = Airport(runways)
+		self.airport = airport
 		# Initialize the Pygame display
 		self.pg_display = Pygame_Display(*display_size)
+
+		# Setup the airport on the display
+		self.pg_display.setup_airport(self.airport)
 
 	def add_plane(self, plane: Plane):
 		"""Add a plane to the simulator."""

@@ -1,6 +1,7 @@
 from plane import *
 import numpy as np
 from flightsim import FlightSimulator
+from airport import Runway, Airport
 
 # test planes
 planes = []
@@ -18,7 +19,13 @@ for i in range(5):
 		}
 	))
 
-fs = FlightSimulator(display_size=(640, 480), planes=planes)
+test_runways = {
+	'Runway1': Runway((0, 0), (1, 1), 90, 1000)
+}
+
+test_airport = Airport(test_runways)
+
+fs = FlightSimulator(display_size=(640, 480), planes=planes, airport=test_airport)
 
 fs.add_command({ # sample command to turn a plane
 	'id': 'UA1',
