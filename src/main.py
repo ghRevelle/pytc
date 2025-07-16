@@ -14,19 +14,24 @@ myPlane = Plane(
 		'hdg': 30,  # heading in degrees
 	}
 )
+planes = []
+for i in range(5):
+	planes.append(Plane(
+		{
+			'id': f"UA{i+1}",
+			'lat': np.random.random(),  # random latitude
+			'lon': np.random.random(),  # random longitude
+			'alt': np.random.uniform(0, 12000),  # random altitude in meters
+			'v_z': np.random.uniform(-10, 10),  # random vertical speed in meters per second
+			'gspd': np.random.uniform(200, 900),  # random ground speed in meters per second
+			'hdg': np.random.uniform(0, 360)  # random heading in degrees
+		}
+	))
 
-fig, ax = plt.subplots()
-ax.set_xlabel('Longitude')
-ax.set_ylabel('Latitude')
-ax.set_xlim((-0.03, 0.03))
-ax.set_ylim((-0.03, 0.03))
-plt.grid()
-"""
-for i in range(10):
-	myPlane.tick()
-	add_position(myPlane.get_state())
-	print(myPlane.get_state())
-	time.sleep(0.2)
-plot_positions("UA93")
-display()
-"""
+pg_display = Pygame_Display()
+for i in range(500):
+	for plane in planes:
+		plane.tick()
+		pg_display.update_display(plane.get_state())
+	# print(myPlane.get_state())
+	time.sleep(0.01)

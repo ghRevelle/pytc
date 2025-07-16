@@ -17,7 +17,7 @@ class Plane:
 		return self.state
 
 	def tick(self): # advance time by 1 second
-		next_pt = geopy.distance.distance(meters=self.state['gspd']).destination((self.state['lon'],self.state['lat']), bearing=self.state['hdg'])
+		next_pt = geopy.distance.distance(meters=self.state['gspd']).destination((self.state['lat'],self.state['lon']), bearing=self.state['hdg'])
 		self.state['lat'] = next_pt.latitude
 		self.state['lon'] = next_pt.longitude
 		self.state['alt'] += self.state['v_z']
