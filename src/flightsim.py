@@ -39,6 +39,8 @@ class FlightSimulator:
 		Args:
 			command (dict): Command to be added to the queue.
 		"""
+		if 'id' not in command or 'cmd' not in command or 'args' not in command or 'last_updated' not in command:
+			raise ValueError("Command must contain 'id', 'cmd', 'args', and 'last_updated' keys.")
 		self.command_queue.append(command)
 
 	def run(self, ticks=500):

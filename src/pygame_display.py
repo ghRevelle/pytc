@@ -54,21 +54,21 @@ class Pygame_Display:
 				continue
 				
 			color = self.plane_colors[plane_id]
-			
+			plane_x, plane_y = self.wgs84_to_xy(
+				self.last_states.get(plane_id, {}).get('lon', self.x_c),
+				self.last_states.get(plane_id, {}).get('lat', self.y_c)
+			)
+
 			# Draw trail dots (excluding the last/current position)
 			for pos in trail[:-1]:
-				x = int(pos[0] * 100 + self.x_c)
-				y = int(pos[1] * 100 + self.y_c)
+				x, y = self.wgs84_to_xy(pos[0], pos[1])
 				pygame.draw.circle(self.fg, color, (x, y), 2)
 
 			# Draw triangle at the current position
 			if trail:
 				lon, lat = trail[-1]
-				x = int(lon * 100 + self.x_c)
-				y = int(lat * 100 + self.y_c)
-				
-				# We need the heading for the triangle, so we'll store it
-				# For now, we'll use a default pointing north if heading is not available
+				x, y = self.wgs84_to_xy(lon, lat)
+
 				if hasattr(self, 'last_states') and plane_id in self.last_states:
 					hdg = self.last_states[plane_id]['hdg']
 				else:
@@ -85,27 +85,27 @@ class Pygame_Display:
 				]
 				pygame.draw.polygon(self.fg, color, points)
 
-				# Draw labels
+			# Draw labels
 
-				# ID label
-				id_font = pygame.font.Font(None, 24)
-				id_label = id_font.render(plane_id, True, color)
-				self.fg.blit(id_label, (x - id_label.get_width() // 2, y - id_label.get_height() // 2 + 25))
-				
-				# Debug labels
-				if self.debug_labels:
-					# Draw labels only if debug_labels is True
-					# Altitude label
-					alt_font = pygame.font.Font(None, 18)
-					alt_label = alt_font.render(f"Alt: {self.last_states[plane_id]['alt']:.0f}m", True, color)
-					# Heading label
-					heading_label = alt_font.render(f"Hdg: {hdg:.0f}°", True, color)
-					# Velocity label
-					vel_label = alt_font.render(f"Gspd: {self.last_states[plane_id]['gspd']:.0f} m/s", True, color)
-					# Blit labels at the position
-					self.fg.blit(vel_label, (x - vel_label.get_width() // 2, y - vel_label.get_height() // 2 + 65))
-					self.fg.blit(alt_label, (x - alt_label.get_width() // 2, y - alt_label.get_height() // 2 + 45))
-					self.fg.blit(heading_label, (x - heading_label.get_width() // 2, y - heading_label.get_height() // 2 - 25))
+			# ID label
+			id_font = pygame.font.Font(None, 24)
+			id_label = id_font.render(plane_id, True, color)
+			self.fg.blit(id_label, (plane_x - id_label.get_width() // 2, plane_y - id_label.get_height() // 2 + 25))
+
+			# Debug labels
+			if self.debug_labels:
+				# Draw labels only if debug_labels is True
+				# Altitude label
+				alt_font = pygame.font.Font(None, 18)
+				alt_label = alt_font.render(f"Alt: {self.last_states[plane_id]['alt']:.0f}m", True, color)
+				# Heading label
+				heading_label = alt_font.render(f"Hdg: {self.last_states[plane_id]['hdg']:.0f}°", True, color)
+				# Velocity label
+				vel_label = alt_font.render(f"Gspd: {self.last_states[plane_id]['gspd']:.0f} m/s", True, color)
+				# Blit labels at the position
+				self.fg.blit(vel_label, (plane_x - vel_label.get_width() // 2, plane_y - vel_label.get_height() // 2 + 65))
+				self.fg.blit(alt_label, (plane_x - alt_label.get_width() // 2, plane_y - alt_label.get_height() // 2 + 45))
+				self.fg.blit(heading_label, (plane_x - heading_label.get_width() // 2, plane_y - heading_label.get_height() // 2 - 25))
 
 		# Blit the foreground onto the background and update display
 		self.bg.blit(self.fg, (0, 0))
@@ -135,3 +135,9 @@ class Pygame_Display:
 
 	def stop_display(self):
 		pygame.quit()
+
+	def wgs84_to_xy(self, lon, lat):
+		"""Convert WGS84 coordinates to display coordinates."""
+		x = int(lon * 100 + self.x_c)
+		y = int(lat * 100 + self.y_c)
+		return x, y
