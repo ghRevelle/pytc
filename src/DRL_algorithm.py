@@ -1,128 +1,146 @@
-
-"""
-# Load dataset
-mnist = tf.keras.datasets.mnist
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
-
-# Normalize
-x_train, x_test = x_train / 255.0, x_test / 255.0
-
-# Build model
-model = models.Sequential([
-    layers.Flatten(input_shape=(28, 28)),
-    layers.Dense(128, activation='relu'),
-    layers.Dropout(0.2),
-    layers.Dense(10, activation='softmax')
-])
-
-# Compile
-model.compile(optimizer='adam',
-              loss='sparse_categorical_crossentropy',
-              metrics=['accuracy']) 
-
-# Train
-model.fit(x_train, y_train, epochs=5)
-
-# Evaluate
-model.evaluate(x_test, y_test)
-"""
-import gymnasium as gym
+import torch
+import torch.nn as nn
+import torch.optim as optim
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras import layers
+import gymnasium as gym  # Changed from 'gym' to 'gymnasium'
+from collections import deque
+import random
 
-# 1. Create Environment
-env = gym.make("CartPole-v1")
+import torch
+print(torch.cuda.is_available())
+print(torch.cuda.device_count())  # Shows how many CUDA devices (GPUs) are available
 
-num_actions = env.action_space.n
-state_shape = env.observation_space.shape
+"""
+# 1. Define the neural network for Q-value approximation
+class QNetwork(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(QNetwork, self).__init__()
+        self.fc1 = nn.Linear(input_dim, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, output_dim)
 
-# 2. Build Q-Network Model
-def create_q_model():
-    inputs = layers.Input(shape=state_shape)
-    layer1 = layers.Dense(24, activation='relu')(inputs)
-    layer2 = layers.Dense(24, activation='relu')(layer1)
-    outputs = layers.Dense(num_actions)(layer2)
-    return tf.keras.Model(inputs=inputs, outputs=outputs)
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
 
-model = create_q_model()
-target_model = create_q_model()
-target_model.set_weights(model.get_weights())
+# 2. Experience Replay Buffer
+class ReplayBuffer:
+    def __init__(self, capacity=10000):
+        self.buffer = deque(maxlen=capacity)
 
-# 3. Define Optimizer and Loss
-optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-loss_function = tf.keras.losses.Huber()
+    def push(self, experience):
+        self.buffer.append(experience)
 
-# 4. Hyperparameters
-gamma = 0.99
-epsilon = 1.0  # Exploration rate
-epsilon_min = 0.1
-epsilon_decay = 0.995
-batch_size = 64
-memory = []
+    def sample(self, batch_size):
+        return random.sample(self.buffer, batch_size)
 
-# 5. Experience Replay Memory Buffer
-max_memory_length = 100000
+    def size(self):
+        return len(self.buffer)
 
-# 6. Helper function to sample from memory
-def sample_memory(batch_size):
-    indices = np.random.choice(len(memory), batch_size)
-    states, actions, rewards, next_states, dones = zip(*[memory[i] for i in indices])
-    return np.array(states), np.array(actions), np.array(rewards), np.array(next_states), np.array(dones)
+# 3. DQN Agent Class
+class DQNAgent:
+    def __init__(self, state_dim, action_dim, gamma=0.99, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, learning_rate=1e-3, batch_size=64):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.batch_size = batch_size
 
-# 7. Training Loop
-episodes = 500
-for episode in range(episodes):
-    state, info = env.reset()
-    state = np.array(state)
-    episode_reward = 0
-    
-    done = False
-    while not done:
-        if np.random.rand() < epsilon:
-            action = env.action_space.sample()
+        self.q_network = QNetwork(state_dim, action_dim)
+        self.target_network = QNetwork(state_dim, action_dim)
+        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.optimizer = optim.Adam(self.q_network.parameters(), lr=learning_rate)
+        self.replay_buffer = ReplayBuffer()
+
+    def act(self, state):
+        if np.random.rand() < self.epsilon:
+            return np.random.choice(self.action_dim)  # Explore: Random action
         else:
-            state_tensor = tf.convert_to_tensor(state[None, :], dtype=tf.float32)
-            q_values = model(state_tensor)
-            action = tf.argmax(q_values[0]).numpy()
+            state_tensor = torch.FloatTensor(state).unsqueeze(0)
+            q_values = self.q_network(state_tensor)
+            return torch.argmax(q_values).item()  # Exploit: Action with highest Q-value
+
+    def update_epsilon(self):
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+
+    def update(self):
+        if self.replay_buffer.size() < self.batch_size:
+            return
+
+        # Sample a batch of experiences
+        batch = self.replay_buffer.sample(self.batch_size)
+        states, actions, rewards, next_states, dones = zip(*batch)
         
-        next_state, reward, terminated, truncated, _ = env.step(action)
-        done = terminated or truncated
-        next_state = np.array(next_state)
-        
-        # Store experience in memory
-        memory.append((state, action, reward, next_state, done))
-        if len(memory) > max_memory_length:
-            memory.pop(0)
-        
-        state = next_state
-        episode_reward += reward
-        
-        # Sample from memory and train model
-        if len(memory) >= batch_size:
-            states_mb, actions_mb, rewards_mb, next_states_mb, dones_mb = sample_memory(batch_size)
+        states = torch.FloatTensor(states)
+        actions = torch.LongTensor(actions)
+        rewards = torch.FloatTensor(rewards)
+        next_states = torch.FloatTensor(next_states)
+        dones = torch.FloatTensor(dones)
+
+        # Get Q-values from the current and next states
+        current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+        next_q_values = self.target_network(next_states).max(1)[0]
+        target_q_values = rewards + (self.gamma * next_q_values * (1 - dones))
+
+        # Compute the loss
+        loss = nn.MSELoss()(current_q_values, target_q_values)
+
+        # Backpropagate and update the Q-network
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+    def update_target_network(self):
+        self.target_network.load_state_dict(self.q_network.state_dict())
+
+# 4. Main training loop
+def train_dqn():
+    env = gym.make('CartPole-v1', render_mode='rgb_array')  # Specify the render_mode for Gymnasium
+    agent = DQNAgent(state_dim=env.observation_space.shape[0], action_dim=env.action_space.n)
+    episodes = 1000
+    max_timesteps = 200
+
+    for episode in range(episodes):
+        state, _ = env.reset()  # Gymnasium: reset() returns a tuple (observation, info)
+        episode_reward = 0
+
+        for t in range(max_timesteps):
+            action = agent.act(state)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+
+            # Gymnasium returns both `terminated` and `truncated`, so we combine them
+            done = terminated or truncated
+
+            # Store the transition in the replay buffer
+            agent.replay_buffer.push((state, action, reward, next_state, float(done)))
             
-            next_q_values = target_model.predict(next_states_mb)
-            max_next_q_values = np.max(next_q_values, axis=1)
-            target_q = rewards_mb + (1 - dones_mb) * gamma * max_next_q_values
-            
-            masks = tf.one_hot(actions_mb, num_actions)
-            
-            with tf.GradientTape() as tape:
-                q_values = model(states_mb)
-                q_action = tf.reduce_sum(q_values * masks, axis=1)
-                loss = loss_function(target_q, q_action)
-            
-            grads = tape.gradient(loss, model.trainable_variables)
-            optimizer.apply_gradients(zip(grads, model.trainable_variables))
-        
-    # Decay epsilon
-    if epsilon > epsilon_min:
-        epsilon *= epsilon_decay
-    
-    # Update target network every 10 episodes
-    if episode % 10 == 0:
-        target_model.set_weights(model.get_weights())
-    
-    print(f"Episode {episode}, Reward: {episode_reward}, Epsilon: {epsilon:.3f}")
- 
+            # Update the agent
+            agent.update()
+
+            # Update the target network every 10 episodes
+            if episode % 10 == 0:
+                agent.update_target_network()
+
+            state = next_state
+            episode_reward += reward
+
+            if done:
+                break
+
+        agent.update_epsilon()
+
+        if (episode + 1) % 100 == 0:
+            print(f"Episode {episode+1}/{episodes}, Reward: {episode_reward}")
+
+    # Save the model
+    torch.save(agent.q_network.state_dict(), "cartpole_dqn.pth")
+
+    env.close()
+
+# Start training
+train_dqn()
+"""

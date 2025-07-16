@@ -1,0 +1,16 @@
+name: pytc
+dependencies:
+- python=3.11
+- numpy
+- pandas
+- seaborn
+- matplotlib
+- scikit-learn
+- geopy
+- pip
+- pip:
+  - pygame
+  - gymnasium
+
+# install PyTorch with the following command:
+# pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
