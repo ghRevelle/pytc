@@ -1,7 +1,8 @@
 from plane import Plane
-from pygame_display import *
-import time
+import numpy as np
+from flightsim import FlightSimulator
 
+# test plane
 myPlane = Plane(
 	{
         'id': "UA93",
@@ -13,8 +14,10 @@ myPlane = Plane(
 		'hdg': 30,  # heading in degrees
 	}
 )
+# test multiple planes
 planes = []
 for i in range(5):
+	# Create 5 planes with random positions and speeds
 	planes.append(Plane(
 		{
 			'id': f"UA{i+1}",
@@ -27,10 +30,6 @@ for i in range(5):
 		}
 	))
 
-pg_display = Pygame_Display(640, 480)
-for i in range(500):
-	for plane in planes:
-		plane.tick()
-		pg_display.update_display(plane.get_state())
-	# print(myPlane.get_state())
-	time.sleep(0.01)
+fs = FlightSimulator(display_size=(640, 480), planes=planes)
+
+fs.run(ticks=250)  # Run the simulation for 250 ticks
