@@ -24,6 +24,7 @@ class Pygame_Display:
 		self.bg = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent background
 		self.airport_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for the airport
 		self.trail_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for trails
+		self.traj_surface = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for trajectories
 		self.fg = pygame.Surface((self.w, self.h), pygame.SRCALPHA)  # Create a transparent surface for drawing
 
 	def update_plane_state(self, state):
@@ -39,7 +40,7 @@ class Pygame_Display:
 
 		# Initialize trajectory if not exists
 		#if state['traj'] not in self.plane_colors:
-		#	self.plane_colors[state['traj']] = [(state['lon'], state['lat']) * state['vel'] * i for i in range(0, 11)]
+		#	self.plane_colors[state['traj']] = [(state['lon'] + state['vel'].longitude * i, state['lat'] + state['vel'].latitude * i) for i in range(0, 11)]
 
 		# Initialize trail if not exists
 		if state['id'] not in self.trails:
@@ -78,9 +79,9 @@ class Pygame_Display:
 				pygame.draw.circle(self.fg, color, (x, y), 1)
 
 			# Draw the plane's trajectory
-			##for pos in plane_id.get_state("traj")[:-1]:
-				#x, y = self.wgs84_to_xy(pos[0], pos[1])
-				#pygame.draw.circle(self.fg, color, (x, y), 2)
+			for pos in self.last_states[plane_id]['traj'][:-1]:
+				x, y = self.wgs84_to_xy(pos[0], pos[1])
+				pygame.draw.circle(self.fg, color, (x, y), 2)
 
 			# Draw triangle at the current position
 			if trail:

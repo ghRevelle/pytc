@@ -16,6 +16,7 @@ class Plane:
 				'gspd' (float): Ground speed of the plane in meters per second.
 				'v_z' (float): Vertical speed (climb/sink rate) in meters per second.
 				'traj' (list): List of the plane's trajectory points in world coordinates.
+				'vel' (tuple): The plane's next world point
 		"""
 		self.state = init_state
 
@@ -34,6 +35,7 @@ class Plane:
 			object: The list of plane trajectory points.
 			Returns as a list.
 		"""
+		return self.state['traj']
 
 	def set_traj(self, traj):
 		"""Set the current trajectory of the plane.
@@ -45,13 +47,15 @@ class Plane:
 	def tick(self):
 		"""Update the plane's position based on its ground speed and heading."""
 		# Calculate the next position based on ground speed and heading
-		next_pt = geopy.distance.distance(meters=self.state['gspd']).destination((self.state['lat'],self.state['lon']), bearing=self.state['hdg'])
+		self.state['vel'] = geopy.distance.distance(meters=self.state['gspd']).destination((self.state['lat'],self.state['lon']), bearing=self.state['hdg'])
 		# Update the plane's state with the new position and altitude
-		self.state['lat'] = next_pt.latitude
-		self.state['lon'] = next_pt.longitude
+		self.state['lat'] = self.state['vel'].latitude
+		self.state['lon'] = self.state['vel'].longitude
 		self.state['alt'] += self.state['v_z']
 		if self.state['alt'] < 0:
 			self.state['alt'] = 0
+		
+		self.state['traj'] = [(self.state['lon'] + self.state['vel'].longitude * i, self.state['lat'] + self.state['vel'].latitude * i) for i in range(0, 11)]
 
 class SimPlane(Plane):
 	"""Simulated plane class to represent a plane in a flight simulation environment, able to be commanded to change its state."""
