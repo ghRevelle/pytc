@@ -1,0 +1,12 @@
+name: pytc
+dependencies:
+- numpy
+- pandas
+- seaborn
+- matplotlib
+- scikit-learn
+- tensorflow
+- geopy
+- pip
+- pip:
+  - pygame
