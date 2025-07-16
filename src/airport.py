@@ -21,4 +21,7 @@ class Airport:
         Args:
             runways : dictionary mapping runway names to runway class
         """
-        self.runways = runways
+        if not isinstance(runways, dict):
+            runways = {}
+        else:
+            self.runways = runways

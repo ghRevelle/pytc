@@ -30,6 +30,10 @@ class Pygame_Display:
 		if state['id'] not in self.plane_colors:
 			self.plane_colors[state['id']] = np.random.randint(0, 255, size=3).tolist()
 
+		# Initialize trajectory if not exists
+		#if state['traj'] not in self.plane_colors:
+		#	self.plane_colors[state['traj']] = [(state['lon'], state['lat']) * state['vel'] * i for i in range(0, 11)]
+
 		# Initialize trail if not exists
 		if state['id'] not in self.trails:
 			self.trails[state['id']] = []
@@ -43,7 +47,7 @@ class Pygame_Display:
 			self.trails[state['id']] = self.trails[state['id']][-max_trail_length:]
 
 	def render(self):
-		"""Render all planes and their trails to the display."""
+		"""Render all planes, their trails, and their trajectories to the display."""
 		# Clear the surfaces
 		self.fg.fill((0, 0, 0, 0))
 		self.bg.fill((0, 0, 0))
@@ -63,6 +67,11 @@ class Pygame_Display:
 			for pos in trail[:-1]:
 				x, y = self.wgs84_to_xy(pos[0], pos[1])
 				pygame.draw.circle(self.fg, color, (x, y), 2)
+
+			# Draw the plane's trajectory
+			##for pos in plane_id.get_state("traj")[:-1]:
+				#x, y = self.wgs84_to_xy(pos[0], pos[1])
+				#pygame.draw.circle(self.fg, color, (x, y), 2)
 
 			# Draw triangle at the current position
 			if trail:
@@ -105,7 +114,7 @@ class Pygame_Display:
 				# Blit labels at the position
 				self.fg.blit(vel_label, (plane_x - vel_label.get_width() // 2, plane_y - vel_label.get_height() // 2 + 65))
 				self.fg.blit(alt_label, (plane_x - alt_label.get_width() // 2, plane_y - alt_label.get_height() // 2 + 45))
-				self.fg.blit(heading_label, (plane_x - heading_label.get_width() // 2, plane_y - heading_label.get_height() // 2 - 25))
+				self.fg.blit(heading_label, (plane_x - heading_label.get_width() // 2, plane_y - heading_label.get_height() // 2 - 25))		
 
 		# Blit the foreground onto the background and update display
 		self.bg.blit(self.fg, (0, 0))

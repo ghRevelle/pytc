@@ -12,20 +12,36 @@ class Plane:
 				'lat' (float): Latitude position of the plane in degrees.
 				'lon' (float): Longitude position of the plane in degrees.
 				'alt' (float): Altitude of the plane in meters.
-				'hdg' (float): Heading of the plane in degrees.
+				'hdg' (int): Heading of the plane in degrees.
 				'gspd' (float): Ground speed of the plane in meters per second.
 				'v_z' (float): Vertical speed (climb/sink rate) in meters per second.
+				'traj' (list): List of the plane's trajectory points in world coordinates.
 		"""
 		self.state = init_state
 
+	# getter-setters
 	def get_state(self) -> object:
 		"""Get the current state of the plane.
 		Returns:
 			object: The current state of the plane.
-			Contains keys: 'id', 'lat', 'lon', 'alt', 'v_z', 'gspd', 'hdg'.
+			Contains keys: 'id', 'lat', 'lon', 'alt', 'v_z', 'gspd', 'hdg', 'traj'.
 		"""
 		return self.state
+	
+	def get_traj(self) -> object:
+		"""Get the current trajectory of the plane.
+		Returns:
+			object: The list of plane trajectory points.
+			Returns as a list.
+		"""
 
+	def set_traj(self, traj):
+		"""Set the current trajectory of the plane.
+		Right now, used only for rendering purposes.
+		"""
+		self.state['traj'] = traj
+
+	# class methods
 	def tick(self):
 		"""Update the plane's position based on its ground speed and heading."""
 		# Calculate the next position based on ground speed and heading
@@ -58,10 +74,10 @@ class SimPlane(Plane):
 		else:
 			raise ValueError("Command must contain 'cmd', 'args', and 'last_updated' keys.")
 		
-	def turn(self, desired_hdg: float, current_tick: int = 0):
+	def turn(self, desired_hdg: int, current_tick: int = 0):
 		"""Turn the plane to a new heading.
 		Args:
-			desired_hdg (float): The desired heading in degrees.
+			desired_hdg (int): The desired heading in degrees.
 			current_tick (int): The current simulation tick.
 		"""
 		if 0 <= desired_hdg < 360:
