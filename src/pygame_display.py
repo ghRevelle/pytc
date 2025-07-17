@@ -76,10 +76,20 @@ class Pygame_Display:
 				x, y = self.wgs84_to_xy(pos[0], pos[1])
 				pygame.draw.circle(self.fg, color, (x, y), 1)
 
-			# Draw the plane's trajectory
-			for pos in self.last_states[plane_id]['traj'][:-1]:
-				x, y = self.wgs84_to_xy(pos[0], pos[1])
-				pygame.draw.circle(self.fg, color, (x, y), 2)
+			# Draw the plane's trajectory...
+			# ...as a series of dots (we'll use this later)
+			#for pos in self.last_states[plane_id]['traj'][:-1]:
+			#	x, y = self.wgs84_to_xy(pos[0], pos[1])
+			#	pygame.draw.circle(self.fg, color, (x, y), 2)
+
+			# ...as a singular line (using this for visibility now)
+			firpos = self.last_states[plane_id]['traj'][0]
+			x, y = self.wgs84_to_xy(firpos[0], firpos[1])
+
+			laspos = self.last_states[plane_id]['traj'][-1]
+			u, v = self.wgs84_to_xy(laspos[0], laspos[1])
+
+			pygame.draw.line(self.fg, color, (x, y), (u, v))
 
 			# Draw triangle at the current position
 			if trail:
