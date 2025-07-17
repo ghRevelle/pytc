@@ -1,10 +1,6 @@
 import torch
-import gymnasium as gym
 import torch.nn as nn
-import torch.optim as optim
-import numpy as np
-import random
-from collections import deque
+import torch.nn.functional as F
 
 # Use this to check if GPU is available
 """
@@ -15,6 +11,67 @@ print(torch.cuda.device_count())  # Shows how many CUDA devices (GPUs) are avail
 # Set up the device (GPU if available, otherwise CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
+
+
+class AirTrafficControlDQN(nn.Module):
+    def __init__(self, input_dim, n_commands, n_planes):
+        super(AirTrafficControlDQN, self).__init__()
+        self.fc1 = nn.Linear(input_dim, 128)
+        self.fc2 = nn.Linear(128, 128)
+
+        # Command output (softmax)
+        self.command_output = nn.Linear(128, n_commands)
+
+        # Argument output (regression for "turn" command)
+        self.argument_output = nn.Linear(128, 1)  # Could be continuous like heading for "turn"
+  
+        # Plane ID selection (softmax)
+        self.id_output = nn.Linear(128, n_planes)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+
+        # Command output (softmax)
+        command_probs = torch.softmax(self.command_output(x), dim=-1)
+
+        # Argument output (regression)
+        argument_value = self.argument_output(x)
+
+        # Plane ID output (softmax)
+        plane_id_probs = torch.softmax(self.id_output(x), dim=-1)
+
+        return command_probs, argument_value, plane_id_probs
+
+def compute_loss(command_probs, argument_value, plane_id_probs, target_command, target_argument, target_plane_id, active_planes):
+    # Command loss (cross-entropy)
+    command_loss = nn.CrossEntropyLoss()(command_probs, target_command)
+
+    # Argument loss (MSE for regression)
+    argument_loss = nn.MSELoss()(argument_value, target_argument)
+
+    # Plane ID loss (cross-entropy with masking for invalid planes)
+    plane_loss = F.cross_entropy(plane_id_probs, target_plane_id)
+
+    # Mask out invalid planes (add large penalty for selecting a non-existent plane)
+    invalid_planes_mask = (target_plane_id >= active_planes).float()  # Active planes are <= n_active_planes
+    penalty = invalid_planes_mask * 1000  # Large penalty for invalid selection
+    total_loss = command_loss + argument_loss + plane_loss + penalty.sum()
+
+    return total_loss
+
+
+
+
+
+"""
+import torch
+import gymnasium as gym
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+import random
+from collections import deque
 
 # Define the Q-Network (DQN)
 class DQNNetwork(nn.Module):
@@ -145,4 +202,4 @@ def load_model(model, filename="dqn_model.pth"):
 
 # Start the training
 train_dqn()
-
+"""
