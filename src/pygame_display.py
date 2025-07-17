@@ -171,7 +171,7 @@ class Pygame_Display:
 			radius = self.nm_to_xy(i)  # I have no idea why this is the conversion factor, but it works
 			pygame.draw.circle(self.bg, (0, 255, 0, 255), (self.x_c, self.y_c), radius, 1)
 			# Draw the radius label
-			radius_label = pygame.font.Font(None, 18).render(f"{i * 2} NM", True, (0, 255, 0))
+			radius_label = pygame.font.Font(None, 18).render(f"{i} NM", True, (0, 255, 0))
 			self.bg.blit(radius_label, (self.x_c + radius - radius_label.get_width() // 2 + 5, self.y_c - radius_label.get_height() // 2))
 		# Draw the center point
 		pygame.draw.circle(self.bg, (255, 0, 0), (self.x_c, self.y_c), 5)
