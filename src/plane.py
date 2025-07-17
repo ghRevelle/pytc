@@ -12,6 +12,10 @@ class Plane:
 		Args:
 			init_state (dict): Initial state of the plane containing the following keys:
 				'id' (str): Unique identifier for the plane (callsign).
+				'type' (str): Plane model
+				'turn_rate' (float): Turn rate of the plane in deg/sec (based only on model)
+				'stall_speed' (float): Plane's minimum speed in kts (based only on model)
+
 				'lat' (float): Latitude position of the plane in degrees.
 				'lon' (float): Longitude position of the plane in degrees.
 				'alt' (float): Altitude of the plane in meters.
@@ -22,6 +26,11 @@ class Plane:
 				'vel' (tuple): The plane's next world point
 		"""
 		self.state = init_state
+		self.state['type'] = "Cessna" # default value
+
+		if self.state['type'] == "Cessna":
+			self.state['turn_rate'] = 3
+			self.state['stall_speed'] = 62.4
 
 	# getter-setters
 	def get_state(self) -> object:
@@ -55,10 +64,23 @@ class Plane:
 		"""
 		self.state['traj'] = traj
 
+	# class methods
 	def _calculate_velocity(self):
 		# Calculate the next position based on ground speed and heading
 		self.state['vel'] = geopy.distance.distance(meters=self.state['gspd']).destination((self.state['lat'],self.state['lon']), bearing=self.state['hdg'])
 	
+	def apply_turn_rate_penalty(self, speed, turn_rate, stall_speed):
+		"""Induce airspeed loss based on how fast the plane is turning.
+		Args:
+			speed: the plane's current groundspeed.
+			turn_rate: the plane's current turnrate.
+			stall_speed: the plane's minimum speed in kts (based only on model).
+		Returns:
+			float: the plane's new groundspeed after the penalty."""
+		
+		penalty = 0.02 * abs(turn_rate)
+		return max(stall_speed, speed - penalty)
+
 	@staticmethod
 	def calculate_intersection(line1: shapely.geometry.LineString, line2: shapely.geometry.LineString) -> tuple:
 		"""Calculate the intersection of the plane's trajectory with a runway.
@@ -100,9 +122,11 @@ class Plane:
 		meters = math.hypot(dlat * 111320.0, dlon * 111320.0)
 		return meters
 
-	# class methods
 	def tick(self):
-		"""Update the plane's position based on its ground speed and heading."""
+		"""
+		Update the plane's position based on its ground speed and heading.
+		Update the plane's groundspeed based on its vertrate and turnrate.
+		"""
 		self._calculate_velocity()
 		# Update the plane's state with the new position and altitude
 		self.state['lat'] = self.state['vel'].latitude
@@ -118,13 +142,14 @@ class Plane:
 
 		hdg_vec = (ux, uy)
 		
-		self.state['traj'] = [(self.state['lon'] + hdg_vec[1] / 500 * i, self.state['lat'] + hdg_vec[0] / 500 * i) for i in range(0, 11)]
+		self.state['traj'] = [(self.state['lon'] + hdg_vec[1] / 1000 * i, self.state['lat'] + hdg_vec[0] / 1000 * i) for i in range(0, 11)]
 
 class SimPlane(Plane):
 	"""Simulated plane class to represent a plane in a flight simulation environment, able to be commanded to change its state."""
 	def __init__(self, init_state: dict):
 		"""Create a simulated plane with no initial command."""
 		super().__init__(init_state)
+
 		self.state['command'] = {
 			'cmd': None,  # Command to execute
 			'args': {},   # Arguments for the command
@@ -155,6 +180,12 @@ class SimPlane(Plane):
 			})
 		else:
 			raise ValueError("Heading must be between 0 and 360 degrees.")
+		
+	def cleared_to_land(self, current_tick: int = 0):
+		"""Put the plane on its final glideslope.
+		By default, this slope is 850 ft / min at 140 kts gspd"""
+
+		raise NotImplementedError()
 
 	def get_turn_radius(self):
 		"""Calculate the turn radius in meters of the plane based on its ground speed."""
@@ -236,8 +267,10 @@ class SimPlane(Plane):
 				if diff == 0:
 					self.state['command']['cmd'] = None # Command completed
 				elif diff <= 180:
-					self.state['hdg'] = (current_hdg + 1) % 360 # Turn right
+					self.state['hdg'] = (current_hdg + self.state['turn_rate']) % 360 # Turn right
 				else:
-					self.state['hdg'] = (current_hdg - 1) % 360 # Turn left
+					self.state['hdg'] = (current_hdg - self.state['turn_rate']) % 360 # Turn left
+				
+				self.state['gspd'] = self.apply_turn_rate_penalty(self.state['gspd'], self.state['turn_rate'], self.state['stall_speed'])
 			else:
 				raise ValueError("Heading must be between 0 and 360 degrees.")
