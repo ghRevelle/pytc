@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.distributions as D
+from commands import *
 
 # Use this to check if GPU is available
 """
@@ -14,9 +16,9 @@ print(f"Using device: {device}")
 
 
 class AirTrafficControlPolicy(nn.Module):
-    def __init__(self, input_dim, n_commands, n_planes):
+    def __init__(self, input_dim, n_commands: int, n_planes: int):
         super().__init__()
-        self.fc = nn.Sequential(
+        self.shared = nn.Sequential(
             nn.Linear(input_dim, 128),
             nn.ReLU(),
             nn.Linear(128, 128),
@@ -24,22 +26,43 @@ class AirTrafficControlPolicy(nn.Module):
         )
 
         # Action heads
-        self.command_head = nn.Linear(128, n_commands)     # logits
-        self.plane_id_head = nn.Linear(128, n_planes)      # logits
-        self.argument_head = nn.Linear(128, 1)             # continuous (e.g., heading)
+        self.command_head = nn.Linear(128, n_commands)   # logits
+        self.plane_id_head = nn.Linear(128, n_planes)    # logits
+        self.argument_head = nn.Linear(128, 1)           # only used for heading (takeoff)
 
         # Critic head
-        self.value_head = nn.Linear(128, 1)                # state value
+        self.value_head = nn.Linear(128, 1)              # state value estimate
 
     def forward(self, x):
-        x = self.fc(x)
+        x = self.shared(x)
+
         command_logits = self.command_head(x)
         plane_logits = self.plane_id_head(x)
-        argument = torch.tanh(self.argument_head(x)) * 360  # constrain to 0–360
+        
+        # Optional continuous argument (e.g., heading)
+        argument_raw = torch.tanh(self.argument_head(x))  # (-1, 1)
+        argument_scaled = (argument_raw + 1) * 180        # (0, 360)
+
         value = self.value_head(x)
-        return command_logits, plane_logits, argument, value
 
+        return {
+            "command_logits": command_logits,
+            "plane_logits": plane_logits,
+            "argument": argument_scaled,
+            "value": value
+        }
 
+"""
+outputs = model(state)
+
+command_dist = D.Categorical(logits=outputs["command_logits"])
+plane_dist = D.Categorical(logits=outputs["plane_logits"])
+
+command_index = command_dist.sample()
+plane_index = plane_dist.sample()
+
+argument = outputs["argument"]  # optional: only used if command is CLEARED_FOR_TAKEOFF
+"""
 def compute_loss(command_probs, argument_value, plane_id_probs, target_command, target_argument, target_plane_id, active_planes):
     # Command loss (cross-entropy)
     command_loss = nn.CrossEntropyLoss()(command_probs, target_command)
@@ -57,7 +80,7 @@ def compute_loss(command_probs, argument_value, plane_id_probs, target_command, 
 
     return total_loss
 
-
+print("passed initialization test")
 
 
 
