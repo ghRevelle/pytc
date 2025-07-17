@@ -8,7 +8,7 @@ class Pygame_Display:
 	trails = {}
 	last_states = {}
 	debug_labels = True
-	trail_length = 100  # Maximum length of the trail in number of points
+	trail_length = 25  # Maximum length of the trail in number of points
 	def __init__(self, w=1280, h=720):
 		pygame.init()
 		self.w = w
@@ -37,7 +37,11 @@ class Pygame_Display:
 				
 		# Initialize plane color if not exists
 		if state['id'] not in self.plane_colors:
-			self.plane_colors[state['id']] = np.random.randint(0, 255, size=3).tolist()
+			#self.plane_colors[state['id']] = np.random.randint(150, 255, size=3).tolist()
+			
+			# this alternative color generation only generates blue-green arrows
+			self.plane_colors[state['id']] = [np.random.randint(0, 255), np.random.randint(150, 255), np.random.randint(0, 255)]
+
 
 		# Initialize trajectory if not exists
 		#if state['traj'] not in self.plane_colors:

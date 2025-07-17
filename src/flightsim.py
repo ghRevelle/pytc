@@ -9,7 +9,7 @@ class FlightSimulator:
 	# TODO: remember to deal with skipped ticks
 	tick = 0
 	"""Current tick of the simulation."""
-	ticks_per_second = 15
+	ticks_per_second = 5
 	"""Number of ticks per second for the simulation."""
 	command_queue = []
 
