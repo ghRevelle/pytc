@@ -18,6 +18,7 @@ class Pygame_Display:
 		self.lon_c = 0
 		self.lat_c = 0
 		self.zoom = 2500
+		self.zoom = 2500
 
 
 		self.screen = pygame.display.set_mode((self.w, self.h))
@@ -166,8 +167,8 @@ class Pygame_Display:
 			pygame.draw.polygon(self.airport_surface, color, points)
 
 		# Draw nautical mile circles
-		for i in range(1, 6):  # Draw 5 circles at 2, 4, 6, 8, and 10 NM
-			radius = self.nm_to_xy(i * 2)  # I have no idea why this is the conversion factor, but it works
+		for i in range(2, 12, 2):  # Draw circles at 2, 4, 6, 8, and 10 NM
+			radius = self.nm_to_xy(i)  # I have no idea why this is the conversion factor, but it works
 			pygame.draw.circle(self.bg, (0, 255, 0, 255), (self.x_c, self.y_c), radius, 1)
 			# Draw the radius label
 			radius_label = pygame.font.Font(None, 18).render(f"{i * 2} NM", True, (0, 255, 0))
