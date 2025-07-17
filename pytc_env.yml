@@ -3,10 +3,9 @@ dependencies:
 - python=3.11
 - numpy
 - pandas
-- seaborn
-- matplotlib
 - scikit-learn
 - geopy
+- shapely
 - pip
 - pip:
   - pygame

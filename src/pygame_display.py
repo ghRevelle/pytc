@@ -17,7 +17,8 @@ class Pygame_Display:
 		self.y_c = self.h // 2
 		self.lon_c = 0
 		self.lat_c = 0
-		self.zoom = 5000
+		self.zoom = 2500
+		self.zoom = 2500
 
 
 		self.screen = pygame.display.set_mode((self.w, self.h))
@@ -76,10 +77,20 @@ class Pygame_Display:
 				x, y = self.wgs84_to_xy(pos[0], pos[1])
 				pygame.draw.circle(self.fg, color, (x, y), 1)
 
-			# Draw the plane's trajectory
-			for pos in self.last_states[plane_id]['traj'][:-1]:
-				x, y = self.wgs84_to_xy(pos[0], pos[1])
-				pygame.draw.circle(self.fg, color, (x, y), 2)
+			# Draw the plane's trajectory...
+			# ...as a series of dots (we'll use this later)
+			#for pos in self.last_states[plane_id]['traj'][:-1]:
+			#	x, y = self.wgs84_to_xy(pos[0], pos[1])
+			#	pygame.draw.circle(self.fg, color, (x, y), 2)
+
+			# ...as a singular line (using this for visibility now)
+			firpos = self.last_states[plane_id]['traj'][0]
+			x, y = self.wgs84_to_xy(firpos[0], firpos[1])
+
+			laspos = self.last_states[plane_id]['traj'][-1]
+			u, v = self.wgs84_to_xy(laspos[0], laspos[1])
+
+			pygame.draw.line(self.fg, color, (x, y), (u, v))
 
 			# Draw triangle at the current position
 			if trail:
@@ -156,11 +167,11 @@ class Pygame_Display:
 			pygame.draw.polygon(self.airport_surface, color, points)
 
 		# Draw nautical mile circles
-		for i in range(1, 6):  # Draw 5 circles at 1, 2, 3, 4, and 5 NM
+		for i in range(2, 12, 2):  # Draw circles at 2, 4, 6, 8, and 10 NM
 			radius = self.nm_to_xy(i)  # I have no idea why this is the conversion factor, but it works
 			pygame.draw.circle(self.bg, (0, 255, 0, 255), (self.x_c, self.y_c), radius, 1)
 			# Draw the radius label
-			radius_label = pygame.font.Font(None, 18).render(f"{i} NM", True, (0, 255, 0))
+			radius_label = pygame.font.Font(None, 18).render(f"{i * 2} NM", True, (0, 255, 0))
 			self.bg.blit(radius_label, (self.x_c + radius - radius_label.get_width() // 2 + 5, self.y_c - radius_label.get_height() // 2))
 		# Draw the center point
 		pygame.draw.circle(self.bg, (255, 0, 0), (self.x_c, self.y_c), 5)
