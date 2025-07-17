@@ -264,7 +264,7 @@ class SimPlane(Plane):
 			desired_hdg = self.state['command']['args'].get('hdg', current_hdg)
 			if 0 <= desired_hdg < 360:
 				diff = (desired_hdg - current_hdg + 360) % 360
-				if diff == 0:
+				if abs(diff) <= self.state['turn_rate']:
 					self.state['command']['cmd'] = None # Command completed
 				elif diff <= 180:
 					self.state['hdg'] = (current_hdg + self.state['turn_rate']) % 360 # Turn right
