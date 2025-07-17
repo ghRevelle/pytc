@@ -5,12 +5,8 @@ import torch.distributions as D
 from commands import *
 
 # Use this to check if GPU is available
-"""
-print(torch.cuda.is_available())
-print(torch.cuda.device_count())  # Shows how many CUDA devices (GPUs) are available
-"""
-
-# Set up the device (GPU if available, otherwise CPU)
+print(f"CUDA is available: {torch.cuda.is_available()}")
+print(f"Number of available GPUs: {torch.cuda.device_count()}")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
