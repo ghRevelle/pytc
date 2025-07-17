@@ -57,6 +57,18 @@ class Pygame_Display:
 		if len(self.trails[state['id']]) > self.trail_length:
 			self.trails[state['id']] = self.trails[state['id']][-self.trail_length:]
 
+	def handle_events(self):
+		"""Handle Pygame events."""
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				self.stop_display()
+			elif event.type == pygame.KEYDOWN:
+				if event.key == pygame.K_ESCAPE:
+					self.stop_display()
+				elif event.key == pygame.K_d:
+					self.zoom *= 1.1  # Zoom in
+				elif event.key == pygame.K_MINUS:
+					self.zoom *= 0.9  # Zoom out
 	def render(self):
 		"""Render all planes, their trails, and their trajectories to the display."""
 		# Clear the surfaces
@@ -208,7 +220,7 @@ class Pygame_Display:
 			self.update_plane_state(state)
 			# Store the last state for each plane
 			self.last_states[state['id']] = state
-		
+		self.handle_events()
 		# Render everything once
 		self.render()
 

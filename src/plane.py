@@ -3,6 +3,7 @@ import shapely
 import math
 import geopy.distance
 import numpy as np
+import utils
 from airport import Runway
 
 class Plane:
@@ -39,6 +40,8 @@ class Plane:
 			object: The current state of the plane.
 			Contains keys: 'id', 'lat', 'lon', 'alt', 'v_z', 'gspd', 'hdg', 'traj'.
 		"""
+		if not isinstance(self.state['hdg'], int):
+			self.state['hdg'] = int(round(self.state['hdg']))
 		return self.state
 	
 	def get_traj(self) -> object:
@@ -80,47 +83,6 @@ class Plane:
 		
 		penalty = 0.02 * abs(turn_rate)
 		return max(stall_speed, speed - penalty)
-
-	@staticmethod
-	def calculate_intersection(line1: shapely.geometry.LineString, line2: shapely.geometry.LineString) -> tuple:
-		"""Calculate the intersection of the plane's trajectory with a runway.
-		Args:
-			runway (Runway): The runway to check for intersection.
-		Returns:
-			bool: True if the trajectory intersects with the runway, False otherwise.
-		"""
-		intersection = line1.intersection(line2)
-		if intersection is None or intersection.is_empty:
-			raise ValueError("No intersection found.")
-		else:
-			return intersection.coords[0]
-		
-	@staticmethod
-	def meters_to_degrees(heading: float, meters: float) -> float:
-		"""
-		Convert a distance in meters along a given heading to degrees (approximate, WGS84).
-		heading: degrees from north (0 = north, 90 = east)
-		meters: distance in meters
-		Returns: distance in degrees
-		"""
-		# Project meters onto latitude and longitude axes
-		dlat = meters * math.cos(math.radians(heading)) / 111320.0
-		dlon = meters * math.sin(math.radians(heading)) / 111320.0
-		# Return the total angular distance (Euclidean in degree space)
-		return math.hypot(dlat, dlon)
-
-	@staticmethod
-	def degrees_to_meters(heading: float, degrees: float) -> float:
-		"""
-		Convert a distance in degrees along a given heading to meters (approximate, WGS84).
-		heading: degrees from north (0 = north, 90 = east)
-		degrees: distance in degrees
-		Returns: distance in meters
-		"""
-		dlat = degrees * math.cos(math.radians(heading))
-		dlon = degrees * math.sin(math.radians(heading))
-		meters = math.hypot(dlat * 111320.0, dlon * 111320.0)
-		return meters
 
 	def tick(self):
 		"""
@@ -218,23 +180,23 @@ class SimPlane(Plane):
 		extended_runway = shapely.geometry.LineString([(rx1 - 1000 * (rx2 - rx1), ry1 - 1000 * (ry2 - ry1)), (rx2 + 1000 * (rx2 - rx1), ry2 + 1000 * (ry2 - ry1))])
 		extended_traj = shapely.geometry.LineString([(tx1 - 1000 * (tx2 - tx1), ty1 - 1000 * (ty2 - ty1)), (tx2 + 1000 * (tx2 - tx1), ty2 + 1000 * (ty2 - ty1))])
 
-		intersection = Plane.calculate_intersection(extended_runway, extended_traj)
+		intersection = utils.calculate_intersection(extended_runway, extended_traj)
 		if intersection is None:
 			return None
 		total_distance = shapely.geometry.Point(plane_pos).distance(shapely.geometry.Point(intersection))
 
 		angle_diff = 180 - (runway_hdg - plane_hdg)
 
-		distance = total_distance - Plane.meters_to_degrees(heading=self.state['hdg'], meters=turn_radius) / math.tan(math.radians(angle_diff / 2)) # distance in degrees
+		distance = total_distance - utils.meters_to_degrees(heading=self.state['hdg'], meters=turn_radius) / math.tan(math.radians(angle_diff / 2)) # distance in degrees
 		# Compute the destination point along the heading
 		# destination = geopy.distance.distance(nautical=distance * 111.32).destination(
 		# 	(self.state['lat'], self.state['lon']), plane_hdg
 		# )
 		# distance_meters = geopy.distance.geodesic((self.state['lat'], self.state['lon']), (destination.latitude, destination.longitude)).meters
-		distance_meters = Plane.degrees_to_meters(heading=plane_hdg, degrees=distance)
+		distance_meters = utils.degrees_to_meters(heading=plane_hdg, degrees=distance)
 		initiation_point = geopy.distance.distance(meters=distance).destination((self.state['lat'], self.state['lon']), bearing=plane_hdg)
-		print("Distance:", Plane.meters_to_degrees(heading=self.state['hdg'], meters=turn_radius) / math.tan(math.radians(angle_diff / 2)))
-		print("Turning radius:", Plane.meters_to_degrees(heading=self.state['hdg'], meters=turn_radius))
+		print("Distance:", utils.meters_to_degrees(heading=self.state['hdg'], meters=turn_radius) / math.tan(math.radians(angle_diff / 2)))
+		print("Turning radius:", utils.meters_to_degrees(heading=self.state['hdg'], meters=turn_radius))
 		return distance_meters
 
 	def find_turn_initiation_time(self, runway_line, current_tick):
@@ -265,6 +227,7 @@ class SimPlane(Plane):
 			if 0 <= desired_hdg < 360:
 				diff = (desired_hdg - current_hdg + 360) % 360
 				if abs(diff) <= self.state['turn_rate']:
+					self.state['hdg'] = desired_hdg
 					self.state['command']['cmd'] = None # Command completed
 				elif diff <= 180:
 					self.state['hdg'] = (current_hdg + self.state['turn_rate']) % 360 # Turn right

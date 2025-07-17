@@ -4,6 +4,8 @@ import math
 
 import shapely
 
+import utils
+
 
 class Runway:
     def __init__(self, start_point, end_point, is_occupied=False):
@@ -18,7 +20,7 @@ class Runway:
         """End point of the runway in (lat, lon) format"""
         # self.hdg = 90 - math.degrees(math.atan2(
         #     end_point[1] - start_point[1], end_point[0] - start_point[0]))
-        self.hdg = self._calculate_bearing(start_point, end_point)
+        self.hdg = utils.calculate_bearing(start_point, end_point)
         """Heading of the runway in degrees"""
         self.length = geopy.distance.distance(start_point, end_point).feet
         """Length of the runway in feet"""
@@ -32,19 +34,6 @@ class Runway:
     def get_end_point(self) -> geopy.Point:
         """Get the end point of the runway."""
         return self.end_point
-
-    @staticmethod
-    def _calculate_bearing(start_point, end_point):
-        """Calculate the bearing from (lat1, lon1) to (lat2, lon2) in degrees."""
-        lat1, lon1 = start_point
-        lat2, lon2 = end_point
-        dLon = math.radians(lon2 - lon1)
-        lat1 = math.radians(lat1)
-        lat2 = math.radians(lat2)
-        x = math.sin(dLon) * math.cos(lat2)
-        y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1) * math.cos(lat2) * math.cos(dLon))
-        bearing = math.degrees(math.atan2(x, y))
-        return (bearing + 360) % 360
 
     def get_line(self):
         """Get the runway line as a shapely LineString object.
