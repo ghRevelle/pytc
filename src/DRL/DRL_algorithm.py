@@ -13,35 +13,32 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 
-class AirTrafficControlDQN(nn.Module):
+class AirTrafficControlPolicy(nn.Module):
     def __init__(self, input_dim, n_commands, n_planes):
-        super(AirTrafficControlDQN, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 128)
-        self.fc2 = nn.Linear(128, 128)
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(input_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU()
+        )
 
-        # Command output (softmax)
-        self.command_output = nn.Linear(128, n_commands)
+        # Action heads
+        self.command_head = nn.Linear(128, n_commands)     # logits
+        self.plane_id_head = nn.Linear(128, n_planes)      # logits
+        self.argument_head = nn.Linear(128, 1)             # continuous (e.g., heading)
 
-        # Argument output (regression for "turn" command)
-        self.argument_output = nn.Linear(128, 1)  # Could be continuous like heading for "turn"
-  
-        # Plane ID selection (softmax)
-        self.id_output = nn.Linear(128, n_planes)
+        # Critic head
+        self.value_head = nn.Linear(128, 1)                # state value
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
+        x = self.fc(x)
+        command_logits = self.command_head(x)
+        plane_logits = self.plane_id_head(x)
+        argument = torch.tanh(self.argument_head(x)) * 360  # constrain to 0–360
+        value = self.value_head(x)
+        return command_logits, plane_logits, argument, value
 
-        # Command output (softmax)
-        command_probs = torch.softmax(self.command_output(x), dim=-1)
-
-        # Argument output (regression)
-        argument_value = self.argument_output(x)
-
-        # Plane ID output (softmax)
-        plane_id_probs = torch.softmax(self.id_output(x), dim=-1)
-
-        return command_probs, argument_value, plane_id_probs
 
 def compute_loss(command_probs, argument_value, plane_id_probs, target_command, target_argument, target_plane_id, active_planes):
     # Command loss (cross-entropy)
