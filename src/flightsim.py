@@ -8,11 +8,11 @@ import time
 
 class FlightSimulator:
 	"""A simple flight simulator to demonstrate plane movement and display."""
-	# TODO: remember to deal with skipped ticks
-	ticks_per_second = 20
-	"""Number of ticks per second for the simulation."""
 
-	def __init__(self, display_size=(640, 480), planes=None, airport=None):
+	# Simulation speed. In real life, 1 tick = 1 second
+	ticks_per_second = 20
+
+	def __init__(self, display_size=(640, 480), planes=None, airport=None, slot_manager=FixedSlotPlaneManager()):
 		"""Initialize the flight simulator with a display size, optional planes, optional airport layout.
 		Args:
 			display_size (tuple): Size of the display window (width, height).
@@ -32,16 +32,16 @@ class FlightSimulator:
 		# Start at tick 0
 		self.tick = 0
 		# Initialize the slot manager
-		self.slot_manager = FixedSlotPlaneManager()
+		self.slot_manager = slot_manager
 
 	def add_plane(self, plane: Plane):
 		"""Add a plane to the simulator."""
 		self.planes.append(plane)
 
-	def command_plane(self, command: dict):
+	def command_plane(self, command: Command):
 		"""Send a command to a specific plane instantly.
 		Args:
-			command (dict): The command to send (e.g., 'turn').
+			command (Command class): The command to send
 		"""
 		for plane in self.planes:
 			if plane.id == command.target_id:
@@ -58,7 +58,7 @@ class FlightSimulator:
 
 	# Function to support testing by allowing commands by callsign
 	def add_command_by_callsign(self, callsign: str, command_type: CommandType, last_update: int, argument: Optional[int]):
-		target_id = self.slot_manager.get_slot(callsign)
+		target_id = self.slot_manager.get_id(callsign)
 		self.add_command(Command(command_type, target_id, last_update, argument))
 
 	def run(self, ticks=500):

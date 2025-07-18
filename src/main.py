@@ -6,16 +6,21 @@ from slot_manager import FixedSlotPlaneManager
 from airport import Runway, Airport
 from commands import *
 
-default_slot_manager = FixedSlotPlaneManager()  # Initialize slot manager
-# Factory function to automatically use the same slot manager
-def create_plane(init_state, slot_manager = default_slot_manager):
+test_runways = {
+	'Runway1': Runway((0, 0), (0.05, 0.05)),
+	'Runway2': Runway((0.05, 0), (0, 0.05)),
+}
+
+test_airport = Airport(test_runways)
+
+def create_plane(init_state, slot_manager):
     return Plane(init_state, slot_manager)
 
-# test planes
-planes = []
+fs = FlightSimulator(display_size=(900, 900), airport = test_airport)
+
 for i in range(5):
 	# Create 5 planes with random positions and speeds
-	planes.append(create_plane(
+	fs.add_plane(create_plane(
 		{
 			'callsign': f"UA{i+1}",
 			'lat': np.random.uniform(-0.01, 0.01),  # random latitude
@@ -24,9 +29,10 @@ for i in range(5):
 			'v_z': np.random.uniform(-10, 10),  # random vertical speed in meters per second
 			'gspd': np.random.uniform(60, 100),  # random ground speed in meters per second
 			'hdg': np.random.uniform(0, 360)  # random heading in degrees
-		}
+		},
+        fs.slot_manager
 	))
-planes.append(create_plane(
+fs.add_plane(create_plane(
 	{
 		'callsign': 'UA6',
 		'lat': 0.0,
@@ -35,16 +41,10 @@ planes.append(create_plane(
 		'v_z': 0,
 		'gspd': 100,
 		'hdg': 45
-	}
+	},
+    fs.slot_manager
 ))
-test_runways = {
-	'Runway1': Runway((0, 0), (0.05, 0.05)),
-	'Runway2': Runway((0.05, 0), (0, 0.05)),
-}
 
-test_airport = Airport(test_runways)
-
-fs = FlightSimulator(display_size=(900, 900), planes=planes, airport=test_airport)
 
 # sample command to turn a plane
 """
@@ -57,9 +57,9 @@ fs.add_command(Command(
 """
 
 # Alternatively, use add_command_by_callsign, easier for testing
-fs.add_command_by_callsign('UA1', CommandType.TURN, last_update=100, argument=90)
+fs.add_command_by_callsign('UA6', CommandType.TURN, last_update=100, argument=90)
 
-#TODO: implement turning onto runways
-print(f"Plane UA0 will turn to heading {test_runways['Runway2'].hdg} at tick {planes[-1].find_turn_initiation_time(test_runways['Runway2'].get_line(), 0)}")
+print(fs.slot_manager.show_ids())
+print(fs.slot_manager.get_id('UA6'))
 
 fs.run(ticks=500)  # Run the simulation for 500 ticks
