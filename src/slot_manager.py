@@ -19,7 +19,17 @@ class FixedSlotPlaneManager:
         raise RuntimeError("No available plane slots.")
 
     # remove a plane from its id slot
-    def release_id(self, callsign: str):
+    def release_id(self, slot_id: int):
+        if slot_id < 0 or slot_id >= self.max_slots:
+            raise ValueError("ID out of range.")
+        
+        if self.id_to_callsign[slot_id] == '':
+            raise ValueError(f"Slot {slot_id} is empty.")
+        self.callsign_to_id.pop(self.id_to_callsign[slot_id])
+        self.id_to_callsign[slot_id] = ''
+
+    # remove a plane from its slot by callsign
+    def release_id_by_callsign(self, callsign: str):
         if callsign not in self.callsign_to_id:
             raise ValueError(f"{callsign} not found in active slots.")
         idx = self.callsign_to_id.pop(callsign)
