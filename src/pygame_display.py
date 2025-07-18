@@ -36,11 +36,16 @@ class Pygame_Display:
 				self.stop_display()
 				
 		# Initialize plane color if not exists
-		if state['id'] not in self.plane_colors:
-			#self.plane_colors[state['id']] = np.random.randint(150, 255, size=3).tolist()
-			
-			# this alternative color generation only generates blue-green arrows
-			self.plane_colors[state['id']] = [np.random.randint(0, 255), np.random.randint(150, 255), np.random.randint(0, 255)]
+		if state['callsign'] not in self.plane_colors:
+			random_color_key = np.random.randint(0,3)
+			palette = []
+			for i in range(3):
+				if i == random_color_key:
+					palette.append(np.random.randint(150,256))
+					# Ensures that at least one of RGB is 150 or more so the color is visible
+				else:
+					palette.append(np.random.randint(0,256))
+			self.plane_colors[state['callsign']] = palette
 
 
 		# Initialize trajectory if not exists
@@ -48,14 +53,14 @@ class Pygame_Display:
 		#	self.plane_colors[state['traj']] = [(state['lon'] + state['vel'].longitude * i, state['lat'] + state['vel'].latitude * i) for i in range(0, 11)]
 
 		# Initialize trail if not exists
-		if state['id'] not in self.trails:
-			self.trails[state['id']] = []
+		if state['callsign'] not in self.trails:
+			self.trails[state['callsign']] = []
 			
 		# Add current position to trail
-		self.trails[state['id']].append((state['lon'], state['lat']))
+		self.trails[state['callsign']].append((state['lon'], state['lat']))
 
-		if len(self.trails[state['id']]) > self.trail_length:
-			self.trails[state['id']] = self.trails[state['id']][-self.trail_length:]
+		if len(self.trails[state['callsign']]) > self.trail_length:
+			self.trails[state['callsign']] = self.trails[state['callsign']][-self.trail_length:]
 
 	def handle_events(self):
 		"""Handle Pygame events."""
@@ -219,7 +224,7 @@ class Pygame_Display:
 		for state in states:
 			self.update_plane_state(state)
 			# Store the last state for each plane
-			self.last_states[state['id']] = state
+			self.last_states[state['callsign']] = state
 		self.handle_events()
 		# Render everything once
 		self.render()

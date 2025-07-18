@@ -1,16 +1,23 @@
-from plane import *
+from plane import Plane
 import numpy as np
 import shapely
 from flightsim import FlightSimulator
+from slot_manager import FixedSlotPlaneManager
 from airport import Runway, Airport
+from commands import *
+
+default_slot_manager = FixedSlotPlaneManager()  # Initialize slot manager
+# Factory function to automatically use the same slot manager
+def create_plane(init_state, slot_manager = default_slot_manager):
+    return Plane(init_state, slot_manager)
 
 # test planes
 planes = []
 for i in range(5):
 	# Create 5 planes with random positions and speeds
-	planes.append(SimPlane(
+	planes.append(create_plane(
 		{
-			'id': f"UA{i+1}",
+			'callsign': f"UA{i+1}",
 			'lat': np.random.uniform(-0.01, 0.01),  # random latitude
 			'lon': np.random.uniform(-0.01, 0.01),  # random longitude
 			'alt': np.random.uniform(0, 12000),  # random altitude in meters
@@ -19,9 +26,9 @@ for i in range(5):
 			'hdg': np.random.uniform(0, 360)  # random heading in degrees
 		}
 	))
-planes.append(SimPlane(
+planes.append(create_plane(
 	{
-		'id': 'UA6',
+		'callsign': 'UA6',
 		'lat': 0.0,
 		'lon': -0.1,
 		'alt': 1000,
@@ -39,27 +46,20 @@ test_airport = Airport(test_runways)
 
 fs = FlightSimulator(display_size=(900, 900), planes=planes, airport=test_airport)
 
-fs.add_command({ # sample command to turn a plane
-	'id': 'UA1',
-	'cmd': 'turn',
-	'args': {'hdg': 90},
-	'last_updated': 100
-})
+# sample command to turn a plane
+"""
+fs.add_command(Command(
+    command_type=CommandType.TURN,
+    target_id=0,                # ID slot assigned to 'UA1'
+	last_update=100             # when to issue command
+    argument=90,                # heading to turn to    
+))
+"""
 
-# fs.add_command({ # sample command to turn a plane onto a runway
-# 	'id': 'UA6',
-# 	'cmd': 'turn',
-# 	'args': {'hdg': test_runways['Runway2'].hdg},
-# 	'last_updated': planes[-1].find_turn_initiation_time(test_runways['Runway2'].get_line(), 0)
-# })
+# Alternatively, use add_command_by_callsign, easier for testing
+fs.add_command_by_callsign('UA1', CommandType.TURN, last_update=100, argument=90)
 
-fs.add_command({ # sample command to turn a plane
-	'id': 'UA6',
-	'cmd': 'turn',
-	'args': {'hdg': test_runways['Runway2'].hdg},
-	'last_updated': 60
-})
-
+#TODO: implement turning onto runways
 print(f"Plane UA0 will turn to heading {test_runways['Runway2'].hdg} at tick {planes[-1].find_turn_initiation_time(test_runways['Runway2'].get_line(), 0)}")
 
 fs.run(ticks=500)  # Run the simulation for 500 ticks

@@ -1,11 +1,8 @@
 # Airport and runway class for flight simulator
 import geopy.distance
 import math
-
 import shapely
-
 import utils
-
 
 class Runway:
     def __init__(self, start_point, end_point, is_occupied=False):
