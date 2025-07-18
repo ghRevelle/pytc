@@ -36,7 +36,7 @@ fs.add_plane_to_manager(
 		'alt': 1000,
 		'v_z': 0,
 		'gspd': 100,
-		'hdg': 45
+		'hdg': 80
 	},
 )
 
@@ -52,9 +52,12 @@ fs.add_command(Command(
 """
 
 # Alternatively, use add_command_by_callsign, easier for testing
-fs.add_command_by_callsign('UA6', CommandType.TURN, last_update=100, argument=90)
 
-print(fs.plane_manager.show_ids())
-print(fs.plane_manager.get_id('UA6'))
-
+ua6 = fs.plane_manager.planes[-1]
+runway = test_runways['Runway1']
+print(f"Plane {ua6.callsign} with ID {ua6.id} is set to turn to heading {runway.hdg} degrees.")
+calculated_time = ua6.find_turn_initiation_time(runway.get_line_xy(),0)
+print(f"Calculated time to initiate turn: {calculated_time} seconds.")
+# calculated_time = 107
+fs.add_command_by_callsign('UA6', CommandType.TURN, last_update=calculated_time, argument=runway.hdg)
 fs.run(ticks=500)  # Run the simulation for 500 ticks

@@ -88,7 +88,7 @@ class Plane:
 		"""
 		self._calculate_velocity()
 		next_point = self.vel
-		return shapely.geometry.LineString([(self.lat, self.lon), (next_point.latitude, next_point.longitude)])
+		return shapely.geometry.LineString([(self.lon, self.lat), (next_point.longitude, next_point.latitude)])
 
 	def set_traj(self, traj):
 		"""Set the current trajectory of the plane.
@@ -123,72 +123,82 @@ class Plane:
 
 	def get_turn_radius(self):
 		"""Calculate the turn radius in meters of the plane based on its ground speed."""
-		turn_rate_deg_per_sec = 1  # 1 deg per tick
-		turn_rate_rad_per_sec = math.radians(turn_rate_deg_per_sec)
+		turn_rate_rad_per_sec = math.radians(self.turn_rate)
 		if turn_rate_rad_per_sec == 0:
 			return float('inf')
 		return self.gspd / turn_rate_rad_per_sec
-	
-	def find_turn_initiation_distance(self, runway_line):
+
+	def find_turn_initiation_time(self, target_line: shapely.geometry.LineString, current_tick: int = 0):
 		"""
-		Find the point where the plane should start turning to become parallel and colinear with the runway line.
-		Handles turns greater than 180 degrees by choosing the correct offset direction.
-		direction: 'left', 'right', or None (auto-choose shortest turn)
+		Find the time to initiate a turn to align with a target line. !!NOTE:!! This method does not work if the target is behind the plane.
+		Args:
+			target_line (shapely.geometry.LineString): The target line to align with. The direction of the line is the desired heading.
+			current_tick (int): The current simulation tick.
+		Returns:
+			int: The tick at which the turn should be initiated, or None if it cannot be determined.
 		"""
-		turn_radius = self.get_turn_radius()
-		plane_pos = (self.lon, self.lat)
-		plane_hdg = self.hdg
-		distance = None
-		# 1. Find the desired final heading (runway heading)
-		print(runway_line.coords[0])
-		ry1, rx1, _ = runway_line.coords[0]
-		ry2, rx2, _ = runway_line.coords[1]
-		runway_hdg = math.degrees(math.atan2(rx2 - rx1, ry2 - ry1)) % 360
+		if not isinstance(target_line, shapely.geometry.LineString):
+			raise TypeError("target_line must be a shapely LineString object.")
+
+
+		# 1. Get inputs
+
+		turn_radius = utils.meters_to_degrees(heading=self.hdg, meters=self.get_turn_radius()) # turn radius in degrees
+		# Get the plane's position and trajectory line
+		plane_pos_xy = (self.lon, self.lat)
 		traj_line = self.get_traj_line()
 		tx1, ty1 = traj_line.coords[0]
 		tx2, ty2 = traj_line.coords[1]
+		# Get the target line coordinates
+		rx1, ry1 = target_line.coords[0]
+		rx2, ry2 = target_line.coords[1]
+		# Get headings
+		plane_hdg = self.hdg
+		target_hdg = (450 - math.degrees(math.atan2(ry2 - ry1, rx2 - rx1))) % 360
 
-		# Extend the length of the runway line x1000 in both directions
-		extended_runway = shapely.geometry.LineString([(rx1 - 1000 * (rx2 - rx1), ry1 - 1000 * (ry2 - ry1)), (rx2 + 1000 * (rx2 - rx1), ry2 + 1000 * (ry2 - ry1))])
-		extended_traj = shapely.geometry.LineString([(tx1 - 1000 * (tx2 - tx1), ty1 - 1000 * (ty2 - ty1)), (tx2 + 1000 * (tx2 - tx1), ty2 + 1000 * (ty2 - ty1))])
 
-		intersection = utils.calculate_intersection(extended_runway, extended_traj)
-		if intersection is None:
-			return None
-		total_distance = shapely.geometry.Point(plane_pos).distance(shapely.geometry.Point(intersection))
+		# 2. Find the intersection point of the extended target and trajectory lines
 
-		angle_diff = 180 - (runway_hdg - plane_hdg)
+		# Extend the target and trajectory lines to ensure intersection
+		# Find slopes
+		slope_target = (ry2 - ry1) / (rx2 - rx1) if (rx2 - rx1) != 0 else 99999 # HACK: close enough to infinity
+		slope_traj = (ty2 - ty1) / (tx2 - tx1) if (tx2 - tx1) != 0 else 99999
+		extend_distance = 3 # how many degrees of lat/lon to extend the lines by
+		# Extend lines
+		extended_target = shapely.geometry.LineString([(rx1 - extend_distance, ry1 - extend_distance*slope_target), (rx2 + extend_distance, ry2 + extend_distance*slope_target)])
+		extended_traj = shapely.geometry.LineString([(tx1 - extend_distance, ty1 - extend_distance*slope_traj), (tx2 + extend_distance, ty2 + extend_distance*slope_traj)])
+		# Find intersection
+		intersection = utils.calculate_intersection(extended_target, extended_traj)
 
-		distance = total_distance - utils.meters_to_degrees(heading=self.hdg, meters=turn_radius) / math.tan(math.radians(angle_diff / 2)) # distance in degrees
-		# Compute the destination point along the heading
-		# destination = geopy.distance.distance(nautical=distance * 111.32).destination(
-		# 	(self.state['lat'], self.state['lon']), plane_hdg
-		# )
-		# distance_meters = geopy.distance.geodesic((self.state['lat'], self.state['lon']), (destination.latitude, destination.longitude)).meters
-		distance_meters = utils.degrees_to_meters(heading=plane_hdg, degrees=distance)
-		initiation_point = geopy.distance.distance(meters=distance).destination((self.lat, self.lon), bearing=plane_hdg)
-		print("Distance:", utils.meters_to_degrees(heading=self.hdg, meters=turn_radius) / math.tan(math.radians(angle_diff / 2)))
-		print("Turning radius:", utils.meters_to_degrees(heading=self.hdg, meters=turn_radius))
-		return distance_meters
 
-	def find_turn_initiation_time(self, runway_line, current_tick):
-		"""Find the time to initiate a turn to align with a runway.
-		Args:
-			runway_line (shapely.geometry.LineString): The runway line to align with.
-			turn_radius (float): The radius of the turn in the same units as the coordinates.
-			direction (str): 'left' or 'right' indicating the direction of the turn.
+		# 3. Find where to start the turn
 
-		Returns:
-			float: The time in seconds to initiate the turn.
-		"""
+		# Calculate the total distance to the intersection point in degrees
+		total_distance = shapely.geometry.Point(plane_pos_xy).distance(shapely.geometry.Point(intersection))
+		
+		# Now the REAL calculation begins
+
+		# Calculate the angle difference between the plane and target headings
+		angle_diff = target_hdg - plane_hdg
+		# Take half of the supplementary angle
+		half_supp_diff = (180 - angle_diff) / 2
+
 		# Calculate the distance to the turn initiation point
-		distance = self.find_turn_initiation_distance(runway_line)
-		if distance is None:
+		# HACK: I don't know what abs() is doing here, but the second term must always be positive or we can't turn left
+		distance = total_distance - turn_radius / abs(math.tan(math.radians(half_supp_diff))) # distance in degrees
+
+		# Convert back to meters
+		distance_meters = utils.degrees_to_meters(heading=plane_hdg, degrees=distance)
+
+		# Check if the distance is valid
+		if distance_meters is None:
 			return None
 
-		if distance < 0:
+		if distance_meters < 0:
 			raise ValueError("Distance cannot be negative.")
-		return distance / self.gspd + current_tick # Time = distance / speed + current time
+		
+		# Finally done
+		return int(round(distance_meters / self.gspd + current_tick))  # Time = distance / speed + current time
 
 	# class methods
 	def _calculate_velocity(self):
