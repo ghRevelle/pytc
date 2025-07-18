@@ -16,8 +16,8 @@ class Plane:
 				'callsign' (str): The plane's callsign.
 				'model' (str): Plane model
 				'turn_rate' (float): Turn rate of the plane in deg/sec (based only on model)
-				'stall_speed' (float): Plane's minimum speed in kts (based only on model)
-				'nex_speed' (float): Plane's never-exceed speed in kts (based only on model)
+				'stall_speed' (float): Plane's minimum speed in m/s (based only on model)
+				'nex_speed' (float): Plane's never-exceed speed in m/s (based only on model)
 
 				'lat' (float): Latitude position of the plane in degrees.
 				'lon' (float): Longitude position of the plane in degrees.
@@ -46,8 +46,8 @@ class Plane:
 
 		if self.model == "Cessna":
 			self.turn_rate = 3
-			self.stall_speed = 62.4
-			self.nex_speed = 163
+			self.stall_speed = 32.1014075233 # m/s, or 62.4 kts / 1.94384
+			self.nex_speed = 83.8546382418 # m/s, or 163 kts / 1.94384
 
 	# getter-setters
 	def get_state(self) -> object:
@@ -198,22 +198,22 @@ class Plane:
 	def apply_turn_rate_penalty(self, speed, turn_rate, stall_speed):
 		"""Induce airspeed loss based on how fast the plane is turning.
 		Args:
-			speed: the plane's current groundspeed.
+			speed: the plane's current groundspeed in m/s.
 			turn_rate: the plane's current turnrate.
 			stall_speed: the plane's minimum speed in kts (based only on model).
 		Returns:
-			float: the plane's new groundspeed after the penalty."""
+			float: the plane's new groundspeed in m/s after the penalty."""
 		
-		penalty = 0.02 * abs(turn_rate)
+		penalty = 0.04 * abs(turn_rate)
 		return max(stall_speed, speed - penalty)
 
 	def apply_never_exceed_speed(self, speed, nex_speed):
 		"""Cap the plane's speed at its never-exceed speed.
 		Args:
-			speed: the plane's current groundspeed.
+			speed: the plane's current groundspeed in m/s.
 			nex_speed: the plane's never-exceed speed.
 		Returns:
-			float: the plane's new groundspeed after the cap."""
+			float: the plane's new groundspeed in m/s after the cap."""
 		return min(speed, nex_speed)
 
 	def tick(self):

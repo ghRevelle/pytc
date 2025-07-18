@@ -24,7 +24,7 @@ for i in range(5):
 			'lon': np.random.uniform(-0.01, 0.01),  # random longitude
 			'alt': np.random.uniform(0, 12000),  # random altitude in meters
 			'v_z': np.random.uniform(-10, 10),  # random vertical speed in meters per second
-			'gspd': np.random.uniform(60, 100),  # random ground speed in meters per second
+			'gspd': np.random.uniform(32.1014075233, 83.8546382418),  # random ground speed in meters per second
 			'hdg': np.random.uniform(0, 360)  # random heading in degrees
 		},
 	)
@@ -35,7 +35,7 @@ fs.add_plane_to_manager(
 		'lon': -0.1,
 		'alt': 1000,
 		'v_z': 0,
-		'gspd': 100,
+		'gspd': 83.8546382418,
 		'hdg': 45
 	},
 )
