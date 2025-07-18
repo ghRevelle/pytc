@@ -12,13 +12,17 @@ class FlightSimulator:
 	# Simulation speed. In real life, 1 tick = 1 second
 	ticks_per_second = 20
 
-	def __init__(self, display_size=(640, 480), planes=None, airport=None, slot_manager=FixedSlotPlaneManager()):
+	def __init__(self, display_size=(640, 480), planes=None, airport=None, slot_manager=None):
 		"""Initialize the flight simulator with a display size, optional planes, optional airport layout.
 		Args:
 			display_size (tuple): Size of the display window (width, height).
 			planes (list): Optional list of Plane objects to simulate.
 
 		"""
+
+		if slot_manager is None:
+			raise TypeError("Missing Slot Manager Class")
+
 		# Initialize the list of planes
 		self.planes = planes if planes is not None else []
 		# Initialize the airport layout

@@ -16,7 +16,7 @@ test_airport = Airport(test_runways)
 def create_plane(init_state, slot_manager):
     return Plane(init_state, slot_manager)
 
-fs = FlightSimulator(display_size=(900, 900), airport = test_airport)
+fs = FlightSimulator(display_size=(900, 900), airport = test_airport, slot_manager = FixedSlotPlaneManager())
 
 for i in range(5):
 	# Create 5 planes with random positions and speeds
