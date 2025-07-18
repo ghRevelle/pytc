@@ -17,6 +17,7 @@ class Plane:
 				'model' (str): Plane model
 				'turn_rate' (float): Turn rate of the plane in deg/sec (based only on model)
 				'stall_speed' (float): Plane's minimum speed in kts (based only on model)
+				'nex_speed' (float): Plane's never-exceed speed in kts (based only on model)
 
 				'lat' (float): Latitude position of the plane in degrees.
 				'lon' (float): Longitude position of the plane in degrees.
@@ -46,6 +47,7 @@ class Plane:
 		if self.model == "Cessna":
 			self.turn_rate = 3
 			self.stall_speed = 62.4
+			self.nex_speed = 163
 
 	# getter-setters
 	def get_state(self) -> object:
@@ -205,6 +207,15 @@ class Plane:
 		penalty = 0.02 * abs(turn_rate)
 		return max(stall_speed, speed - penalty)
 
+	def apply_never_exceed_speed(self, speed, nex_speed):
+		"""Cap the plane's speed at its never-exceed speed.
+		Args:
+			speed: the plane's current groundspeed.
+			nex_speed: the plane's never-exceed speed.
+		Returns:
+			float: the plane's new groundspeed after the cap."""
+		return min(speed, nex_speed)
+
 	def tick(self):
 		"""
 		Update the plane's position based on its ground speed and heading.
@@ -251,6 +262,13 @@ class Plane:
             	self.turn_rate,
             	self.stall_speed
         	)
+
+			# checks never-exceed speed here to minimize wasteful calls to the method
+			if self.gspd > self.nex_speed:
+				self.gspd = self.apply_never_exceed_speed(
+					self.gspd,
+					self.nex_speed
+				)
 
 
 
