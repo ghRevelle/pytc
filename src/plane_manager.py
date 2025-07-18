@@ -51,8 +51,9 @@ class PlaneManager:
         self.id_to_callsign[idx] = ''
 
         for idx in range(len(self.planes)):
-            if self.planes[idx].id == id:
+            if self.planes[idx].callsign == callsign:
                 idx_to_remove = idx
+                break
         self.planes.pop(idx_to_remove)
 
     # get the callsign associated with an id

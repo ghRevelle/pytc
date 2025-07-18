@@ -54,7 +54,7 @@ fs.add_command(Command(
 # Alternatively, use add_command_by_callsign, easier for testing
 fs.add_command_by_callsign('UA6', CommandType.TURN, last_update=100, argument=90)
 
-print(fs.plane_manager.show_ids())
-print(fs.plane_manager.get_id('UA6'))
-
-fs.run(ticks=500)  # Run the simulation for 500 ticks
+for tick in range(500):
+	if tick == 150:
+		fs.delete_plane_from_manager(callsign='UA1')
+	fs.next_tick()
