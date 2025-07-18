@@ -36,10 +36,21 @@ class FlightSimulator:
 		# Initialize the slot manager
 		self.plane_manager = plane_manager
 
+	# Add a plane to the plane manager
 	def add_plane_to_manager(self, plane: dict):
 		"""Add a plane to the simulator."""
 		self.plane_manager.add_plane(plane)
 
+	# Delete a plane from the plane manager
+	def delete_plane_from_manager(self, id = None, callsign = None):
+		if id is not None:
+			self.plane_manager.delete_plane(id)
+		elif callsign is not None:
+			self.plane_manager.delete_plane_by_callsign(callsign)
+		else:
+			raise ValueError("Must input an ID or callsign for deletion.")
+
+	# Send a command to a plane
 	def command_plane(self, command: Command):
 		"""Send a command to a specific plane instantly.
 		Args:
@@ -49,6 +60,7 @@ class FlightSimulator:
 			if plane.id == command.target_id:
 				plane.change_command(command)
 
+	# Add a command to a command queue
 	def add_command(self, command: Command):
 		"""Add a command to the command queue.
 		Args:
@@ -63,9 +75,9 @@ class FlightSimulator:
 		target_id = self.plane_manager.get_id(callsign)
 		self.add_command(Command(command_type, target_id, last_update, argument))
 
+	# Run the simulator for a number of ticks
 	def run(self, ticks=500):
 		"""Run the flight simulation for a specified number of ticks."""
-		
 		while self.tick < ticks:
 			for event in pygame.event.get(): # Check for quit events
 				if event.type == pygame.QUIT:
