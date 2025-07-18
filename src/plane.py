@@ -4,13 +4,12 @@ import math
 import geopy.distance
 import numpy as np
 import utils
-from slot_manager import FixedSlotPlaneManager
 from airport import Runway
 from commands import *
 
 class Plane:
 	"""Plane class to represent a single aircraft in a flight simulation environment."""
-	def __init__(self, init_state: dict, slot_manager: FixedSlotPlaneManager):
+	def __init__(self, init_state: dict):
 		"""Initialize the Plane with its state.
 		Args:
 			init_state (dict): Initial state of the plane containing the following keys:
@@ -35,9 +34,11 @@ class Plane:
 		self.hdg = init_state['hdg']
 		self.gspd = init_state['gspd']
 		self.v_z = init_state['v_z']
+
+		self.id = init_state['id']
+
 		self.traj = None
 		self._calculate_velocity()
-		self.id = slot_manager.get_id(self.callsign)
 		self.command: Optional[Command] = None
 
 		self.model = "Cessna" # default value

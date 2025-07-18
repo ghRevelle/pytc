@@ -3,7 +3,7 @@ from plane import Plane
 from pygame_display import *
 from airport import *
 from commands import *
-from slot_manager import FixedSlotPlaneManager
+from plane_manager import PlaneManager
 import time
 
 class FlightSimulator:
@@ -12,7 +12,7 @@ class FlightSimulator:
 	# Simulation speed. In real life, 1 tick = 1 second
 	ticks_per_second = 20
 
-	def __init__(self, display_size=(640, 480), planes=None, airport=None, slot_manager=None):
+	def __init__(self, display_size=(640, 480), planes=None, airport=None, plane_manager=None):
 		"""Initialize the flight simulator with a display size, optional planes, optional airport layout.
 		Args:
 			display_size (tuple): Size of the display window (width, height).
@@ -20,11 +20,9 @@ class FlightSimulator:
 
 		"""
 
-		if slot_manager is None:
-			raise TypeError("Missing Slot Manager Class")
+		if plane_manager is None:
+			raise TypeError("Missing Plane Manager")
 
-		# Initialize the list of planes
-		self.planes = planes if planes is not None else []
 		# Initialize the airport layout
 		self.airport = airport
 		# Initialize the Pygame display
@@ -36,18 +34,18 @@ class FlightSimulator:
 		# Start at tick 0
 		self.tick = 0
 		# Initialize the slot manager
-		self.slot_manager = slot_manager
+		self.plane_manager = plane_manager
 
-	def add_plane(self, plane: Plane):
+	def add_plane_to_manager(self, plane: dict):
 		"""Add a plane to the simulator."""
-		self.planes.append(plane)
+		self.plane_manager.add_plane(plane)
 
 	def command_plane(self, command: Command):
 		"""Send a command to a specific plane instantly.
 		Args:
 			command (Command class): The command to send
 		"""
-		for plane in self.planes:
+		for plane in self.plane_manager.planes:
 			if plane.id == command.target_id:
 				plane.change_command(command)
 
@@ -62,7 +60,7 @@ class FlightSimulator:
 
 	# Function to support testing by allowing commands by callsign
 	def add_command_by_callsign(self, callsign: str, command_type: CommandType, last_update: int, argument: Optional[int]):
-		target_id = self.slot_manager.get_id(callsign)
+		target_id = self.plane_manager.get_id(callsign)
 		self.add_command(Command(command_type, target_id, last_update, argument))
 
 	def run(self, ticks=500):
@@ -79,7 +77,7 @@ class FlightSimulator:
 					self.command_plane(command)
 			# Update all plane states
 			plane_states = []
-			for plane in self.planes:
+			for plane in self.plane_manager.planes:
 				plane.tick()
 				plane_states.append(plane.get_state())
 			

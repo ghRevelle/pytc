@@ -1,9 +1,15 @@
-class FixedSlotPlaneManager:
-	# assigning planes and their callsigns to a unique integer ID with a limited number of ID slots
-    def __init__(self, max_slots=10):
+from plane import Plane
+
+class PlaneManager:
+    def __init__(self, planes=[], max_slots=10):
+        self.planes = planes
         self.max_slots = max_slots
         self.id_to_callsign = [''] * max_slots  # id -> callsign
-        self.callsign_to_id = {}                  # callsign -> id
+        self.callsign_to_id = {}                # callsign -> id
+
+    def add_plane(self, init_state: dict):
+        init_state['id'] = self.get_id(init_state['callsign'])
+        self.planes.append(Plane(init_state))
 
     # get a new id for a plane or return a plane's current id
     def get_id(self, callsign: str) -> int:
