@@ -5,6 +5,7 @@ import geopy.distance
 import numpy as np
 import utils
 from airport import Runway
+from commands import *
 
 class Plane:
 	"""Plane class to represent a single aircraft in a flight simulation environment."""
@@ -237,3 +238,29 @@ class SimPlane(Plane):
 				self.state['gspd'] = self.apply_turn_rate_penalty(self.state['gspd'], self.state['turn_rate'], self.state['stall_speed'])
 			else:
 				raise ValueError("Heading must be between 0 and 360 degrees.")
+			
+"""
+def apply_command(command : Command, plane : SimPlane):
+    if command.command_type == CommandType.LINE_UP_AND_WAIT:
+        if plane.state['command'] == "holding_short":
+            plane.status = "lined_up"
+    
+    elif command.command_type == CommandType.CLEARED_FOR_TAKEOFF:
+        if plane.status == "lined_up":
+            plane.status = "takeoff_roll"
+            if command.argument:
+                plane.heading = command.argument  # only if geography requires it
+    
+    elif command.command_type == CommandType.CLEARED_TO_LAND:
+        if plane.status == "on_approach":
+            plane.status = "descending"
+    
+    elif command.command_type == CommandType.GO_AROUND:
+        if plane.status in ["on_approach", "descending"]:
+            plane.go_around()  # handles re-entry delay, etc.
+    
+    elif command.command_type == CommandType.ABORT_TAKEOFF:
+        if plane.status == "takeoff_roll":
+            plane.abort_takeoff()  # returns to back of queue
+
+"""
