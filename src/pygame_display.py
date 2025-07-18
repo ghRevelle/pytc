@@ -1,6 +1,6 @@
 import pygame
 import numpy as np
-import utils as ut
+import utils
 from geopy import units, distance
 
 class Pygame_Display:	
@@ -242,7 +242,7 @@ class Pygame_Display:
 	def state_to_display(self, state) -> dict:
 		"""Convert a plane state to display units."""
 		display_state = state.copy()
-		display_state['gspd'] = int(ut.mps_to_knots(state['gspd']))  # Convert m/s to kts
+		display_state['gspd'] = int(utils.mps_to_knots(state['gspd']))  # Convert m/s to kts
 		display_state['alt'] = int(state['alt'] * 3.28084)  # Convert meters to feet
 		return display_state
 	

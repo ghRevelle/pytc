@@ -41,6 +41,9 @@ def degrees_to_meters(heading: float, degrees: float) -> float:
 def mps_to_knots(mps: float) -> float:
 	return mps * 1.94384
 
+def knots_to_mps(knots: float) -> float:
+	return knots / 1.94384
+
 def calculate_bearing(start_point, end_point):
         """Calculate the bearing from (lat1, lon1) to (lat2, lon2) in degrees."""
         lat1, lon1 = start_point
