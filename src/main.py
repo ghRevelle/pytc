@@ -31,8 +31,8 @@ fs.add_plane_to_manager(
 	{
 		'callsign': 'UA6',
 		'lat': 0.0,
-		'lon': -1,
-		'alt': 1000,
+		'lon': -0.1,
+		'alt': 400,
 		'v_z': 0,
 		'gspd': 83.8546382418,
 		'hdg': 45
