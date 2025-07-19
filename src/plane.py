@@ -20,6 +20,7 @@ class Plane:
 				'nex_speed' (float): Plane's never-exceed speed in m/s (based only on model)
 				'asc_rate' (float): Plane's maximum no-speed-loss climb rate in m/s (based only on model)
 				'dsc_rate' (float): Plane's maximum descent rate in m/s (asc_rate * 1.5)
+				'v_acc' (float): Plane's acceleration in m/s^2 (based only on model)
 
 				'lat' (float): Latitude position of the plane in degrees.
 				'lon' (float): Longitude position of the plane in degrees.
@@ -52,6 +53,7 @@ class Plane:
 			self.nex_speed = 83.8546382418 # m/s, or 163 kts / 1.94384
 			self.asc_rate = 3.556 # m/s
 			self.dsc_rate = 5.334 # m/s, or 3.556 * 1.5
+			self.v_acc = 0.5 # m/s^2
 
 	# getter-setters
 	def get_state(self) -> object:
@@ -253,6 +255,17 @@ class Plane:
 		self.traj = [(self.lon + hdg_vec[1] / 1000 * i, self.lat + hdg_vec[0] / 1000 * i) for i in range(0, 11)]
 
 		if self.command is None:
+			if self.v_z > 0:
+				# If the plane is climbing, apply the ascent rate
+				self.v_z = min(self.v_z, self.asc_rate)
+				# Acceleration scales with current vertical speed (proportional deceleration)
+				acc = self.v_acc * abs(self.v_z / self.asc_rate) if self.asc_rate != 0 else self.v_acc
+				self.v_z = max(self.v_z - acc, 0)
+			elif self.v_z < 0:
+				# If the plane is descending, apply the descent rate
+				self.v_z = max(self.v_z, -self.dsc_rate)
+				acc = self.v_acc * abs(self.v_z / self.dsc_rate) if self.dsc_rate != 0 else self.v_acc
+				self.v_z = min(self.v_z + acc, 0)
 			return
     
 		if self.command.command_type == CommandType.TURN:
