@@ -11,6 +11,7 @@ class FlightSimulator:
 
 	# Simulation speed. In real life, 1 tick = 1 second
 	ticks_per_second = 20
+	current_tick = 0
 
 	def __init__(self, display_size=(640, 480), planes=None, airport=None, plane_manager=None):
 		"""Initialize the flight simulator with a display size, optional planes, optional airport layout.
@@ -32,7 +33,7 @@ class FlightSimulator:
 		# Empty command queue
 		self.command_queue = []
 		# Start at tick 0
-		self.tick = 0
+		self.current_tick = 0
 		# Initialize the slot manager
 		self.plane_manager = plane_manager
 
@@ -78,25 +79,40 @@ class FlightSimulator:
 	# Run the simulator for a number of ticks
 	def run(self, ticks=500):
 		"""Run the flight simulation for a specified number of ticks."""
-		while self.tick < ticks:
-			for event in pygame.event.get(): # Check for quit events
-				if event.type == pygame.QUIT:
-					self.pg_display.stop_display()
-					self.tick = 0
-					return
-			for command in self.command_queue:  # Process all commands in the queue
-				if self.tick == command.last_update:
-					self.command_plane(command)
-			# Update all plane states
-			plane_states = []
-			for plane in self.plane_manager.planes:
-				plane.tick()
-				plane_states.append(plane.get_state())
-			
-			# Update display once with all plane states
-			if plane_states:
-				self.pg_display.update_display(plane_states)
-
+		while self.current_tick < ticks:
+			if self.current_tick == 200:
+				self.plane_manager.delete_plane_by_callsign('UA4')  # Example of deleting a plane at tick 200
+			elif self.current_tick == 300:
+				self.plane_manager.add_plane({ # Example of adding a new plane at tick 300
+					'callsign': 'UA7',
+					'lat': 0.01,
+					'lon': 0.01,
+					'alt': 5000,
+					'v_z': 0,
+					'gspd': 50,
+					'hdg': 90
+				})
+			self.tick()
 			time.sleep(1 / self.ticks_per_second)  # Control the simulation speed
-			self.tick += 1  # Increment the tick count
-		self.tick = 0  # Reset tick after running
+			self.current_tick += 1  # Increment the tick count
+		self.current_tick = 0  # Reset tick after running
+
+	def tick(self):
+		"""Run a single tick of the simulation."""
+		for event in pygame.event.get(): # Check for quit events
+			if event.type == pygame.QUIT:
+				self.pg_display.stop_display()
+				self.current_tick = 0
+				return
+		for command in self.command_queue:  # Process all commands in the queue
+			if self.current_tick == command.last_update:
+				self.command_plane(command)
+		# Update all plane states
+		plane_states = []
+		for plane in self.plane_manager.planes:
+			plane.tick()
+			plane_states.append(plane.get_state())
+		
+		# Update display once with all plane states
+		if plane_states:
+			self.pg_display.update_display(plane_states)

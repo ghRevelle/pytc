@@ -1,6 +1,4 @@
-from plane import Plane
 import numpy as np
-import shapely
 from flightsim import FlightSimulator
 from plane_manager import PlaneManager
 from airport import Runway, Airport
