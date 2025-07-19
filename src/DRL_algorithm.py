@@ -8,45 +8,34 @@ from commands import *
 print(f"CUDA is available: {torch.cuda.is_available()}")
 print(f"Number of available GPUs: {torch.cuda.device_count()}")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if device == "cpu":
+    raise RuntimeWarning("It is strongly advised not to train on CPU.")
 print(f"Using device: {device}")
 
 
-class AirTrafficControlPolicy(nn.Module):
-    def __init__(self, input_dim, n_commands: int, n_planes: int):
+class AirTrafficControlDQN(nn.Module):
+    def __init__(self, input_dim=120, n_commands=7, n_planes=10):
         super().__init__()
-        self.shared = nn.Sequential(
+        self.fc = nn.Sequential(
             nn.Linear(input_dim, 128),
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU()
         )
 
-        # Action heads
-        self.command_head = nn.Linear(128, n_commands)   # logits
-        self.plane_id_head = nn.Linear(128, n_planes)    # logits
-        self.argument_head = nn.Linear(128, 1)           # only used for heading (takeoff)
-
-        # Critic head
-        self.value_head = nn.Linear(128, 1)              # state value estimate
+        # Output heads
+        self.command_head = nn.Linear(128, n_commands)   # logits for command
+        self.plane_head = nn.Linear(128, n_planes)       # logits for target plane
+        self.argument_head = nn.Linear(128, 1)           # regression for heading / runway ID
 
     def forward(self, x):
-        x = self.shared(x)
+        x = self.fc(x)
+        command_logits = self.command_head(x)            # (batch, n_commands)
+        plane_logits = self.plane_head(x)                # (batch, n_planes)
+        argument = torch.tanh(self.argument_head(x))     # (batch, 1)
+        argument = argument * 360                        # map to [–360, +360] or clamp for specific uses
+        return command_logits, plane_logits, argument
 
-        command_logits = self.command_head(x)
-        plane_logits = self.plane_id_head(x)
-        
-        # Optional continuous argument (e.g., heading)
-        argument_raw = torch.tanh(self.argument_head(x))  # (-1, 1)
-        argument_scaled = (argument_raw + 1) * 180        # (0, 360)
-
-        value = self.value_head(x)
-
-        return {
-            "command_logits": command_logits,
-            "plane_logits": plane_logits,
-            "argument": argument_scaled,
-            "value": value
-        }
 
 """
 outputs = model(state)
@@ -58,6 +47,47 @@ command_index = command_dist.sample()
 plane_index = plane_dist.sample()
 
 argument = outputs["argument"]  # optional: only used if command is CLEARED_FOR_TAKEOFF
+"""
+ 
+def compute_dqn_loss(policy_net, target_net, batch, gamma=0.99):
+    losses = []
+
+    for state, action, reward, next_state, done in batch:
+        command_logits, plane_logits, arg_pred, _ = policy_net(state)
+        next_command_logits, next_plane_logits, _, _ = target_net(next_state)
+
+        # Get Q(s,a)
+        q_pred = extract_q_value(command_logits, plane_logits, arg_pred, action)
+
+        # Get Q_target = r + γ * max_a' Q(s',a')
+        with torch.no_grad():
+            next_q_pred = compute_max_q_value(next_command_logits, next_plane_logits)
+            q_target = reward if done else reward + gamma * next_q_pred
+
+        loss = F.mse_loss(q_pred, q_target)
+        losses.append(loss)
+
+    return torch.stack(losses).mean()
+
+def extract_q_value(command_logits, plane_logits, arg_pred, action):
+    # action: tuple(command_index, plane_id, argument)
+    cmd_idx, plane_idx, arg_val = action
+
+    # Combine into a scalar estimate
+    cmd_logit = command_logits[cmd_idx]
+    plane_logit = plane_logits[plane_idx]
+    arg_q = -((arg_pred - arg_val) ** 2)       # regression distance = lower is better
+
+    q_value = cmd_logit + plane_logit + arg_q  # simple sum; weights can be tuned
+    return q_value
+
+def compute_max_q_value(command_logits, plane_logits):
+    # Max over possible command/plane pairs
+    cmd_vals = F.softmax(command_logits, dim=-1)
+    plane_vals = F.softmax(plane_logits, dim=-1)
+    max_q = torch.max(cmd_vals.unsqueeze(1) * plane_vals.unsqueeze(0))
+    return max_q
+
 """
 def compute_loss(command_probs, argument_value, plane_id_probs, target_command, target_argument, target_plane_id, active_planes):
     # Command loss (cross-entropy)
@@ -77,7 +107,7 @@ def compute_loss(command_probs, argument_value, plane_id_probs, target_command, 
     return total_loss
 
 print("passed initialization test")
-
+"""
 
 
 """
