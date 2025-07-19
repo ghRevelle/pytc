@@ -31,7 +31,7 @@ fs.add_plane_to_manager(
 	{
 		'callsign': 'UA6',
 		'lat': 0.0,
-		'lon': -0.1,
+		'lon': -1,
 		'alt': 1000,
 		'v_z': 0,
 		'gspd': 83.8546382418,
@@ -54,8 +54,6 @@ fs.add_command(Command(
 
 ua6 = fs.plane_manager.planes[-1]
 runway = test_runways['Runway2']
-calculated_time = ua6.find_turn_initiation_time(runway.get_line_xy(),0)
-print(f"Plane {ua6.callsign} with ID {ua6.id} is set to turn to heading {runway.hdg} degrees at {calculated_time} seconds.")
 
-fs.add_command_by_callsign('UA6', CommandType.TURN, last_update=calculated_time, argument=runway.hdg)
-fs.run(ticks=500)  # Run the simulation for 500 ticks
+fs.add_command_by_callsign('UA6', CommandType.CLEARED_TO_LAND, last_update=0, argument=runway)
+fs.run(ticks=2500)  # Run the simulation for 500 ticks

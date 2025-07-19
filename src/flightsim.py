@@ -10,7 +10,7 @@ class FlightSimulator:
 	"""A simple flight simulator to demonstrate plane movement and display."""
 
 	# Simulation speed. In real life, 1 tick = 1 second
-	ticks_per_second = 20
+	base_tps = 20
 	current_tick = 0
 
 	def __init__(self, display_size=(640, 480), planes=None, airport=None, plane_manager=None):
@@ -36,6 +36,12 @@ class FlightSimulator:
 		self.current_tick = 0
 		# Initialize the slot manager
 		self.plane_manager = plane_manager
+
+	def get_tps(self):
+		"""Get the effective ticks per second, accounting for turbo mode."""
+		if hasattr(self.pg_display, 'turbo_mode') and self.pg_display.turbo_mode:
+			return self.base_tps * 10
+		return self.base_tps
 
 	# Add a plane to the plane manager
 	def add_plane_to_manager(self, plane: dict):
@@ -72,7 +78,7 @@ class FlightSimulator:
 		self.command_queue.append(command)
 
 	# Function to support testing by allowing commands by callsign
-	def add_command_by_callsign(self, callsign: str, command_type: CommandType, last_update: int, argument: Optional[int]):
+	def add_command_by_callsign(self, callsign: str, command_type: CommandType, last_update: int, argument):
 		target_id = self.plane_manager.get_id(callsign)
 		self.add_command(Command(command_type, target_id, last_update, argument))
 
@@ -93,7 +99,8 @@ class FlightSimulator:
 					'hdg': 90
 				})
 			self.tick()
-			time.sleep(1 / self.ticks_per_second)  # Control the simulation speed
+			effective_tps = self.get_tps()
+			time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
 			self.current_tick += 1  # Increment the tick count
 		self.current_tick = 0  # Reset tick after running
 
@@ -110,7 +117,7 @@ class FlightSimulator:
 		# Update all plane states
 		plane_states = []
 		for plane in self.plane_manager.planes:
-			plane.tick()
+			plane.tick(self.current_tick)
 			plane_states.append(plane.get_state())
 		
 		# Update display once with all plane states

@@ -13,7 +13,7 @@ def calculate_intersection(line1: shapely.geometry.LineString, line2: shapely.ge
 		else:
 			return intersection.coords[0]
 		
-def meters_to_degrees(heading: float, meters: float) -> float:
+def meters_to_degrees(heading: int, meters: float) -> float:
 		"""
 		Convert a distance in meters along a given heading to degrees (approximate, WGS84).
 		heading: degrees from north (0 = north, 90 = east)
@@ -26,7 +26,7 @@ def meters_to_degrees(heading: float, meters: float) -> float:
 		# Return the total angular distance (Euclidean in degree space)
 		return math.hypot(dlat, dlon)
 
-def degrees_to_meters(heading: float, degrees: float) -> float:
+def degrees_to_meters(heading: int, degrees: float) -> float:
 		"""
 		Convert a distance in degrees along a given heading to meters (approximate, WGS84).
 		heading: degrees from north (0 = north, 90 = east)
@@ -37,6 +37,15 @@ def degrees_to_meters(heading: float, degrees: float) -> float:
 		dlon = degrees * math.sin(math.radians(heading))
 		meters = math.hypot(dlat * 111320.0, dlon * 111320.0)
 		return meters
+
+def degrees_to_nautical_miles(heading: int, degrees: float) -> float:
+		"""
+		Convert a distance in degrees along a given heading to nautical miles (approximate, WGS84).
+		heading: degrees from north (0 = north, 90 = east)
+		degrees: distance in degrees
+		Returns: distance in nautical miles
+		"""
+		return degrees_to_meters(heading, degrees) / 1852.0
 
 def mps_to_knots(mps: float) -> float:
 	return mps * 1.94384

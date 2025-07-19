@@ -52,12 +52,17 @@ class Plane:
 
 		if self.model == "Cessna":
 			self.turn_rate = 3
-			self.stall_speed = 32.1014075233 # m/s, or 62.4 kts / 1.94384
+			self.stall_speed = 24.1789448 # m/s, or 62.4 kts / 1.94384
 			self.nex_speed = 83.8546382418 # m/s, or 163 kts / 1.94384
+			self.landing_speed = 33.4389662 # m/s, or 65 kts / 1.94384
 			self.asc_rate = 3.556 # m/s
 			self.dsc_rate = 5.334 # m/s, or 3.556 * 1.5
 			self.acc_z_max = 0.5 # m/s^2
-			self.acc_xy_max = 3.0 # m/s^2, total guess
+			self.acc_xy_max = 1.0 # m/s^2, total guess
+
+		
+		# Misc
+		self.turn_start_time = -1 # Used for landing
 
 	# getter-setters
 	def get_state(self) -> object:
@@ -111,25 +116,6 @@ class Plane:
 		if not isinstance(new_command, Command):
 			raise TypeError("Expected a Command object.")
 		self.command = new_command
-
-	def turn(self, desired_hdg: int, current_tick: int = 0):
-		"""Turn the plane to a new heading using the Command dataclass."""
-		if not (0 <= desired_hdg < 360):
-			raise ValueError("Heading must be between 0 and 360 degrees.")
-		
-		# Create Command and assign it to self.command
-		self.change_command(Command(
-        	command_type=CommandType.TURN,
-        	target_id=self.id,
-        	last_update=current_tick,
-        	argument=desired_hdg
-    	))
-
-	def cleared_to_land(self, current_tick: int = 0):
-		"""Put the plane on its final glideslope.
-		By default, this slope is 850 ft / min at 140 kts gspd"""
-
-		raise NotImplementedError()
 
 	def get_turn_radius(self):
 		"""Calculate the turn radius in meters of the plane based on its ground speed."""
@@ -215,6 +201,41 @@ class Plane:
 		# Calculate the next position based on ground speed and heading
 		self.vel = geopy.distance.distance(meters=self.gspd).destination((self.lat,self.lon), bearing=self.hdg)
 	
+	def _turn(self, current_hdg, desired_hdg):
+		"""Turn the plane to a new heading."""
+		diff = (desired_hdg - current_hdg + 360) % 360
+		if abs(diff) <= self.turn_rate:
+			self.hdg = desired_hdg
+		elif diff <= 180:
+			self.hdg = (current_hdg + self.turn_rate) % 360
+		else:
+			self.hdg = (current_hdg - self.turn_rate) % 360
+
+		# Apply turn rate penalty to ground speed
+		self.gspd = self._apply_turn_rate_penalty(
+			self.gspd,
+			self.turn_rate,
+			self.stall_speed
+		)
+
+	def _calculate_tod(self, current_alt):
+		"""Calculate the top of descent to a target position in nautical miles."""
+		return current_alt * 3 / 1000  # Distance to start descent in nautical miles
+
+	def _calculate_rod(self, current_speed):
+		"""Calculate the rate of descent to a target position in meters per second."""
+		return 5 * utils.mps_to_knots(current_speed) * 0.00508
+	
+	def _calculate_target_acc_descend(self, current_speed, current_alt):
+		"""Calculate the target acceleration for descent based on current speed and altitude."""
+		# Calculate the top of descent (m)
+		tod = self._calculate_tod(current_alt) * 1852  # Convert to meters
+		target_final_speed = self.landing_speed
+		# Calculate the target acceleration for descent using v² = u² + 2as
+		# Rearranged to: a = (v² - u²) / (2s)
+		acceleration = (target_final_speed**2 - current_speed**2) / (2 * tod)
+		return acceleration
+
 	def _apply_turn_rate_penalty(self, speed, turn_rate, stall_speed):
 		"""Induce airspeed loss based on how fast the plane is turning.
 		Args:
@@ -265,7 +286,7 @@ class Plane:
 			acc = max_accel * abs((speed - target) / scale)
 			return min(speed + acc, max_speed)
 
-	def tick(self):
+	def tick(self, tick):
 		"""
 		Update the plane's position based on its ground speed and heading.
 		Update the plane's groundspeed based on its vertrate and turnrate.
@@ -296,21 +317,76 @@ class Plane:
 			if desired_hdg is None or not (0 <= desired_hdg < 360):
 				raise ValueError("TURN command missing valid heading.")
 
-			diff = (desired_hdg - current_hdg + 360) % 360
-			if abs(diff) <= self.turn_rate:
-				self.hdg = desired_hdg
-				self.command = None  # Command completed
-			elif diff <= 180:
-				self.hdg = (current_hdg + self.turn_rate) % 360
-			else:
-				self.hdg = (current_hdg - self.turn_rate) % 360
+			self._turn(current_hdg, desired_hdg)
+			if self.hdg == desired_hdg:
+				self.command.command_type = CommandType.NONE
+		
+		elif self.command.command_type == CommandType.CLEARED_TO_LAND:
+			target_runway = self.command.argument
 
-			# Apply turn rate penalty to ground speed
-			self.gspd = self._apply_turn_rate_penalty(
-				self.gspd,
-				self.turn_rate,
-				self.stall_speed
-			)
+			# Check all the assumptions to stop python from complaining
+			if not isinstance(target_runway, Runway):
+				raise TypeError("Argument must be a Runway object.")
+			if self.command.last_update is None or not isinstance(self.command.last_update, int):
+				raise ValueError("Command last_update must be an integer tick value.")
+			if self.turn_start_time is None or not isinstance(self.turn_start_time, int):
+				self.turn_start_time = -1
+
+			target_hdg = target_runway.hdg
+			# Calculate the distance to the runway in nautical miles
+			target_dist = utils.degrees_to_nautical_miles(heading = self.hdg, degrees = target_runway.get_line_xy().distance(shapely.geometry.Point((self.lon, self.lat))))
+
+			if self.turn_start_time == -1: # Alignment not yet started
+				self.turn_start_time = self.find_turn_initiation_time(target_runway.get_line_xy(), self.command.last_update)
+				self.tod = self._calculate_tod(self.alt)  # Calculate top of descent
+				self.rod = self._calculate_rod(self.gspd)  # Calculate rate of descent
+				self.desired_acc_xy = self._calculate_target_acc_descend(self.gspd, self.alt)  # Calculate target horizontal acceleration for descent
+			elif tick >= self.turn_start_time and self.command.last_update < self.turn_start_time:  # Time to align with the runway
+				self._turn(self.hdg, target_hdg)
+				if self.hdg == target_hdg:
+					self.command.last_update = tick  # Update last update time when the turn is completed
+			elif self.command.last_update >= self.turn_start_time and target_dist < self.tod and self.alt > 0:  # Already aligned, descend
+				self.rod = self._calculate_rod(self.gspd)
+				if target_dist < 1:
+					self.v_z = self.proportional_acceleration(
+						speed=self.v_z,
+						target=-(self.alt*self.gspd/target_dist),  # Descend at the rate of descent
+						min_speed=-self.dsc_rate,
+						max_speed=self.asc_rate,
+						max_accel=self.acc_z_max
+					)
+				self.v_z = self.proportional_acceleration(
+					speed=self.v_z,
+					target=-self.rod,  # Descend at the rate of descent
+					min_speed=-self.dsc_rate,
+					max_speed=self.asc_rate,
+					max_accel=self.acc_z_max
+				)
+				if self.gspd > self.landing_speed:
+					self.acc_xy = self.proportional_acceleration(
+						speed=self.acc_xy,
+						target=self.desired_acc_xy,  # Maintain horizontal acceleration for descent
+						min_speed=-self.acc_xy_max,
+						max_speed=self.acc_xy_max,
+						max_accel=self.acc_xy_max
+					)
+				else:
+					self.acc_xy = self.proportional_acceleration(
+						speed=self.acc_xy,
+						target=0,  # Stop horizontal acceleration when on the ground
+						min_speed=-self.acc_xy_max,
+						max_speed=self.acc_xy_max,
+						max_accel=self.acc_xy_max
+					)
+			elif self.alt <= 0 and self.gspd > 0:  # If the plane is on the ground, stop all movement
+				self.v_z = 0 # Stop vertical movement
+				self.acc_xy = -self.acc_xy_max # Slow down as quickly as possible
+			elif self.gspd <= 0:  # If the plane is stopped, stop vertical movement
+				print(f"Plane {self.callsign} with ID {self.id} has landed.")
+				self.command.command_type = CommandType.NONE  # Done
+				self.command.last_update = tick  # Update last update time to stop the command
+		else:
+			raise ValueError(f"Unknown command type: {self.command.command_type}")
 
 		# Update the plane's state with the new position and speed
 		self.lat = self.vel.latitude
@@ -319,6 +395,8 @@ class Plane:
 		self.gspd += self.acc_xy
 		if self.alt < 0:
 			self.alt = 0
+		if self.gspd < 0:
+			self.gspd = 0
 
 		# Apply descent boost if descending
 		self.gspd = self._apply_descend_boost(

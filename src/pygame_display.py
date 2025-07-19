@@ -27,6 +27,9 @@ class Pygame_Display:
 		# Tick counter (separate from the real tick counter in FlightSimulator but it's just for display anyway)
 		self.tick_count = 0
 		
+		# Turbo mode state (10x speed when V is held)
+		self.turbo_mode = False
+		
 		# Cache fonts for plane labels
 		self.id_font = pygame.font.Font(None, 24)
 		self.debug_font = pygame.font.Font(None, 18)
@@ -74,11 +77,31 @@ class Pygame_Display:
 		if pressed_keys[pygame.K_ESCAPE]:
 			self.stop_display()
 		if pressed_keys[pygame.K_EQUALS]:
-			self.zoom *= 1.05  # Zoom in
+			self.zoom *= 1.01  # Zoom in
 			self._clear_rendered_content()  # Need to redraw when zoom changes
 		if pressed_keys[pygame.K_MINUS]:
-			self.zoom *= 0.95  # Zoom out
+			self.zoom *= 0.99  # Zoom out
 			self._clear_rendered_content()  # Need to redraw when zoom changes
+		
+		# Check for turbo mode (10x speed while V is held)
+		self.turbo_mode = pressed_keys[pygame.K_v]
+		
+		# Handle viewport movement with arrow keys
+		# Movement speed inversely proportional to zoom (more zoomed in = slower movement)
+		move_speed = 0.001 / (self.zoom / 2500)  # Base movement speed scaled by zoom
+		
+		if pressed_keys[pygame.K_UP]:
+			self.lat_c += move_speed
+			self._clear_rendered_content()  # Need to redraw when viewport moves
+		if pressed_keys[pygame.K_DOWN]:
+			self.lat_c -= move_speed
+			self._clear_rendered_content()
+		if pressed_keys[pygame.K_LEFT]:
+			self.lon_c -= move_speed
+			self._clear_rendered_content()
+		if pressed_keys[pygame.K_RIGHT]:
+			self.lon_c += move_speed
+			self._clear_rendered_content()
 
 	def _clear_rendered_content(self):
 		"""Mark static content as needing redraw (called when zoom changes)."""
@@ -187,7 +210,10 @@ class Pygame_Display:
 		self.screen.blit(fps_text, fps_rect)
 		
 		# Draw tick counter in top left corner
-		tick_text = self.fps_font.render(f"Tick: {self.tick_count}", True, (255, 255, 255))
+		tick_display = f"Tick: {self.tick_count}"
+		if self.turbo_mode:
+			tick_display += " (TURBO)"
+		tick_text = self.fps_font.render(tick_display, True, (255, 255, 0) if self.turbo_mode else (255, 255, 255))
 		tick_rect = tick_text.get_rect()
 		tick_rect.topleft = (10, 10)
 		self.screen.blit(tick_text, tick_rect)
@@ -196,6 +222,8 @@ class Pygame_Display:
 		keybind_lines = [
 			"ESC: Quit",
 			"+/-: Zoom In/Out",
+			"Arrow Keys: Move Viewport",
+			"V: Turbo Mode (10x speed)",
 			f"Zoom: {self.zoom:.0f}"
 		]
 		
@@ -211,15 +239,18 @@ class Pygame_Display:
 		"""Render static background elements (nautical mile circles, center point)."""
 		self.bg.fill((0, 0, 0))
 		
-		# Draw nautical mile circles
+		# Convert world origin (0, 0) to screen coordinates
+		origin_x, origin_y = self.wgs84_to_xy(0, 0)
+		
+		# Draw nautical mile circles centered at world origin
 		for i in range(2, 12, 2):  # Draw circles at 2, 4, 6, 8, and 10 NM
 			radius = self.nm_to_xy(i)
-			pygame.draw.circle(self.bg, (0, 255, 0, 255), (self.x_c, self.y_c), radius, 1)
+			pygame.draw.circle(self.bg, (0, 255, 0, 255), (origin_x, origin_y), radius, 1)
 			# Draw the radius label (using cached font)
 			radius_label = self.nm_label_font.render(f"{i} NM", True, (0, 255, 0))
-			self.bg.blit(radius_label, (self.x_c + radius - radius_label.get_width() // 2 + 5, self.y_c - radius_label.get_height() // 2))
-		# Draw the center point
-		pygame.draw.circle(self.bg, (255, 0, 0), (self.x_c, self.y_c), 5)
+			self.bg.blit(radius_label, (origin_x + radius - radius_label.get_width() // 2 + 5, origin_y - radius_label.get_height() // 2))
+		# Draw the center point at world origin
+		pygame.draw.circle(self.bg, (255, 0, 0), (origin_x, origin_y), 5)
 
 	def _render_airport(self):
 		"""Render static airport elements (runways)."""
