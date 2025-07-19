@@ -20,7 +20,8 @@ class Plane:
 				'nex_speed' (float): Plane's never-exceed speed in m/s (based only on model)
 				'asc_rate' (float): Plane's maximum no-speed-loss climb rate in m/s (based only on model)
 				'dsc_rate' (float): Plane's maximum descent rate in m/s (asc_rate * 1.5)
-				'v_acc' (float): Plane's acceleration in m/s^2 (based only on model)
+				'acc_z_max' (float): Plane's maximum vertical acceleration in m/s^2 (based only on model)
+				'acc_xy_max' (float, optional): Plane's maximum horizontal acceleration in m/s^2
 
 				'lat' (float): Latitude position of the plane in degrees.
 				'lon' (float): Longitude position of the plane in degrees.
@@ -39,6 +40,8 @@ class Plane:
 		self.gspd = init_state['gspd']
 		self.v_z = init_state['v_z']
 
+		self.acc_xy = init_state.get('acc_xy', 0.0)  # Optional, default to 0.0
+
 		self.id = init_state['id']
 
 		self.traj = None
@@ -53,7 +56,8 @@ class Plane:
 			self.nex_speed = 83.8546382418 # m/s, or 163 kts / 1.94384
 			self.asc_rate = 3.556 # m/s
 			self.dsc_rate = 5.334 # m/s, or 3.556 * 1.5
-			self.v_acc = 0.5 # m/s^2
+			self.acc_z_max = 0.5 # m/s^2
+			self.acc_xy_max = 3.0 # m/s^2, total guess
 
 	# getter-setters
 	def get_state(self) -> object:
@@ -211,7 +215,7 @@ class Plane:
 		# Calculate the next position based on ground speed and heading
 		self.vel = geopy.distance.distance(meters=self.gspd).destination((self.lat,self.lon), bearing=self.hdg)
 	
-	def apply_turn_rate_penalty(self, speed, turn_rate, stall_speed):
+	def _apply_turn_rate_penalty(self, speed, turn_rate, stall_speed):
 		"""Induce airspeed loss based on how fast the plane is turning.
 		Args:
 			speed: the plane's current groundspeed in m/s.
@@ -223,7 +227,7 @@ class Plane:
 		penalty = 0.04 * abs(turn_rate)
 		return max(stall_speed, speed - penalty)
 
-	def apply_descend_boost(self, speed, v_speed, max_speed):
+	def _apply_descend_boost(self, speed, v_speed, max_speed):
 		"""Induce airspeed gain based on how fast the plane is descending.
 		Args:
 			speed: the plane's current groundspeed in m/s.
@@ -238,44 +242,54 @@ class Plane:
 		boost = 0.02 * abs(v_speed) # Boost is proportional to the vertical speed
 		# it should also be proportional to aircraft weight, but we don't have that info
 		return min(speed + boost, max_speed)
+	
+	@staticmethod
+	def proportional_acceleration(speed, target, min_speed, max_speed, max_accel):
+		"""Induce acceleration based on the current vertical speed.
+		Args:
+			speed: the plane's current groundspeed in m/s.
+			target: the plane's target groundspeed in m/s.
+			min_speed: the plane's minimum speed in m/s.
+			max_speed: the plane's maximum speed in m/s.
+		Returns:
+			float: the plane's new groundspeed in m/s after the acceleration."""
+		scale = (max_speed - min_speed) / 2
+		if speed < min_speed or speed > max_speed:
+			return min(max(speed, min_speed), max_speed)
+		elif np.isclose(speed, target, atol=0.01):
+			return target
+		elif speed > target:
+			acc = -max_accel * abs((speed - target) / scale)
+			return max(speed + acc, min_speed)
+		else:
+			acc = max_accel * abs((speed - target) / scale)
+			return min(speed + acc, max_speed)
 
 	def tick(self):
 		"""
 		Update the plane's position based on its ground speed and heading.
 		Update the plane's groundspeed based on its vertrate and turnrate.
 		"""
-		self._calculate_velocity()
-		# Update the plane's state with the new position and altitude
-		self.lat = self.vel.latitude
-		self.lon = self.vel.longitude
-		self.alt += self.v_z
-		if self.alt < 0:
-			self.alt = 0
 
-		# Compute the heading unit vector by changing heading to radians
-		hdg_rads = math.radians(self.hdg)
-		ux = math.cos(hdg_rads)
-		uy = math.sin(hdg_rads)
+		if self.command is None or self.command.command_type == CommandType.NONE:
+			# No command, stabilize altitude
+			self.v_z = self.proportional_acceleration(
+				speed=self.v_z,
+				target=0,
+				min_speed=-self.dsc_rate,
+				max_speed=self.asc_rate,
+				max_accel=self.acc_z_max
+			)
 
-		hdg_vec = (ux, uy)
-		
-		self.traj = [(self.lon + hdg_vec[1] / 1000 * i, self.lat + hdg_vec[0] / 1000 * i) for i in range(0, 11)]
+			self.acc_xy = self.proportional_acceleration(
+				speed=self.acc_xy,
+				target=0,
+				min_speed=-self.acc_xy_max,
+				max_speed=self.acc_xy_max,
+				max_accel= self.acc_xy_max
+			)
 
-		if self.command is None:
-			if self.v_z > 0:
-				# If the plane is climbing, apply the ascent rate
-				self.v_z = min(self.v_z, self.asc_rate)
-				# Acceleration scales with current vertical speed (proportional deceleration)
-				acc = self.v_acc * abs(self.v_z / self.asc_rate) if self.asc_rate != 0 else self.v_acc
-				self.v_z = max(self.v_z - acc, 0)
-			elif self.v_z < 0:
-				# If the plane is descending, apply the descent rate
-				self.v_z = max(self.v_z, -self.dsc_rate)
-				acc = self.v_acc * abs(self.v_z / self.dsc_rate) if self.dsc_rate != 0 else self.v_acc
-				self.v_z = min(self.v_z + acc, 0)
-			return
-    
-		if self.command.command_type == CommandType.TURN:
+		elif self.command.command_type == CommandType.TURN:
 			current_hdg = self.hdg
 			desired_hdg = self.command.argument
 
@@ -292,22 +306,42 @@ class Plane:
 				self.hdg = (current_hdg - self.turn_rate) % 360
 
 			# Apply turn rate penalty to ground speed
-			self.gspd = self.apply_turn_rate_penalty(
-            	self.gspd,
-            	self.turn_rate,
-            	self.stall_speed
-        	)
-			# Apply descent boost if descending
-			self.gspd = self.apply_descend_boost(
-            	self.gspd,
-            	self.v_z,
-            	self.nex_speed
-        	)
+			self.gspd = self._apply_turn_rate_penalty(
+				self.gspd,
+				self.turn_rate,
+				self.stall_speed
+			)
 
-			# check never-exceed speed
-			if self.gspd > self.nex_speed:
-				self.gspd = self.nex_speed
+		# Update the plane's state with the new position and speed
+		self.lat = self.vel.latitude
+		self.lon = self.vel.longitude
+		self.alt += self.v_z
+		self.gspd += self.acc_xy
+		if self.alt < 0:
+			self.alt = 0
 
+		# Apply descent boost if descending
+		self.gspd = self._apply_descend_boost(
+			self.gspd,
+			self.v_z,
+			self.nex_speed
+		)
+
+		# check never-exceed speed
+		if self.gspd > self.nex_speed:
+			self.gspd = self.nex_speed
+
+		self._calculate_velocity()
+
+
+		# Compute the heading unit vector by changing heading to radians
+		hdg_rads = math.radians(self.hdg)
+		ux = math.cos(hdg_rads)
+		uy = math.sin(hdg_rads)
+
+		hdg_vec = (ux, uy)
+		
+		self.traj = [(self.lon + hdg_vec[1] / 1000 * i, self.lat + hdg_vec[0] / 1000 * i) for i in range(0, 11)]
 
 
 ###########################################################################################################################################

@@ -23,7 +23,8 @@ for i in range(5):
 			'alt': np.random.uniform(0, 12000),  # random altitude in meters
 			'v_z': np.random.uniform(-5, 5),  # random vertical speed in meters per second
 			'gspd': np.random.uniform(32.1014075233, 83.8546382418),  # random ground speed in meters per second
-			'hdg': np.random.uniform(0, 360)  # random heading in degrees
+			'hdg': np.random.uniform(0, 360), # random heading in degrees
+			'acc_xy': np.random.uniform(0, 3.0)  # random horizontal acceleration in m/s^2
 		},
 	)
 fs.add_plane_to_manager(
