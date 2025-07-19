@@ -223,14 +223,21 @@ class Plane:
 		penalty = 0.04 * abs(turn_rate)
 		return max(stall_speed, speed - penalty)
 
-	def apply_never_exceed_speed(self, speed, nex_speed):
-		"""Cap the plane's speed at its never-exceed speed.
+	def apply_descend_boost(self, speed, v_speed, max_speed):
+		"""Induce airspeed gain based on how fast the plane is descending.
 		Args:
 			speed: the plane's current groundspeed in m/s.
-			nex_speed: the plane's never-exceed speed.
+			vertical_speed: the plane's current vertical rate in m/s.
+			max_speed: the plane's maximum speed in m/s.
 		Returns:
-			float: the plane's new groundspeed in m/s after the cap."""
-		return min(speed, nex_speed)
+			float: the plane's new groundspeed in m/s after the boost."""
+
+		if v_speed >= 0:
+			return speed
+
+		boost = 0.02 * abs(v_speed) # Boost is proportional to the vertical speed
+		# it should also be proportional to aircraft weight, but we don't have that info
+		return min(speed + boost, max_speed)
 
 	def tick(self):
 		"""
@@ -284,18 +291,22 @@ class Plane:
 			else:
 				self.hdg = (current_hdg - self.turn_rate) % 360
 
+			# Apply turn rate penalty to ground speed
 			self.gspd = self.apply_turn_rate_penalty(
             	self.gspd,
             	self.turn_rate,
             	self.stall_speed
         	)
+			# Apply descent boost if descending
+			self.gspd = self.apply_descend_boost(
+            	self.gspd,
+            	self.v_z,
+            	self.nex_speed
+        	)
 
-			# checks never-exceed speed here to minimize wasteful calls to the method
+			# check never-exceed speed
 			if self.gspd > self.nex_speed:
-				self.gspd = self.apply_never_exceed_speed(
-					self.gspd,
-					self.nex_speed
-				)
+				self.gspd = self.nex_speed
 
 
 
