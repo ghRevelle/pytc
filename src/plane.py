@@ -15,9 +15,10 @@ class Plane:
 			init_state (dict): Initial state of the plane containing the following keys:
 				'callsign' (str): The plane's callsign.
 				'model' (str): Plane model
-				'turn_rate' (float): Turn rate of the plane in deg/sec (based only on model)
-				'stall_speed' (float): Plane's minimum speed in m/s (based only on model)
-				'nex_speed' (float): Plane's never-exceed speed in m/s (based only on model)
+				'turn_rate' (float): Turn rate of the plane in deg/sec (based on model)
+				'stall_speed' (float): Plane's minimum speed in m/s (based on model)
+				'crz_speed' (float): Plane's default speed in a traffic pattern (based on model)
+				'nex_speed' (float): Plane's never-exceed speed in m/s (based on model)
 				'asc_rate' (float): Plane's maximum no-speed-loss climb rate in m/s (based only on model)
 				'dsc_rate' (float): Plane's maximum descent rate in m/s (asc_rate * 1.5)
 				'acc_z_max' (float): Plane's maximum vertical acceleration in m/s^2 (based only on model)
@@ -54,6 +55,7 @@ class Plane:
 			self.turn_rate = 3
 			self.stall_speed = 24.1789448 # m/s, or 62.4 kts / 1.94384
 			self.nex_speed = 83.8546382418 # m/s, or 163 kts / 1.94384
+			self.crz_speed = 48.8723351716 # m/s, or 95 kts / 1.94834
 			self.landing_speed = 33.4389662 # m/s, or 65 kts / 1.94384
 			self.asc_rate = 3.556 # m/s
 			self.dsc_rate = 5.334 # m/s, or 3.556 * 1.5
@@ -265,15 +267,15 @@ class Plane:
 		return min(speed + boost, max_speed)
 	
 	@staticmethod
-	def proportional_acceleration(speed, target, min_speed, max_speed, max_accel):
-		"""Induce acceleration based on the current vertical speed.
+	def proportional_change(speed, target, min_speed, max_speed, max_accel):
+		"""Induce change in a plane's speed/acceleration based on current values.
 		Args:
-			speed: the plane's current groundspeed in m/s.
-			target: the plane's target groundspeed in m/s.
-			min_speed: the plane's minimum speed in m/s.
-			max_speed: the plane's maximum speed in m/s.
+			speed: the plane's current value in m/s.
+			target: the plane's target value in m/s.
+			min_speed: the plane's minimum value in m/s.
+			max_speed: the plane's maximum value in m/s.
 		Returns:
-			float: the plane's new groundspeed in m/s after the acceleration."""
+			float: the plane's new value in m/s after the acceleration."""
 		scale = (max_speed - min_speed) / 2
 		if speed < min_speed or speed > max_speed:
 			return min(max(speed, min_speed), max_speed)
@@ -294,7 +296,7 @@ class Plane:
 
 		if self.command is None or self.command.command_type == CommandType.NONE:
 			# No command, stabilize altitude
-			self.v_z = self.proportional_acceleration(
+			self.v_z = self.proportional_change(
 				speed=self.v_z,
 				target=0,
 				min_speed=-self.dsc_rate,
@@ -302,11 +304,19 @@ class Plane:
 				max_accel=self.acc_z_max
 			)
 
-			self.acc_xy = self.proportional_acceleration(
+			self.acc_xy = self.proportional_change(
 				speed=self.acc_xy,
 				target=0,
 				min_speed=-self.acc_xy_max,
 				max_speed=self.acc_xy_max,
+				max_accel= self.acc_xy_max
+			)
+
+			self.gspd = self.proportional_change(
+				speed=self.gspd,
+				target=self.crz_speed,
+				min_speed=self.stall_speed,
+				max_speed=self.nex_speed,
 				max_accel= self.acc_xy_max
 			)
 
@@ -348,14 +358,14 @@ class Plane:
 			elif self.command.last_update >= self.turn_start_time and target_dist < self.tod and self.alt > 0:  # Already aligned, descend
 				self.rod = self._calculate_rod(self.gspd)
 				if target_dist < 1:
-					self.v_z = self.proportional_acceleration(
+					self.v_z = self.proportional_change(
 						speed=self.v_z,
 						target=-(self.alt*self.gspd/target_dist),  # Descend at the rate of descent
 						min_speed=-self.dsc_rate,
 						max_speed=self.asc_rate,
 						max_accel=self.acc_z_max
 					)
-				self.v_z = self.proportional_acceleration(
+				self.v_z = self.proportional_change(
 					speed=self.v_z,
 					target=-self.rod,  # Descend at the rate of descent
 					min_speed=-self.dsc_rate,
@@ -363,7 +373,7 @@ class Plane:
 					max_accel=self.acc_z_max
 				)
 				if self.gspd > self.landing_speed:
-					self.acc_xy = self.proportional_acceleration(
+					self.acc_xy = self.proportional_change(
 						speed=self.acc_xy,
 						target=self.desired_acc_xy,  # Maintain horizontal acceleration for descent
 						min_speed=-self.acc_xy_max,
@@ -371,7 +381,7 @@ class Plane:
 						max_accel=self.acc_xy_max
 					)
 				else:
-					self.acc_xy = self.proportional_acceleration(
+					self.acc_xy = self.proportional_change(
 						speed=self.acc_xy,
 						target=0,  # Stop horizontal acceleration when on the ground
 						min_speed=-self.acc_xy_max,
