@@ -1,13 +1,12 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-
 from flightsim import FlightSimulator
 from plane_manager import PlaneManager
 from commands import Command, CommandType
 
 class AirTrafficControlEnv(gym.Env):
-    """Custom Gymnasium environment for air traffic control using your simulator."""
+    """Custom Gymnasium environment for tower control using simulator."""
 
     def __init__(self, max_planes=10, max_ticks=5000):
         super().__init__()
