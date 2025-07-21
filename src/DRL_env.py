@@ -15,7 +15,8 @@ class AirTrafficControlEnv(gym.Env):
         self.max_ticks = max_ticks
 
         # Sim setup
-        self.sim = FlightSimulator(plane_manager=PlaneManager())
+        self.manager = PlaneManager()
+        self.sim = FlightSimulator(plane_manager=self.manager)
         self.current_tick = 0
 
         # === Spaces ===
@@ -33,7 +34,8 @@ class AirTrafficControlEnv(gym.Env):
         self.current_tick = 0
 
         # Create a new flight simulator class
-        self.sim = FlightSimulator(plane_manager=PlaneManager())
+        self.manager = PlaneManager()
+        self.sim = FlightSimulator(plane_manager=self.manager)
 
         # Create starting state
         self.sim.initialize_scenario_from_real_data(...)  # placeholder for OpenSky snapshot
