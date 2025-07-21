@@ -2,6 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as D
+import gymnasium as gym
+from gymnasium import spaces
+import numpy as np
+from collections import deque
+import random
+import torch.optim as optim
 from commands import *
 
 # Use this to check if GPU is available
@@ -11,7 +17,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if device == "cpu":
     raise RuntimeWarning("It is strongly advised not to train on CPU.")
 print(f"Using device: {device}")
-
 
 class AirTrafficControlDQN(nn.Module):
     def __init__(self, input_dim=120, n_commands=7, n_planes=10):
@@ -35,26 +40,14 @@ class AirTrafficControlDQN(nn.Module):
         argument = torch.tanh(self.argument_head(x))     # (batch, 1)
         argument = argument * 360                        # map to [–360, +360] or clamp for specific uses
         return command_logits, plane_logits, argument
-
-
-"""
-outputs = model(state)
-
-command_dist = D.Categorical(logits=outputs["command_logits"])
-plane_dist = D.Categorical(logits=outputs["plane_logits"])
-
-command_index = command_dist.sample()
-plane_index = plane_dist.sample()
-
-argument = outputs["argument"]  # optional: only used if command is CLEARED_FOR_TAKEOFF
-"""
  
 def compute_dqn_loss(policy_net, target_net, batch, gamma=0.99):
     losses = []
 
     for state, action, reward, next_state, done in batch:
-        command_logits, plane_logits, arg_pred, _ = policy_net(state)
-        next_command_logits, next_plane_logits, _, _ = target_net(next_state)
+        command_logits, plane_logits, arg_pred = policy_net(state)
+        next_command_logits, next_plane_logits, next_arg_pred = target_net(next_state)
+
 
         # Get Q(s,a)
         q_pred = extract_q_value(command_logits, plane_logits, arg_pred, action)
@@ -69,44 +62,147 @@ def compute_dqn_loss(policy_net, target_net, batch, gamma=0.99):
 
     return torch.stack(losses).mean()
 
-def extract_q_value(command_logits, plane_logits, arg_pred, action):
-    # action: tuple(command_index, plane_id, argument)
-    cmd_idx, plane_idx, arg_val = action
-
-    # Combine into a scalar estimate
-    cmd_logit = command_logits[cmd_idx]
-    plane_logit = plane_logits[plane_idx]
-    arg_q = -((arg_pred - arg_val) ** 2)       # regression distance = lower is better
-
-    q_value = cmd_logit + plane_logit + arg_q  # simple sum; weights can be tuned
-    return q_value
+def extract_q_value(command_logits, plane_logits, arg_pred, actions):
+    # actions: list/array of tuples (cmd_idx, plane_idx, arg_val)
+    q_vals = []
+    for i, (cmd_idx, plane_idx, arg_val) in enumerate(actions):
+        cmd_logit = command_logits[i, cmd_idx]
+        plane_logit = plane_logits[i, plane_idx]
+        arg_q = -((arg_pred[i] - arg_val) ** 2)
+        q_val = cmd_logit + plane_logit + arg_q
+        q_vals.append(q_val)
+    return torch.stack(q_vals)
 
 def compute_max_q_value(command_logits, plane_logits):
     # Max over possible command/plane pairs
-    cmd_vals = F.softmax(command_logits, dim=-1)
-    plane_vals = F.softmax(plane_logits, dim=-1)
-    max_q = torch.max(cmd_vals.unsqueeze(1) * plane_vals.unsqueeze(0))
+    all_qs = command_logits.unsqueeze(2) + plane_logits.unsqueeze(1)  # (batch, n_commands, n_planes)
+    max_q = torch.max(all_qs.view(all_qs.size(0), -1), dim=1).values
     return max_q
 
-"""
-def compute_loss(command_probs, argument_value, plane_id_probs, target_command, target_argument, target_plane_id, active_planes):
-    # Command loss (cross-entropy)
-    command_loss = nn.CrossEntropyLoss()(command_probs, target_command)
+class AirTrafficControlEnv(gym.Env):
+    def __init__(self, flight_simulator):
+        super().__init__()
+        self.sim = flight_simulator
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(120,), dtype=np.float32)
+        
+        self.action_space = spaces.Dict({
+            "command": spaces.Discrete(7),      # NONE to TURN
+            "plane_id": spaces.Discrete(10),    # plane slots
+            "argument": spaces.Box(low=0, high=360, shape=(1,), dtype=np.float32)
+        })
 
-    # Argument loss (MSE for regression)
-    argument_loss = nn.MSELoss()(argument_value, target_argument)
+    def reset(self, seed=None, options=None):
+        observation = self.sim.reset()  # Should return flat 120-D array
+        return observation, {}
 
-    # Plane ID loss (cross-entropy with masking for invalid planes)
-    plane_loss = F.cross_entropy(plane_id_probs, target_plane_id)
+    def step(self, action):
+        reward, done = self.sim.step(action)  # Action must be mapped to internal Command class
+        observation = self.sim.get_state_vector()
+        info = {}
+        return observation, reward, done, False, info
 
-    # Mask out invalid planes (add large penalty for selecting a non-existent plane)
-    invalid_planes_mask = (target_plane_id >= active_planes).float()  # Active planes are <= n_active_planes
-    penalty = invalid_planes_mask * 1000  # Large penalty for invalid selection
-    total_loss = command_loss + argument_loss + plane_loss + penalty.sum()
+def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
+              epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995, target_update=10):
+    
+    optimizer = optim.Adam(policy_net.parameters(), lr=1e-4)
+    memory = deque(maxlen=10000)
+    epsilon = epsilon_start
 
-    return total_loss
+    for episode in range(episodes):
+        state, _ = env.reset()
+        total_reward = 0
+        done = False
+
+        while not done:
+            # Epsilon-greedy action
+            if random.random() < epsilon:
+                action = {
+                    'command': env.action_space['command'].sample(),
+                    'plane_id': env.action_space['plane_id'].sample(),
+                    'argument': env.action_space['argument'].sample()[0]
+                }
+            else:
+                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+                command_logits, plane_logits, argument = policy_net(state_tensor)
+                command = torch.argmax(command_logits).item()
+                plane_id = torch.argmax(plane_logits).item()
+                arg = argument.squeeze().item()
+                action = {'command': command, 'plane_id': plane_id, 'argument': arg}
+
+            next_state, reward, done, _, _ = env.step(action)
+            total_reward += reward
+
+            memory.append((state, (action['command'], action['plane_id'], action['argument']),
+                          reward, next_state, done))
+            state = next_state
+
+            # Train
+            if len(memory) >= batch_size:
+                batch = random.sample(memory, batch_size)
+                batch = [(torch.tensor(s, dtype=torch.float32, device=device),
+                          a, torch.tensor(r, dtype=torch.float32, device=device),
+                          torch.tensor(ns, dtype=torch.float32, device=device),
+                          d) for s, a, r, ns, d in batch]
+
+                loss = compute_dqn_loss(policy_net, target_net, batch, gamma)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+        # Epsilon decay
+        epsilon = max(epsilon_end, epsilon * epsilon_decay)
+
+        # Sync target network
+        if episode % target_update == 0:
+            target_net.load_state_dict(policy_net.state_dict())
+
+        print(f"Episode {episode}, Total Reward: {total_reward:.2f}, Epsilon: {epsilon:.3f}")
+
 
 print("passed initialization test")
+"""
+outputs = model(state)
+
+command_dist = D.Categorical(logits=outputs["command_logits"])
+plane_dist = D.Categorical(logits=outputs["plane_logits"])
+
+command_index = command_dist.sample()
+plane_index = plane_dist.sample()
+
+argument = outputs["argument"]  # optional: only used if command is CLEARED_FOR_TAKEOFF
+"""
+
+
+# to put in flightsim.py
+"""
+def compute_reward(env_state, command_executed, sim_tick):
+    reward = 0.0
+
+    # Reward for successful landings
+    for plane in env_state.planes:
+        if plane.landed_this_tick:
+            reward += 1.0
+
+    # Reward for successful takeoff
+        if plane.took_off_this_tick:
+            reward += 1.0
+
+    # Penalty for invalid or illegal commands
+    if command_executed.is_invalid:
+        reward -= 10.0
+
+    if command_executed.caused_conflict:
+        reward -= 50.0
+
+    # Penalty for a crash
+    for plane in env_state.planes:
+        if plane.crashed:
+            reward -= 100.0
+
+    # Small time pressure penalty per plane still in air
+    reward -= 0.01 * env_state.num_planes_in_air
+
+    return reward
 """
 
 
