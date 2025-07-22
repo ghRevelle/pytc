@@ -24,20 +24,37 @@ class Runway:
         self.is_occupied = is_occupied
         """If the runway is occupied by a plane being on it"""
     
-    def get_start_point(self) -> geopy.Point:
-        """Get the start point of the runway."""
+    def get_start_point_ll(self) -> geopy.Point:
+        """Get the start point of the runway as a geopy.Point(latitude, longitude)."""
         return self.start_point
 
-    def get_end_point(self) -> geopy.Point:
-        """Get the end point of the runway."""
+    def get_end_point_ll(self) -> geopy.Point:
+        """Get the end point of the runway as a geopy.Point(latitude, longitude)."""
         return self.end_point
+    
+    def get_start_point_xy(self):
+        """Get the start point of the runway as a tuple (longitude, latitude).
+        Returns:
+            tuple: The start point of the runway in (longitude, latitude) format.
+        """
+        return (self.start_point.longitude, self.start_point.latitude)
+    
+    def get_end_point_xy(self):
+        """Get the end point of the runway as a tuple (longitude, latitude).
+        Returns:
+            tuple: The end point of the runway in (longitude, latitude) format.
+        """
+        return (self.end_point.longitude, self.end_point.latitude)
 
-    def get_line(self):
+    def get_line_xy(self):
         """Get the runway line as a shapely LineString object.
         Returns:
             object: The runway line as a shapely LineString object.
         """
-        return shapely.geometry.LineString([self.start_point, self.end_point])
+        return shapely.geometry.LineString([
+            (self.start_point.longitude, self.start_point.latitude), 
+            (self.end_point.longitude, self.end_point.latitude)
+        ])
 
 class Airport:
     def __init__(self, runways : dict={}):

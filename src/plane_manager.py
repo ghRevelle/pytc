@@ -38,22 +38,19 @@ class PlaneManager:
         self.callsign_to_id.pop(self.id_to_callsign[id])
         self.id_to_callsign[id] = ''
 
-        for idx in range(len(self.planes)):
-            if self.planes[idx].id == id:
-                idx_to_remove = idx
+        idx_to_remove = next(idx for idx, plane in enumerate(self.planes) if plane.id == id)
+        
         self.planes.pop(idx_to_remove)
 
     # remove a plane from its slot by callsign
     def delete_plane_by_callsign(self, callsign: str):
         if callsign not in self.callsign_to_id:
             raise ValueError(f"Flight {callsign} does not exist.")
-        idx = self.callsign_to_id.pop(callsign)
-        self.id_to_callsign[idx] = ''
+        id = self.callsign_to_id.pop(callsign)
+        self.id_to_callsign[id] = ''
 
-        for idx in range(len(self.planes)):
-            if self.planes[idx].callsign == callsign:
-                idx_to_remove = idx
-                break
+idx_to_remove = next(idx for idx, plane in enumerate(self.planes) if plane.id == id)
+
         self.planes.pop(idx_to_remove)
 
     # get the callsign associated with an id
