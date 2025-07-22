@@ -101,8 +101,8 @@ class FlightSimulator:
 		if plane_states:
 			self.pg_display.update_display(plane_states)
 
-		self.tick += 1
-		time.sleep(1 / self.ticks_per_second)  # Control the simulation speed
+		self.current_tick += 1
+		time.sleep(1 / self.base_tps)  # Control the simulation speed
 
 	# Run the simulator for a number of ticks
 	def run(self, ticks=500):
