@@ -17,8 +17,13 @@ class Plane:
 				'model' (str): Plane model
 				'turn_rate' (float): Turn rate of the plane in deg/sec (based on model)
 				'stall_speed' (float): Plane's minimum speed in m/s (based on model)
-				'crz_speed' (float): Plane's default speed in a traffic pattern (based on model)
 				'nex_speed' (float): Plane's never-exceed speed in m/s (based on model)
+				'crz_speed' (float): Plane's default speed in a traffic pattern (based on model)
+				'ldg_speed' (float): Plane's target landing speed (based on model)
+
+				'nex_alt' (float): Plane's never-exceed altitude in meters (based on model)
+				'crz_alt' (float): Plane's typical approach altitude in meters (based on model)
+
 				'asc_rate' (float): Plane's maximum no-speed-loss climb rate in m/s (based only on model)
 				'dsc_rate' (float): Plane's maximum descent rate in m/s (asc_rate * 1.5)
 				'acc_z_max' (float): Plane's maximum vertical acceleration in m/s^2 (based only on model)
@@ -56,7 +61,11 @@ class Plane:
 			self.stall_speed = 24.1789448 # m/s, or 62.4 kts / 1.94384
 			self.nex_speed = 83.8546382418 # m/s, or 163 kts / 1.94384
 			self.crz_speed = 48.8723351716 # m/s, or 95 kts / 1.94834
-			self.landing_speed = 33.4389662 # m/s, or 65 kts / 1.94384
+			self.ldg_speed = 33.4389662 # m/s, or 65 kts / 1.94384
+
+			self.nex_alt = 4114.8 # meters, or 13500 / 3.281
+			self.crz_alt = 304.8 # meters, or 1000 / 3.281
+
 			self.asc_rate = 3.556 # m/s
 			self.dsc_rate = 5.334 # m/s, or 3.556 * 1.5
 			self.acc_z_max = 0.5 # m/s^2
@@ -232,7 +241,7 @@ class Plane:
 		"""Calculate the target acceleration for descent based on current speed and altitude."""
 		# Calculate the top of descent (m)
 		tod = self._calculate_tod(current_alt) * 1852  # Convert to meters
-		target_final_speed = self.landing_speed
+		target_final_speed = self.ldg_speed
 		# Calculate the target acceleration for descent using v² = u² + 2as
 		# Rearranged to: a = (v² - u²) / (2s)
 		acceleration = (target_final_speed**2 - current_speed**2) / (2 * tod)
@@ -250,7 +259,7 @@ class Plane:
 		penalty = 0.04 * abs(turn_rate)
 		return max(stall_speed, speed - penalty)
 
-	def _apply_descend_boost(self, speed, v_speed, max_speed):
+	def _apply_descend_boost(self, speed, v_speed, max_speed): # currently this function is not working (planes are gaining 0 airspeed from descent)
 		"""Induce airspeed gain based on how fast the plane is descending.
 		Args:
 			speed: the plane's current groundspeed in m/s.
@@ -267,26 +276,26 @@ class Plane:
 		return min(speed + boost, max_speed)
 	
 	@staticmethod
-	def proportional_change(speed, target, min_speed, max_speed, max_accel):
-		"""Induce change in a plane's speed/acceleration based on current values.
+	def proportional_change(current, target, min_value, max_value, max_change):
+		"""Induce change in a plane's speed/acceleration state based on current values.
 		Args:
 			speed: the plane's current value in m/s.
 			target: the plane's target value in m/s.
 			min_speed: the plane's minimum value in m/s.
 			max_speed: the plane's maximum value in m/s.
 		Returns:
-			float: the plane's new value in m/s after the acceleration."""
-		scale = (max_speed - min_speed) / 2
-		if speed < min_speed or speed > max_speed:
-			return min(max(speed, min_speed), max_speed)
-		elif np.isclose(speed, target, atol=0.01):
+			float: the plane's new value in m/s after the change."""
+		scale = (max_value - min_value) / 2
+		if current < min_value or current > max_value:
+			return min(max(current, min_value), max_value)
+		elif np.isclose(current, target, atol=0.01):
 			return target
-		elif speed > target:
-			acc = -max_accel * abs((speed - target) / scale)
-			return max(speed + acc, min_speed)
+		elif current > target:
+			acc = -max_change * abs((current - target) / scale)
+			return max(current + acc, min_value)
 		else:
-			acc = max_accel * abs((speed - target) / scale)
-			return min(speed + acc, max_speed)
+			acc = max_change * abs((current - target) / scale)
+			return min(current + acc, max_value)
 
 	def tick(self, tick):
 		"""
@@ -295,29 +304,42 @@ class Plane:
 		"""
 
 		if self.command is None or self.command.command_type == CommandType.NONE:
-			# No command, stabilize altitude
+			# When no command is given...
+
+			# ...Try to achieve a vertrate of 0
 			self.v_z = self.proportional_change(
-				speed=self.v_z,
+				current=self.v_z,
 				target=0,
-				min_speed=-self.dsc_rate,
-				max_speed=self.asc_rate,
-				max_accel=self.acc_z_max
+				min_value=-self.dsc_rate,
+				max_value=self.asc_rate,
+				max_change=self.acc_z_max
 			)
 
+			# ...Try to achieve the cruising altitude
+			self.alt = self.proportional_change(
+				current=self.alt,
+				target=self.crz_alt,
+				min_value=304.8, # or 1000 feet
+				max_value=self.nex_alt,
+				max_change=self.asc_rate if self.alt < self.crz_alt else self.dsc_rate			
+			)
+
+			# ...Try to achieve a lateral acceleration of 0
 			self.acc_xy = self.proportional_change(
-				speed=self.acc_xy,
+				current=self.acc_xy,
 				target=0,
-				min_speed=-self.acc_xy_max,
-				max_speed=self.acc_xy_max,
-				max_accel= self.acc_xy_max
+				min_value=-self.acc_xy_max,
+				max_value=self.acc_xy_max,
+				max_change= self.acc_xy_max
 			)
 
+			# ...Try to achieve the cruising groundspeed
 			self.gspd = self.proportional_change(
-				speed=self.gspd,
+				current=self.gspd,
 				target=self.crz_speed,
-				min_speed=self.stall_speed,
-				max_speed=self.nex_speed,
-				max_accel= self.acc_xy_max
+				min_value=self.stall_speed,
+				max_value=self.nex_speed,
+				max_change= self.acc_xy_max
 			)
 
 		elif self.command.command_type == CommandType.TURN:
@@ -359,34 +381,34 @@ class Plane:
 				self.rod = self._calculate_rod(self.gspd)
 				if target_dist < 1:
 					self.v_z = self.proportional_change(
-						speed=self.v_z,
+						current=self.v_z,
 						target=-(self.alt*self.gspd/target_dist),  # Descend at the rate of descent
-						min_speed=-self.dsc_rate,
-						max_speed=self.asc_rate,
-						max_accel=self.acc_z_max
+						min_value=-self.dsc_rate,
+						max_value=self.asc_rate,
+						max_change=self.acc_z_max
 					)
 				self.v_z = self.proportional_change(
-					speed=self.v_z,
+					current=self.v_z,
 					target=-self.rod,  # Descend at the rate of descent
-					min_speed=-self.dsc_rate,
-					max_speed=self.asc_rate,
-					max_accel=self.acc_z_max
+					min_value=-self.dsc_rate,
+					max_value=self.asc_rate,
+					max_change=self.acc_z_max
 				)
-				if self.gspd > self.landing_speed:
+				if self.gspd > self.ldg_speed:
 					self.acc_xy = self.proportional_change(
-						speed=self.acc_xy,
+						current=self.acc_xy,
 						target=self.desired_acc_xy,  # Maintain horizontal acceleration for descent
-						min_speed=-self.acc_xy_max,
-						max_speed=self.acc_xy_max,
-						max_accel=self.acc_xy_max
+						min_value=-self.acc_xy_max,
+						max_value=self.acc_xy_max,
+						max_change=self.acc_xy_max
 					)
 				else:
 					self.acc_xy = self.proportional_change(
-						speed=self.acc_xy,
+						current=self.acc_xy,
 						target=0,  # Stop horizontal acceleration when on the ground
-						min_speed=-self.acc_xy_max,
-						max_speed=self.acc_xy_max,
-						max_accel=self.acc_xy_max
+						min_value=-self.acc_xy_max,
+						max_value=self.acc_xy_max,
+						max_change=self.acc_xy_max
 					)
 			elif self.alt <= 0 and self.gspd > 0:  # If the plane is on the ground, stop all movement
 				self.v_z = 0 # Stop vertical movement

@@ -20,9 +20,9 @@ for i in range(5):
 			'callsign': f"UA{i+1}",
 			'lat': np.random.uniform(-0.01, 0.01),  # random latitude
 			'lon': np.random.uniform(-0.01, 0.01),  # random longitude
-			'alt': np.random.uniform(0, 12000),  # random altitude in meters
+			'alt': np.random.uniform(304.8, 607.6),  # random altitude in meters corresponding to between 1000 and 2000 feet
 			'v_z': np.random.uniform(-5, 5),  # random vertical speed in meters per second
-			'gspd': np.random.uniform(32.1014075233, 83.8546382418),  # random ground speed in meters per second
+			'gspd': np.random.uniform(24.1789448, 83.8546382418),  # random ground speed in meters per second corresponding to between 62.4 and 163 kts
 			'hdg': np.random.uniform(0, 360), # random heading in degrees
 			'acc_xy': np.random.uniform(0, 3.0)  # random horizontal acceleration in m/s^2
 		},
