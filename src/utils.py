@@ -1,5 +1,17 @@
 import shapely, math
 
+def lerp(amt, low, high):
+	"""Linearly interpolates between two numbers.
+	Args:
+		current: The amount to interpolate between low and high.
+		low: The value at the low end of the lerp range.
+		high: The value at the high end of the lerp range.
+	Returns:
+		float: The interpolated value.
+	"""
+
+	return low + (high - low) * amt
+
 def calculate_intersection(line1: shapely.geometry.LineString, line2: shapely.geometry.LineString) -> tuple:
 		"""Calculate the intersection of the plane's trajectory with a runway.
 		Args:

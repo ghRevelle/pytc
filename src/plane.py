@@ -306,41 +306,32 @@ class Plane:
 		if self.command is None or self.command.command_type == CommandType.NONE:
 			# When no command is given...
 
-			# ...Try to achieve a vertrate of 0
+			# ...Try to achieve a vertrate proportional to the altitudinal error
+			alt_error = self.crz_alt - self.alt
+			v_z_target = max(-self.dsc_rate, min(self.asc_rate, alt_error * 0.1))
+
 			self.v_z = self.proportional_change(
 				current=self.v_z,
-				target=0,
+				target=v_z_target,
 				min_value=-self.dsc_rate,
 				max_value=self.asc_rate,
 				max_change=self.acc_z_max
 			)
 
-			# ...Try to achieve the cruising altitude
-			self.alt = self.proportional_change(
-				current=self.alt,
-				target=self.crz_alt,
-				min_value=304.8, # or 1000 feet
-				max_value=self.nex_alt,
-				max_change=self.asc_rate if self.alt < self.crz_alt else self.dsc_rate			
-			)
+			# ...Try to achieve a lateral acceleration proportional to the gspd error
+			gspd_error = self.crz_speed - self.gspd
+			gspd_target = max(-self.acc_xy_max, min(self.acc_xy_max, gspd_error * 0.1))
 
-			# ...Try to achieve a lateral acceleration of 0
-			self.acc_xy = self.proportional_change(
-				current=self.acc_xy,
-				target=0,
-				min_value=-self.acc_xy_max,
-				max_value=self.acc_xy_max,
-				max_change= self.acc_xy_max
-			)
-
-			# ...Try to achieve the cruising groundspeed
-			self.gspd = self.proportional_change(
-				current=self.gspd,
-				target=self.crz_speed,
-				min_value=self.stall_speed,
-				max_value=self.nex_speed,
-				max_change= self.acc_xy_max
-			)
+			# If the plane is NOT descending...
+			if self.v_z > -self.dsc_rate / 2:
+				# Turn on the speed controller
+				self.acc_xy = self.proportional_change(
+					current=self.acc_xy,
+					target=gspd_target,
+					min_value=-self.acc_xy_max,
+					max_value=self.acc_xy_max,
+					max_change= self.acc_xy_max
+				)
 
 		elif self.command.command_type == CommandType.TURN:
 			current_hdg = self.hdg
