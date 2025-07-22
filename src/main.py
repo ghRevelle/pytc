@@ -56,4 +56,5 @@ ua6 = fs.plane_manager.planes[-1]
 runway = test_runways['Runway2']
 
 fs.add_command_by_callsign('UA6', CommandType.CLEARED_TO_LAND, last_update=0, argument=runway)
+fs.add_command_by_callsign('UA6', CommandType.CLEARED_FOR_TAKEOFF, last_update=300, argument=None)
 fs.run(ticks=2500)  # Run the simulation for 500 ticks
