@@ -1,10 +1,12 @@
 # PyTC  
 
-Python Tower Controller (PyTC) is a software package including a deep reinforcement learning algorithm and a flight radar simulator. It it not meant to be a replacement for Tower Control; it is a proof-of-concept for potentially utilizing DRL algorithms for the role.  
+Python Tower Controller (PyTC) is a software package including a deep reinforcement learning algorithm and a flight radar simulator. It it not meant to be a replacement for Tower Control; it is a proof-of-concept of a DRL algorithm that could potentially serve the role of a Tower Controller.
+
+We wanted to answer the question: how would DRL algorithms compare to real, human Tower Controllers? This issue has become pertinent recently, since the worsening strain on ATCs and Tower Controllers has led to disastrous air accidents in the US. While we don't claim to have a solution to such a multifaceted issue, we did want to examine how we could use machine learning to produce a viable AI Tower Controller. In the future, a tool similar to ours could take some burden off of Tower Controllers, or, if AI becomes truly robust and trusted, could serve as an Tower Controller "hub", communicating with and directing autonomous commercial aircraft without human intervention.
 
 ## Description  
 
-PyTC comprises of several major parts:  
+PyTC is comprised of several major parts:  
 1. Sample training data and data manipulating algorithms
 2. A DRL algorithm, training environment, and training function
 3. A flight simulator to process commands issued by the algorithm
@@ -33,12 +35,12 @@ PyTC comprises of several major parts:
 
 ## Notes  
 
-Rapid City Regional Airport is an arbitrary regional airport we chose for our testing.  
+Rapid City Regional Airport is a regional airport we chose for our testing.  
 
 Why?  
 
-- It is small enough in scale
-- It does not have a lot of surrounding traffic
+- It is not too large: it has just two runways and services either GA or small commercial aircraft
+- It does not have a lot of traffic from surrounding airports
 - It is in the US (more data available)
 - One of our developers has visited before
 

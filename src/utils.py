@@ -12,6 +12,16 @@ def lerp(amt, low, high):
 
 	return low + (high - low) * amt
 
+def get_turn_rate(bank_angle, gspd):
+	"""Determines an aircraft's turn rate based on its maximum bank angle and current groundspeed.
+	Args:
+		bank_angle: The aircraft's maximum commercial bank angle.
+		gspd: The aircraft's cruising speed.
+	Returns:
+		float: The aircraft's turn rate in degrees/sec."""
+	
+	return abs(1091 * math.tan(bank_angle) / gspd)
+
 def calculate_intersection(line1: shapely.geometry.LineString, line2: shapely.geometry.LineString) -> tuple:
 		"""Calculate the intersection of the plane's trajectory with a runway.
 		Args:
