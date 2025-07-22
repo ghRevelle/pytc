@@ -1,5 +1,6 @@
 # Data scraper for ADS-B Exchange historical data
 
+import pandas as pd
 import concurrent.futures
 import requests
 import json
@@ -8,7 +9,13 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import csv
 
-target_icaos = [] # This will be the list of ICAOs you want to filter
+df_filtered = pd.read_csv('filtered_operations.csv')  # Load the filtered operations data
+# Extract ICAOs from the filtered DataFrame
+target_icaos = df_filtered['icao']
+# Convert to a list
+target_icaos_list = target_icaos.tolist()
+
+target_icaos = target_icaos_list # This will be the list of ICAOs you want to filter
 OUTPUT_CSV = "filtered_aircraft.csv" # Rename as needed
 
 fieldnames = [
