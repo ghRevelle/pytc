@@ -6,6 +6,7 @@ dependencies:
 - scikit-learn
 - geopy
 - shapely
+- requests
 - pip
 - pip:
   - pygame

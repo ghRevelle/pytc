@@ -1,0 +1,4 @@
+Sources:
+
+https://samples.adsbexchange.com/operations-ax-v2/2024/07/01/
+https://samples.adsbexchange.com/readsb-hist/2024/07/01/
