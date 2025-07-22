@@ -2,7 +2,7 @@
 
 Python Tower Controller (PyTC) is a software package including a deep reinforcement learning algorithm and a flight radar simulator. It it not meant to be a replacement for Tower Control; it is a proof-of-concept of a DRL algorithm that could potentially serve the role of a Tower Controller.
 
-We wanted to answer the question: how would DRL algorithms compare to real, human Tower Controllers? This issue has become pertinent recently, since the worsening strain on ATCs and Tower Controllers has led to disastrous air accidents in the US. While we don't claim to have a solution to such a multifaceted issue, we did want to examine how we could use machine learning to produce a viable AI Tower Controller. In the future, a tool similar to ours could take some burden off of Tower Controllers, or, if AI becomes truly robust and trusted, could serve as an Tower Controller "hub", communicating with and directing autonomous commercial aircraft without human intervention.
+We want to answer the question: how would DRL algorithms compare to real, human Tower Controllers? This issue has become pertinent recently, since the worsening strain on ATCs and Tower Controllers has led to disastrous air accidents in the US. While we don't claim to have a solution to such a multifaceted issue, we did want to examine how we could use machine learning to produce a viable AI Tower Controller. In the future, a tool similar to ours could take some burden off of Tower Controllers, or, if AI becomes truly robust and trusted, could serve as an Tower Controller "hub", communicating with and directing autonomous commercial aircraft without human intervention.
 
 ## Description  
 
@@ -31,7 +31,14 @@ PyTC is comprised of several major parts:
     - plane.py: plane class
     - pygame_display.py: Pygame display class
     - utils.py: useful conversion functions
-- **pytc_env.yml**: virtual environment information
+- **pytc_env.yml**: virtual environment information  
+
+## Instructions  
+
+To clean data, use data_cleaner.ipynb and do the following:
+1. Load your filtered csv file
+2. Run the code cells for your desired form of cleaning (clean aircraft vs operations)
+3. You now have a clean csv file
 
 ## Notes  
 
