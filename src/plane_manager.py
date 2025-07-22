@@ -49,8 +49,8 @@ class PlaneManager:
         id = self.callsign_to_id.pop(callsign)
         self.id_to_callsign[id] = ''
 
-        idx_to_remove = next(idx for idx, plane in enumerate(self.planes) if plane.id == id)
-        
+idx_to_remove = next(idx for idx, plane in enumerate(self.planes) if plane.id == id)
+
         self.planes.pop(idx_to_remove)
 
     # get the callsign associated with an id
