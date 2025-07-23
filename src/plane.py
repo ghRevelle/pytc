@@ -355,8 +355,6 @@ class Plane:
 		Update the plane's groundspeed based on its vertrate and turnrate.
 		"""
 
-		print(f"Current state: {self.state}")
-
 		self.thistick = [False, False, False]
 
 		# Process commands using the command processor
