@@ -56,22 +56,44 @@ class Plane:
 		self.traj = None
 		self._calculate_velocity()
 
-		self.model = "Cessna" # default value
+		self.model = "A320" # default value
 
-		if self.model == "Cessna":
-			self.turn_rate = 3
-			self.stall_speed = 24.1789448 # m/s, or 62.4 kts / 1.94384
-			self.nex_speed = 83.8546382418 # m/s, or 163 kts / 1.94384
-			self.crz_speed = 48.8723351716 # m/s, or 95 kts / 1.94834
-			self.ldg_speed = 33.4389662 # m/s, or 65 kts / 1.94384
+		match self.model:
+			case "Cessna":
+				self.stall_speed = 24.1789448 # m/s, or 62.4 kts / 1.94384
+				self.nex_speed = 83.8546382418 # m/s, or 163 kts / 1.94384
+				self.crz_speed = 48.8723351716 # m/s, or 95 kts / 1.94834
+				self.ldg_speed = 33.4389662 # m/s, or 65 kts / 1.94384
 
-			self.nex_alt = 4114.8 # meters, or 13500 / 3.281
-			self.crz_alt = 304.8 # meters, or 1000 / 3.281
+				self.turn_rate = utils.get_turn_rate(25, self.crz_speed)
 
-			self.asc_rate = 3.556 # m/s
-			self.dsc_rate = 5.334 # m/s, or 3.556 * 1.5
-			self.acc_z_max = 0.5 # m/s^2
-			self.acc_xy_max = 1.0 # m/s^2, total guess
+				self.nex_alt = 4114.8 # meters, or 13500 / 3.281
+				self.crz_alt = 304.8 # meters, or 1000 / 3.281
+
+				self.asc_rate = 3.556 # m/s
+				self.dsc_rate = 5.334 # m/s, or asc_rate * 1.5
+				self.acc_z_max = 0.5 # m/s^2
+				self.acc_xy_max = 1.0 # m/s^2, total guess
+
+			case "A320":
+				self.stall_speed = 73.5656 # m/s or 143 kts / 1.94384
+				self.nex_speed = 180.056 # m/s or 350 kts / 1.94834
+				self.crz_speed = 82.3111 # m/s or 160 kts / 1.94834
+				self.ldg_speed = 77.1667 # m/s or 150 kts / 1.94834
+
+				self.turn_rate = utils.get_turn_rate(25, self.crz_speed) # degrees/sec
+
+				self.nex_alt = 12131.04 # meters, or 39800 / 3.281
+				self.crz_alt = 457.2 # meters, or 1500 / 3.281"""
+
+				self.asc_rate = 12.7 # m/s
+				self.dsc_rate = 19.05 # m/s, or asc_rate * 1.5
+				self.acc_z_max = 1.5 # m/s^2, total guess
+				self.acc_xy_max = 3 # m/s^2, this is an informed guesstimate
+
+			#case "BE9L":
+
+			#case "PA28":
 
 		self.command = Command(command_type=CommandType.CRUISE, target_id=self.id, last_update=0, argument=None)  # Default command
 		
