@@ -9,6 +9,12 @@ from enum import Enum
 from commands import *
 from command_handlers import CommandProcessor
 
+# the DRL will gather its rewards/punishments via checking these plane states
+class PlaneState(Enum):
+	AIR = 0
+	GROUND = 1
+	CRASHED = 2
+
 class Plane:
 	"""Plane class to represent a single aircraft in a flight simulation environment."""
 	def __init__(self, init_state: dict):
@@ -17,6 +23,8 @@ class Plane:
 			init_state (dict): Initial state of the plane containing the following keys:
 				'callsign' (str): The plane's callsign.
 				'model' (str): Plane model
+
+				'state': Plane's state (AIR by default)
 
 				'turn_rate' (float): Turn rate of the plane in deg/sec (based on model)
 				'stall_speed' (float): Plane's minimum speed in m/s (based on model)
@@ -48,6 +56,11 @@ class Plane:
 		self.hdg = init_state['hdg']
 		self.gspd = init_state['gspd']
 		self.v_z = init_state['v_z']
+
+		if self.alt > 0:
+			self.state = PlaneState.AIR
+		else:
+			self.state = PlaneState.GROUND
 
 		self.acc_xy = init_state.get('acc_xy', 0.0)  # Optional, default to 0.0
 

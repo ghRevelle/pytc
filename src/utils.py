@@ -1,4 +1,5 @@
 import shapely, math
+from plane import Plane
 
 def lerp(amt, low, high):
 	"""Linearly interpolates between two numbers.
@@ -21,6 +22,31 @@ def get_turn_rate(bank_angle, gspd):
 		float: The aircraft's turn rate in degrees/sec."""
 	
 	return abs(1091 * math.tan(bank_angle) / gspd)
+
+def calculate_craft_distance(plane1 : Plane, plane2 : Plane):
+	"""Finds the 3D distance between two aircraft.
+	Args:
+		plane1: The first aircraft to compare.
+		plane2: The second aircraft to compare.
+	Returns:
+		float: The 3D distance between the aircraft in meters."""
+	
+	# Latitude difference in meters (constant ~111,320 m per degree)
+	dlat_meters = abs(plane1.lat - plane2.lat) * 111320.0
+	
+	# Longitude difference in meters (varies with latitude)
+	# Use average latitude for the longitude conversion
+	avg_lat = (plane1.lat + plane2.lat) / 2
+	dlon_meters = abs(plane1.lon - plane2.lon) * 111320.0 * math.cos(math.radians(avg_lat))
+	
+	# Calculate horizontal distance
+	horizontal_distance = math.sqrt(dlat_meters**2 + dlon_meters**2)
+	
+	# Altitude difference (requires alt in meters)
+	altitude_difference = abs(plane1.alt - plane2.alt)
+	
+	# Calculate 3D distance using Pythagorean theorem
+	return math.sqrt(horizontal_distance**2 + altitude_difference**2)
 
 def calculate_intersection(line1: shapely.geometry.LineString, line2: shapely.geometry.LineString) -> tuple:
 		"""Calculate the intersection of the plane's trajectory with a runway.
