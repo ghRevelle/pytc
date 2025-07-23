@@ -146,6 +146,8 @@ class FlightSimulator:
 		# Update display once with all plane states
 		if plane_states:
 			self.pg_display.update_display(plane_states)
+		
+		#print(compute_reward(self, self))
 			
 		self.current_tick += 1  # Increment the tick count
 	

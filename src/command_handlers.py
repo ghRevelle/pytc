@@ -128,7 +128,7 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
-		plane.state = PlaneState.AIR
+		plane.state = PlaneState.GROUND
 
 		target_runway = command.argument
 		
