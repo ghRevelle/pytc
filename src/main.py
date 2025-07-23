@@ -4,22 +4,30 @@ from plane_manager import PlaneManager
 from airport import Runway, Airport
 from commands import *
 
+# Use coordinates relative to 44.04882° N / 103.06126° W (Rapid City, SD area)
+# Create runways with realistic coordinates for this location
 test_runways = {
-	'Runway1': Runway((0, 0), (0.05, 0.05)),
-	'Runway2': Runway((0.05, 0), (0, 0.05)),
+	'Runway14': Runway((44.05383, -103.06500), (44.03283, -103.04933), "Runway14"),  # NE-SW runway
+	'Runway32': Runway((44.03283, -103.04933), (44.05383, -103.06500), "Runway32"),  # SW-NE runway
+	'Runway05': Runway((44.04783, -103.06383), (44.05250, -103.05167), "Runway05"),  # NW-SE runway
+	'Runway23': Runway((44.05250, -103.05167), (44.04783, -103.06383), "Runway23"),  # SE-NW runway
 }
 
 test_airport = Airport(test_runways)
 
 fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_manager = PlaneManager())
 
+# Base coordinates around Rapid City area
+base_lat = 44.04882
+base_lon = -103.06126
+
 for i in range(5):
 	# Create 5 planes with random positions and speeds
 	fs.add_plane_to_manager(
 		{
 			'callsign': f"UA{i+1}",
-			'lat': np.random.uniform(-0.01, 0.01),  # random latitude
-			'lon': np.random.uniform(-0.01, 0.01),  # random longitude
+			'lat': base_lat + np.random.uniform(-0.01, 0.01),  # random latitude around base
+			'lon': base_lon + np.random.uniform(-0.01, 0.01),  # random longitude around base
 			'alt': np.random.uniform(304.8, 607.6),  # random altitude in meters corresponding to between 1000 and 2000 feet
 			'v_z': np.random.uniform(-5, 5),  # random vertical speed in meters per second
 			'gspd': np.random.uniform(24.1789448, 83.8546382418),  # random ground speed in meters per second corresponding to between 62.4 and 163 kts
@@ -30,12 +38,12 @@ for i in range(5):
 fs.add_plane_to_manager(
 	{
 		'callsign': 'UA6',
-		'lat': 0.0,
-		'lon': -0.1,
+		'lat': base_lat + 0.1,  # North of the airport
+		'lon': base_lon - 0.5,  # West of the airport
 		'alt': 400,
 		'v_z': 0,
 		'gspd': 83.8546382418,
-		'hdg': 45
+		'hdg': 90
 	},
 )
 
@@ -53,9 +61,7 @@ fs.add_command(Command(
 # Alternatively, use add_command_by_callsign, easier for testing
 
 ua6 = fs.plane_manager.planes[-1]
-runway = test_runways['Runway2']
+runway = test_runways['Runway14']
 
-fs.add_command_by_callsign('UA6', CommandType.LINE_UP_AND_WAIT, last_update=0, argument=runway)
-fs.add_command_by_callsign('UA6', CommandType.GO_AROUND, last_update=300, argument=None)
-fs.add_command_by_callsign('UA6', CommandType.REALIGN, last_update=1100, argument=runway)
+fs.add_command_by_callsign('UA6', CommandType.CLEARED_TO_LAND, last_update=0, argument=runway)
 fs.run(ticks=2500)  # Run the simulation for 500 ticks
