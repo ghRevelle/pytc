@@ -2,6 +2,7 @@ import pygame
 import numpy as np
 import utils
 from geopy import units, distance
+from planestates import PlaneState
 
 class Pygame_Display:	
 	"""A class to handle the Pygame display for the plane simulation."""
@@ -124,6 +125,10 @@ class Pygame_Display:
 		# Draw all trails and planes
 		for plane_id, trail in self.trails.items():
 			if not trail:
+				continue
+
+			if self.last_states.get(plane_id, {}).get('state') == PlaneState.GROUND:
+				print("Plane with id {plane_id} was on the ground and was not rendered.")
 				continue
 				
 			color = self.plane_colors[plane_id]

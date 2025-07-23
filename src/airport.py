@@ -23,7 +23,7 @@ class Runway:
         """Length of the runway in feet"""
         self.is_occupied = is_occupied
         """If the runway is occupied by a plane being on it"""
-    
+
     def get_start_point_ll(self) -> geopy.Point:
         """Get the start point of the runway as a geopy.Point(latitude, longitude)."""
         return self.start_point
@@ -76,3 +76,11 @@ class Airport:
     def remove_from_queue(self, plane_id):
         """Remove a plane from the takeoff queue."""
         self.queue = [item for item in self.queue if item[0] != plane_id]
+
+    def get_top_of_queue(self):
+        return self.queue[0][0]
+
+    def pop_top_of_queue(self):
+        pop_plane = self.queue.pop(0)
+
+        return pop_plane

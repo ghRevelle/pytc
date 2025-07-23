@@ -203,7 +203,7 @@ class TurnCommandHandler(CommandHandler):
 			command.command_type = CommandType.CRUISE
 			
 class LineUpAndWaitCommandHandler(CommandHandler):
-	"""Handler for line up and wait commands."""
+	"""Handler for line up and wait for takeoff commands."""
 	
 	def can_handle(self, command_type: CommandType) -> bool:
 		return command_type == CommandType.LINE_UP_AND_WAIT
@@ -216,9 +216,14 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 		
 		# Validation using shared method
 		self._validate_runway_command(target_runway, command, plane)
+
+		plane.get_state()['hdg'] = target_runway.hdg
+		plane.get_state()['lon'] = target_runway.get_start_point_xy()[0]
+		plane.get_state()['lat'] = target_runway.get_start_point_xy()[1]
+
+		plane.state = PlaneState.WAITING_FOR_TAKEOFF
 		
-		target_hdg = target_runway.hdg
-		
+		""" This code is all deprecated---it was written under the misinterpretation that lineupandwait meant line up to land!
 		# Initialize alignment if needed
 		if plane.turn_start_time == -1:
 			self._initialize_runway_alignment(plane, target_runway, command)
@@ -239,7 +244,7 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 				min_value=-plane.acc_xy_max,
 				max_value=plane.acc_xy_max,
 				max_change=plane.acc_xy_max
-			)
+			)"""
 
 class LandingCommandHandler(CommandHandler):
 	"""Handler for landing commands."""

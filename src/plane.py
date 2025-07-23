@@ -45,6 +45,8 @@ class Plane:
 				'v_z' (float): Vertical speed (climb/sink rate) in meters per second.
 				'traj' (list): List of the plane's trajectory points in world coordinates.
 				'vel' (tuple): The plane's next world point
+
+				
 		"""
 		self.callsign = init_state['callsign']
 		self.lat = init_state['lat']
@@ -53,17 +55,12 @@ class Plane:
 		self.hdg = init_state['hdg']
 		self.gspd = init_state['gspd']
 		self.v_z = init_state['v_z']
-
-		if self.alt > 0:
-			self.state = PlaneState.AIR
-		else:
-			self.state = PlaneState.GROUND
+		self.state = init_state['state']
+		self.id = init_state['id']
 
 		self.thistick = [False, False, False]
 
 		self.acc_xy = init_state.get('acc_xy', 0.0)  # Optional, default to 0.0
-
-		self.id = init_state['id']
 
 		self.traj = None
 		self._calculate_velocity()
@@ -107,7 +104,10 @@ class Plane:
 
 			#case "PA28":
 
-		self.command = Command(command_type=CommandType.CRUISE, target_id=self.id, last_update=0, argument=None)  # Default command
+		if self.alt > 0:
+			self.command = Command(command_type=CommandType.CRUISE, target_id=self.id, last_update=0, argument=None)  # Default command
+		else:
+			self.command = Command(command_type=CommandType.NONE, target_id=self.id, last_update=0)
 		
 		# Misc
 		self.turn_start_time = -1 # Used for landing
@@ -117,7 +117,7 @@ class Plane:
 		"""Get the current state of the plane.
 		Returns:
 			object: The current state of the plane.
-			Contains keys: 'callsign', 'lat', 'lon', 'alt', 'v_z', 'gspd', 'hdg', 'traj'.
+			Contains keys: 'callsign', 'lat', 'lon', 'alt', 'v_z', 'gspd', 'hdg', 'traj', 'state'.
 		"""
 		state_dict = {
         	'callsign': self.callsign,
@@ -127,13 +127,25 @@ class Plane:
         	'hdg': self.hdg,
         	'gspd': self.gspd,
         	'v_z': self.v_z,
-			'traj': self.traj
+			'traj': self.traj,
+			'state' : self.state
 		}
 		
 		# Convert heading to an integer
 		state_dict['hdg'] = state_dict['hdg']
 		
 		return state_dict
+	
+	def set_state(self, input_dict) -> None:
+		self.callsign = input_dict['callsign']
+		self.lat = input_dict['lat']
+		self.lon = input_dict['lon']
+		self.alt = input_dict['alt']
+		self.hdg = input_dict['hdg']
+		self.gspd = input_dict['gspd']
+		self.v_z = input_dict['v_z']
+		self.state = input_dict['state']
+		self.id = input_dict['id']
 	
 	def get_traj(self) -> object:
 		"""Get the current trajectory of the plane.
