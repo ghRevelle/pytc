@@ -4,10 +4,9 @@ import math
 import geopy.distance
 import numpy as np
 import utils
-from airport import Runway
-from enum import Enum
 from commands import *
 from command_handlers import CommandProcessor
+from planestates import *
 
 class Plane:
 	"""Plane class to represent a single aircraft in a flight simulation environment."""
@@ -17,6 +16,12 @@ class Plane:
 			init_state (dict): Initial state of the plane containing the following keys:
 				'callsign' (str): The plane's callsign.
 				'model' (str): Plane model
+
+				'state' (Enum): Plane's current state (just AIR by default)
+				'thistick' (List): List of bools tracking whether the plane:
+				0	landed_this_tick,
+				1	tookoff_this_tick,
+				2	crashed_this_tick
 
 				'turn_rate' (float): Turn rate of the plane in deg/sec (based on model)
 				'stall_speed' (float): Plane's minimum speed in m/s (based on model)
@@ -48,6 +53,13 @@ class Plane:
 		self.hdg = init_state['hdg']
 		self.gspd = init_state['gspd']
 		self.v_z = init_state['v_z']
+
+		if self.alt > 0:
+			self.state = PlaneState.AIR
+		else:
+			self.state = PlaneState.GROUND
+
+		self.thistick = [False, False, False]
 
 		self.acc_xy = init_state.get('acc_xy', 0.0)  # Optional, default to 0.0
 
@@ -327,7 +339,10 @@ class Plane:
 		"""
 		Update the plane's position based on its ground speed and heading.
 		Update the plane's groundspeed based on its vertrate and turnrate.
-		"""		
+		"""
+
+		self.thistick = [False, False, False]
+
 		# Process commands using the command processor
 		if not hasattr(self, '_command_processor'):
 			self._command_processor = CommandProcessor()
