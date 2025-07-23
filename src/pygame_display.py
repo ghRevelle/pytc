@@ -127,8 +127,8 @@ class Pygame_Display:
 			if not trail:
 				continue
 
+			# this works!
 			if self.last_states.get(plane_id, {}).get('state') == PlaneState.GROUND:
-				print("Plane with id {plane_id} was on the ground and was not rendered.")
 				continue
 				
 			color = self.plane_colors[plane_id]

@@ -152,7 +152,7 @@ class CruiseCommandHandler(CommandHandler):
 		return command_type == CommandType.CRUISE
 	
 	def execute(self, plane, command, tick) -> None:
-
+		
 		plane.state = PlaneState.AIR
 
 		# Try to achieve a vertrate proportional to the altitudinal error
@@ -210,16 +210,14 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
-		plane.state = PlaneState.GROUND
-
 		target_runway = command.argument
 		
 		# Validation using shared method
 		self._validate_runway_command(target_runway, command, plane)
 
-		plane.get_state()['hdg'] = target_runway.hdg
-		plane.get_state()['lon'] = target_runway.get_start_point_xy()[0]
-		plane.get_state()['lat'] = target_runway.get_start_point_xy()[1]
+		plane.hdg = target_runway.hdg
+		plane.lon = target_runway.get_start_point_xy()[0]
+		plane.lat = target_runway.get_start_point_xy()[1]
 
 		plane.state = PlaneState.WAITING_FOR_TAKEOFF
 		
@@ -346,8 +344,6 @@ class TakeoffCommandHandler(CommandHandler):
 		return command_type == CommandType.CLEARED_FOR_TAKEOFF
 	
 	def execute(self, plane, command, tick) -> None:
-
-		plane.state = PlaneState.GROUND
 
 		# Ground roll -> accelerate to minimum takeoff speed
 		if plane.gspd < plane.stall_speed:
