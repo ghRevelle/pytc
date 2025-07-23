@@ -133,6 +133,10 @@ class FlightSimulator:
 				if self.plane_manager.planes[i] != self.plane_manager.planes[j]:
 					plane1 = self.plane_manager.planes[i]
 					plane2 = self.plane_manager.planes[j]
+
+					# does not count close planes on the ground as being a collision or near-collision
+					if plane1.state == PlaneState.GROUND and plane2.state == PlaneState.GROUND:
+						continue
 					
 					check_distance = utils.calculate_craft_distance(plane1.lat, plane1.lon, plane2.lat, plane2.lon, plane1.alt, plane2.alt)
 
