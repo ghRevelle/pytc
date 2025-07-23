@@ -66,3 +66,5 @@ class Airport:
             runways = {}
         else:
             self.runways = runways
+        
+        self.queue = []
