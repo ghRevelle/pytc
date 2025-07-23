@@ -24,9 +24,6 @@ def get_turn_rate(bank_angle, gspd):
 	
 	return abs(1091 * math.tan(bank_angle) / gspd)
 
-# Constants for coordinate conversion at 44.04882° N / 103.06126° W
-METERS_PER_DEGREE_LAT = 111320.0  # Constant for latitude
-METERS_PER_DEGREE_LON_AT_44N = 111320.0 * math.cos(math.radians(44.04882))  # ~79,847 m/degree at 44°N
 
 def calculate_craft_distance(lat1, lon1, lat2, lon2, alt1, alt2):
 	"""Finds the 3D distance between two aircraft.
@@ -37,12 +34,12 @@ def calculate_craft_distance(lat1, lon1, lat2, lon2, alt1, alt2):
 		float: The 3D distance between the aircraft in meters."""
 	
 	# Latitude difference in meters (constant ~111,320 m per degree)
-	dlat_meters = abs(lat1 - lat2) * METERS_PER_DEGREE_LAT
+	dlat_meters = abs(lat1 - lat2) * get_meters_per_degree_lat()
 	
 	# Longitude difference in meters (varies with latitude)
 	# Use average latitude for the longitude conversion
 	avg_lat = (lat1 + lat2) / 2
-	dlon_meters = abs(lon1 - lon2) * METERS_PER_DEGREE_LAT * math.cos(math.radians(avg_lat))
+	dlon_meters = abs(lon1 - lon2) * get_meters_per_degree_lon(avg_lat)
 	
 	# Calculate horizontal distance
 	horizontal_distance = math.sqrt(dlat_meters**2 + dlon_meters**2)
@@ -94,7 +91,21 @@ def is_parallel(line1: shapely.geometry.LineString, line2: shapely.geometry.Line
 		# Use a small tolerance for floating point comparison
 		tolerance = 1e-10
 		return abs(cross_product) < tolerance
-		
+
+def get_meters_per_degree_lat() -> float:
+		"""Get the meters per degree of latitude.
+		Returns:
+			float: Meters per degree of latitude."""
+		return 111320.0  # Average meters per degree latitude (WGS84)
+
+def get_meters_per_degree_lon(lat: float=44.04882) -> float:
+		"""Get the meters per degree of longitude at a given latitude.
+		Args:
+			lat (float): Latitude in degrees.
+		Returns:
+			float: Meters per degree of longitude at the specified latitude."""
+		return 111320.0 * math.cos(math.radians(lat))
+
 def is_collinear(line1: shapely.geometry.LineString, line2: shapely.geometry.LineString) -> bool:
 		"""Check if two lines are collinear.
 		Args:
@@ -117,8 +128,8 @@ def meters_to_degrees(heading: int, meters: float) -> float:
 		Returns: distance in degrees
 		"""
 		# Project meters onto latitude and longitude axes
-		dlat = meters * math.cos(math.radians(heading)) / METERS_PER_DEGREE_LAT
-		dlon = meters * math.sin(math.radians(heading)) / METERS_PER_DEGREE_LON_AT_44N
+		dlat = meters * math.cos(math.radians(heading)) / get_meters_per_degree_lat()
+		dlon = meters * math.sin(math.radians(heading)) / get_meters_per_degree_lon()
 		# Return the total angular distance (Euclidean in degree space)
 		return math.hypot(dlat, dlon)
 
@@ -131,7 +142,7 @@ def degrees_to_meters(heading: int, degrees: float) -> float:
 		"""
 		dlat = degrees * math.cos(math.radians(heading))
 		dlon = degrees * math.sin(math.radians(heading))
-		meters = math.hypot(dlat * METERS_PER_DEGREE_LAT, dlon * METERS_PER_DEGREE_LON_AT_44N)
+		meters = math.hypot(dlat * get_meters_per_degree_lat(), dlon * get_meters_per_degree_lon())
 		return meters
 
 def degrees_to_nautical_miles(heading: int, degrees: float) -> float:
@@ -204,12 +215,12 @@ def latlon_to_meters(lat: float, lon: float, origin_lat: float = 44.04882, origi
 	dlon = lon - origin_lon
 	
 	# Convert latitude difference to meters (constant ~111,320 m per degree)
-	y_meters = dlat * METERS_PER_DEGREE_LAT
+	y_meters = dlat * get_meters_per_degree_lat()
 	
 	# Convert longitude difference to meters (varies with latitude)
 	# Use average latitude for the longitude conversion
 	avg_lat = (lat + origin_lat) / 2
-	x_meters = dlon * METERS_PER_DEGREE_LAT * math.cos(math.radians(avg_lat))
+	x_meters = dlon * get_meters_per_degree_lon(avg_lat)
 	
 	return (x_meters, y_meters)
 
@@ -226,13 +237,13 @@ def meters_to_latlon(x_meters: float, y_meters: float, origin_lat: float = 44.04
 		tuple: (latitude, longitude) in degrees
 	"""
 	# Convert y_meters back to latitude difference
-	dlat = y_meters / METERS_PER_DEGREE_LAT
+	dlat = y_meters / get_meters_per_degree_lat()
 	lat = origin_lat + dlat
 	
 	# Convert x_meters back to longitude difference
 	# Use the calculated latitude for the longitude conversion
 	avg_lat = (lat + origin_lat) / 2
-	dlon = x_meters / (METERS_PER_DEGREE_LAT * math.cos(math.radians(avg_lat)))
+	dlon = x_meters / (get_meters_per_degree_lon(avg_lat))
 	lon = origin_lon + dlon
 	
 	return (lat, lon)

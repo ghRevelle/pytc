@@ -49,7 +49,7 @@ class Runway:
         return (self.end_point.longitude, self.end_point.latitude)
 
     def get_line_xy(self):
-        """Get the runway line as a shapely LineString object.
+        """Get the runway line as a shapely LineString object using the latitude and longitude of the start and end points.
         Returns:
             object: The runway line as a shapely LineString object.
         """
