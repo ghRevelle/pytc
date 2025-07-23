@@ -14,8 +14,9 @@ from commands import *
 print(f"CUDA is available: {torch.cuda.is_available()}")
 print(f"Number of available GPUs: {torch.cuda.device_count()}")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if device == "cpu":
+if device.type == "cpu":
     raise RuntimeWarning("It is strongly advised not to train on CPU.")
+
 print(f"Using device: {device}")
 
 class AirTrafficControlDQN(nn.Module):
