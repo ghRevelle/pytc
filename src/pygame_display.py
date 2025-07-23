@@ -89,7 +89,7 @@ class Pygame_Display:
 		
 		# Handle viewport movement with arrow keys
 		# Movement speed inversely proportional to zoom (more zoomed in = slower movement)
-		move_speed = 0.001 / (self.zoom / 2500)  # Base movement speed scaled by zoom
+		move_speed = 0.00005 / (self.zoom / 2500)  # Base movement speed scaled by zoom
 		
 		if pressed_keys[pygame.K_UP]:
 			self.lat_c += move_speed
@@ -240,17 +240,29 @@ class Pygame_Display:
 		"""Render static background elements (nautical mile circles, center point)."""
 		self.bg.fill((0, 0, 0))
 		
-		# Convert display center to screen coordinates
-		origin_x, origin_y = self.wgs84_to_xy(self.lon_c, self.lat_c)
+		# Use a fixed reference point for the range rings (e.g., airport center or control tower)
+		# This prevents the rings from moving when the viewport is panned
+		if hasattr(self, 'airport') and self.airport.runways:
+			# Use the center of the first runway as the reference point
+			first_runway = next(iter(self.airport.runways.values()))
+			ref_lat = (first_runway.start_point.latitude + first_runway.end_point.latitude) / 2
+			ref_lon = (first_runway.start_point.longitude + first_runway.end_point.longitude) / 2
+		else:
+			# Fall back to the initial center coordinates as fixed reference
+			ref_lat = 44.04882  # Rapid City area
+			ref_lon = -103.06126
 		
-		# Draw nautical mile circles centered at display center
+		# Convert fixed reference point to screen coordinates
+		origin_x, origin_y = self.wgs84_to_xy(ref_lon, ref_lat)
+		
+		# Draw nautical mile circles centered at the fixed reference point
 		for i in range(2, 12, 2):  # Draw circles at 2, 4, 6, 8, and 10 NM
 			radius = self.nm_to_xy(i)
 			pygame.draw.circle(self.bg, (0, 255, 0, 255), (origin_x, origin_y), radius, 1)
 			# Draw the radius label (using cached font)
 			radius_label = self.nm_label_font.render(f"{i} NM", True, (0, 255, 0))
 			self.bg.blit(radius_label, (origin_x + radius - radius_label.get_width() // 2 + 5, origin_y - radius_label.get_height() // 2))
-		# Draw the center point at display center
+		# Draw the center point at the fixed reference location
 		pygame.draw.circle(self.bg, (255, 0, 0), (origin_x, origin_y), 5)
 
 	def _render_airport(self):
