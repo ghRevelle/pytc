@@ -1,4 +1,5 @@
 import shapely, math
+import numpy as np
 
 def lerp(amt, low, high):
 	"""Linearly interpolates between two numbers.
@@ -129,3 +130,32 @@ def calculate_bearing(start_point, end_point):
         y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1) * math.cos(lat2) * math.cos(dLon))
         bearing = math.degrees(math.atan2(x, y))
         return int(round((bearing + 360) % 360))
+
+def latlon_to_unit_vector(lat_deg, lon_deg):
+    lat = math.radians(lat_deg)
+    lon = math.radians(lon_deg)
+    x = math.cos(lat) * math.cos(lon)
+    y = math.cos(lat) * math.sin(lon)
+    z = math.sin(lat)
+    return np.array([x, y, z])
+
+def point_to_great_circle_distance(point, line_point1, line_point2, radius=6371.0):
+    """
+    Args:
+        point: Tuple of (lat, lon) in degrees - the point you want to measure from
+        line_point1: Tuple of (lat, lon) in degrees - first point on the great circle
+        line_point2: Tuple of (lat, lon) in degrees - second point on the great circle
+        radius: Radius of the sphere (default is Earth's radius in km)
+
+    Returns:
+        Shortest distance from the point to the great circle, in same units as radius
+    """
+    p = latlon_to_unit_vector(*point)
+    a = latlon_to_unit_vector(*line_point1)
+    b = latlon_to_unit_vector(*line_point2)
+
+    n = np.cross(a, b)
+
+    angle_rad = math.asin(abs(np.dot(n, p)) / np.linalg.norm(n))
+	
+    return radius * angle_rad
