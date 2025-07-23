@@ -128,8 +128,8 @@ class FlightSimulator:
 			plane_states.append(plane.get_state())
 
 		# Check all planes for crashes
-		for i in range(0, self.plane_manager.planes):
-			for j in range(0, self.plane_manager.planes):
+		for i in range(0, len(self.plane_manager.planes)):
+			for j in range(0, len(self.plane_manager.planes)):
 				if self.plane_manager.planes[i] != self.plane_manager.planes[j]:
 					plane1 = self.plane_manager.planes[i]
 					plane2 = self.plane_manager.planes[j]
