@@ -248,11 +248,12 @@ class Plane:
 			self.hdg = (current_hdg - self.turn_rate) % 360
 
 		# Apply turn rate penalty to ground speed
-		self.gspd = self._apply_turn_rate_penalty(
-			self.gspd,
-			self.turn_rate,
-			self.stall_speed
-		)
+		# (commented out for now, we'll assume auto throttle handles it)
+		# self.gspd = self._apply_turn_rate_penalty(
+		# 	self.gspd,
+		# 	self.turn_rate,
+		# 	self.stall_speed
+		# )
 
 	def _calculate_tod(self, current_alt):
 		"""Calculate the top of descent to a target position in nautical miles."""

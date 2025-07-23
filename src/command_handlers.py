@@ -49,6 +49,7 @@ class CommandHandler(ABC):
 			command.last_update = tick
 			return True  # Alignment complete
 		return False  # Still aligning
+	
 
 class NoCommandHandler(CommandHandler):
 	"""Handler for when no command is active."""
@@ -289,7 +290,6 @@ class GoAroundCommandHandler(CommandHandler):
 				command.last_update = tick + 500  # random delay to simulate go-around time
 				self.has_turned = True
 		elif tick >= command.last_update and self.has_turned and plane.hdg != self.init_hdg:  # Turn back to initial heading
-			print("turning back to initial heading")
 			plane._turn(plane.hdg, self.init_hdg)
 		elif plane.hdg == self.init_hdg and tick >= command.last_update:
 			# If already back to initial heading, just cruise
