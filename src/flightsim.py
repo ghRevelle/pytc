@@ -82,28 +82,6 @@ class FlightSimulator:
 		target_id = self.plane_manager.get_id(callsign)
 		self.add_command(Command(command_type, target_id, last_update, argument))
 
-	# Advance the simulator by 1 tick
-	def next_tick(self):
-		for event in pygame.event.get(): # Check for quit events
-			if event.type == pygame.QUIT:
-				self.pg_display.stop_display()
-				return
-		for command in self.command_queue:  # Process all commands in the queue
-			if self.tick == command.last_update:
-				self.command_plane(command)
-		# Update all plane states
-		plane_states = []
-		for plane in self.plane_manager.planes:
-			plane.tick()
-			plane_states.append(plane.get_state())
-			
-		# Update display once with all plane states
-		if plane_states:
-			self.pg_display.update_display(plane_states)
-
-		self.current_tick += 1
-		time.sleep(1 / self.base_tps)  # Control the simulation speed
-
 	# Run the simulator for a number of ticks
 	def run(self, ticks=500):
 		"""Run the flight simulation for a specified number of ticks."""
@@ -123,7 +101,7 @@ class FlightSimulator:
 			self.tick()
 			effective_tps = self.get_tps()
 			time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
-			self.current_tick += 1  # Increment the tick count
+			
 		self.current_tick = 0  # Reset tick after running
 
 	def tick(self):
@@ -145,6 +123,8 @@ class FlightSimulator:
 		# Update display once with all plane states
 		if plane_states:
 			self.pg_display.update_display(plane_states)
+			
+		self.current_tick += 1  # Increment the tick count
 	
 
 	# Pseudocode implementation of a reward function for reinforcement learning
