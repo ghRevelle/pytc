@@ -129,6 +129,12 @@ class FlightSimulator:
 
 	def tick(self):
 		"""Run a single tick of the simulation."""
+		# Initialize the list of crashed planes
+		crashed_planes = []
+
+		for plane in crashed_planes:
+			self.plane_manager.delete_plane(plane.id)
+
 		for event in pygame.event.get(): # Check for quit events
 			if event.type == pygame.QUIT:
 				self.pg_display.stop_display()
@@ -142,6 +148,22 @@ class FlightSimulator:
 		for plane in self.plane_manager.planes:
 			plane.tick(self.current_tick)
 			plane_states.append(plane.get_state())
+
+		# Check all planes for crashes
+		for i in range(0, self.plane_manager.planes):
+			for j in range(0, self.plane_manager.planes):
+				if self.plane_manager.planes[i] != self.plane_manager.planes[j]:
+					plane1 = self.plane_manager.planes[i]
+					plane2 = self.plane_manager.planes[j]
+					
+					check_distance = utils.calculate_craft_distance(plane1.lat, plane1.lon, plane2.lat, plane2.lon, plane1.alt, plane2.alt)
+
+					if check_distance <= 30:
+						plane1.thistick[2] = True
+						plane2.thistick[2] = True
+
+						crashed_planes.append(plane1)
+						crashed_planes.append(plane2)
 		
 		# Update display once with all plane states
 		if plane_states:
