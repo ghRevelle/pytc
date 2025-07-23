@@ -1,3 +1,4 @@
+import geopy
 import shapely, math
 import numpy as np
 
@@ -139,23 +140,48 @@ def latlon_to_unit_vector(lat_deg, lon_deg):
     z = math.sin(lat)
     return np.array([x, y, z])
 
-def point_to_great_circle_distance(point, line_point1, line_point2, radius=6371.0):
+def point_to_great_circle_distance(point: geopy.Point, line_point1: geopy.Point, line_point2: geopy.Point, radius=6371000.0):
     """
     Args:
-        point: Tuple of (lat, lon) in degrees - the point you want to measure from
-        line_point1: Tuple of (lat, lon) in degrees - first point on the great circle
-        line_point2: Tuple of (lat, lon) in degrees - second point on the great circle
-        radius: Radius of the sphere (default is Earth's radius in km)
+        point: geopy.Point - the point you want to measure from
+        line_point1: geopy.Point - first point on the great circle
+        line_point2: geopy.Point - second point on the great circle
+        radius: Radius of the sphere (default is Earth's radius in m)
 
     Returns:
-        Shortest distance from the point to the great circle, in same units as radius
+        Shortest distance from the point to the great circle, in same units as radius (default meters)
     """
-    p = latlon_to_unit_vector(*point)
-    a = latlon_to_unit_vector(*line_point1)
-    b = latlon_to_unit_vector(*line_point2)
+    p = latlon_to_unit_vector(point.latitude, point.longitude)
+    a = latlon_to_unit_vector(line_point1.latitude, line_point1.longitude)
+    b = latlon_to_unit_vector(line_point2.latitude, line_point2.longitude)
 
     n = np.cross(a, b)
 
     angle_rad = math.asin(abs(np.dot(n, p)) / np.linalg.norm(n))
 	
     return radius * angle_rad
+
+
+def heading_angle_to_unit_vector(angle_rad):
+	return np.array([np.cos(angle_rad), np.sin(angle_rad)])
+
+def extend_line(line: shapely.geometry.LineString, distance: float) -> shapely.geometry.LineString:
+	"""
+	Extend a line in both directions by a fixed distance.
+	Args:
+		line (shapely.geometry.LineString): The line to extend.
+		distance (float): The distance to extend the line in both directions.
+	"""
+	# Get the start and end points of the line
+	start = line.coords[0]
+	end = line.coords[-1]
+
+	# Calculate the direction vector of the line
+	direction = np.array(end) - np.array(start)
+	direction /= np.linalg.norm(direction)  # Normalize the vector
+
+	# Extend the line in both directions
+	new_start = np.array(start) - direction * distance
+	new_end = np.array(end) + direction * distance
+
+	return shapely.geometry.LineString([new_start, new_end])

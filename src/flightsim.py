@@ -10,7 +10,7 @@ class FlightSimulator:
 	"""A simple flight simulator to demonstrate plane movement and display."""
 
 	# Simulation speed. In real life, 1 tick = 1 second
-	base_tps = 20
+	base_tps = 5
 	current_tick = 0
 
 	def __init__(self, display_size=(640, 480), planes=None, airport=None, plane_manager=None):

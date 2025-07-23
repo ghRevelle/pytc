@@ -1,6 +1,9 @@
 # Command handler classes for better separation of concerns
 from abc import ABC, abstractmethod
 import math
+
+import geopy
+import numpy as np
 from commands import CommandType
 import utils
 import shapely.geometry
@@ -26,7 +29,7 @@ class CommandHandler(ABC):
 			raise TypeError("Argument must be a Runway object.")
 		if command.last_update is None or not isinstance(command.last_update, int):
 			raise ValueError("Command last_update must be an integer tick value.")
-		if plane.turn_start_time is None or not isinstance(plane.turn_start_time, int):
+		if plane.turn_start_time is None or not isinstance(plane.turn_start_time, int): # TODO: don't go around adding random attributes to the plane object
 			plane.turn_start_time = -1
 	
 	def _calculate_runway_distance(self, plane, target_runway):
@@ -49,6 +52,85 @@ class CommandHandler(ABC):
 			command.last_update = tick
 			return True  # Alignment complete
 		return False  # Still aligning
+	
+	def _is_aligned_to_runway(self, plane, target_runway):
+		"""Check if the plane is aligned with the target runway."""
+		return utils.is_collinear(
+			shapely.geometry.LineString([(plane.lon, plane.lat), (plane.next_pt.lon, plane.next_pt.lat)]),
+			target_runway.get_line_xy()
+		)
+	
+
+class RealignCommandHandler(CommandHandler):
+	"""Handler for realigning planes to the runway centerline."""
+
+	def __init__(self):
+		self.init_dist = None
+		self.dir = None  # Direction to turn: "left", "right", or "straight ahead"
+	def can_handle(self, command_type: CommandType) -> bool:
+		return command_type == CommandType.REALIGN
+	
+	def execute(self, plane, command, tick) -> None:
+		target_runway = command.argument
+		
+		# Validation using shared method
+		self._validate_runway_command(target_runway, command, plane)
+		
+		target_hdg = target_runway.hdg
+		self.init_dist = self.init_dist if self.init_dist is not None else utils.point_to_great_circle_distance(
+			geopy.Point(plane.lat, plane.lon),
+			target_runway.get_start_point_ll(),
+			target_runway.get_end_point_ll()
+		)
+		current_dist = utils.point_to_great_circle_distance(
+			geopy.Point(plane.lat, plane.lon),
+			target_runway.get_start_point_ll(),
+			target_runway.get_end_point_ll()
+		)
+		self.dir = self.dir if self.dir is not None else self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
+		
+		print(f"Plane {plane.callsign} is realigning to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} at tick {tick}. Direction: {self.dir}, Current Distance: {current_dist}, Initial Distance: {self.init_dist}")
+		
+		if self.dir == "left":
+			if current_dist > self.init_dist / 2:
+				plane._turn(plane.hdg, (plane.hdg - 90) % 360)
+			else:
+				plane._turn(plane.hdg, target_hdg)
+		elif self.dir == "right":
+			if current_dist > self.init_dist / 2:
+				plane._turn(plane.hdg, (plane.hdg + 90) % 360)
+			else:
+				plane._turn(plane.hdg, target_hdg)
+		else:
+			self.init_dist = None  # Reset initial distance if already aligned
+			plane.dir = None  # Reset direction
+			command.command_type = CommandType.CRUISE  # If already aligned, switch to cruise mode
+
+
+	@staticmethod
+	def _get_direction(pos, heading_angle_rad, target_pos):
+		"""Determine the direction to the target position relative to the plane's heading.
+		Args:
+			pos (tuple): The current position of the plane (x, y).
+			heading_angle_rad (float): The current heading angle of the plane in radians.
+			target_pos (tuple): The target position (x, y) to check the direction towards.
+		Returns:
+			str: The direction to the target position ("left", "right", or "straight ahead (or behind)").
+		"""
+
+		heading = utils.heading_angle_to_unit_vector(heading_angle_rad)
+		to_target = (target_pos[0] - pos[0], target_pos[1] - pos[1])
+
+		# 2D cross product
+		cross = heading[0] * to_target[1] - heading[1] * to_target[0]
+
+		if cross > 0:
+			return "left"
+		elif cross < 0:
+			return "right"
+		else:
+			return "straight ahead"
+			
 	
 
 class NoCommandHandler(CommandHandler):
@@ -296,6 +378,9 @@ class GoAroundCommandHandler(CommandHandler):
 			print(f"Plane {plane.callsign} has completed go-around and is returning to pattern.")
 			command.command_type = CommandType.CRUISE
 			plane.acc_xy = 0
+			self.has_turned = False
+			self.init_hdg = None
+			self.target_hdg = None
 
 
 class CommandProcessor:
@@ -310,6 +395,7 @@ class CommandProcessor:
 			TakeoffCommandHandler(),
 			GoAroundCommandHandler(),
 			CruiseCommandHandler(),
+			RealignCommandHandler()
 		]
 	
 	def process_command(self, plane, command, tick):

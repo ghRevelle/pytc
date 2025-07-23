@@ -192,12 +192,14 @@ class Plane:
 
 		# Extend the target and trajectory lines to ensure intersection
 		# Find slopes
-		slope_target = (ry2 - ry1) / (rx2 - rx1) if (rx2 - rx1) != 0 else 99999 # HACK: close enough to infinity
-		slope_traj = (ty2 - ty1) / (tx2 - tx1) if (tx2 - tx1) != 0 else 99999
-		extend_distance = 3 # how many degrees of lat/lon to extend the lines by
-		# Extend lines
-		extended_target = shapely.geometry.LineString([(rx1 - extend_distance, ry1 - extend_distance*slope_target), (rx2 + extend_distance, ry2 + extend_distance*slope_target)])
-		extended_traj = shapely.geometry.LineString([(tx1 - extend_distance, ty1 - extend_distance*slope_traj), (tx2 + extend_distance, ty2 + extend_distance*slope_traj)])
+		# slope_target = (ry2 - ry1) / (rx2 - rx1) if (rx2 - rx1) != 0 else 99999 # HACK: close enough to infinity
+		# slope_traj = (ty2 - ty1) / (tx2 - tx1) if (tx2 - tx1) != 0 else 99999
+		# extend_distance = 3 # how many degrees of lat/lon to extend the lines by
+		# # Extend lines
+		# extended_target = shapely.geometry.LineString([(rx1 - extend_distance, ry1 - extend_distance*slope_target), (rx2 + extend_distance, ry2 + extend_distance*slope_target)])
+		# extended_traj = shapely.geometry.LineString([(tx1 - extend_distance, ty1 - extend_distance*slope_traj), (tx2 + extend_distance, ty2 + extend_distance*slope_traj)])
+		extended_target = utils.extend_line(target_line, 3)
+		extended_traj = utils.extend_line(traj_line, 3)
 		# Find intersection
 		intersection = utils.calculate_intersection(extended_target, extended_traj)
 
