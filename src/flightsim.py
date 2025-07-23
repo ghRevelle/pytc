@@ -151,26 +151,25 @@ class FlightSimulator:
 	def compute_reward(self, env_state, command_executed, sim_tick):
 		reward = 0.0
 
-    	# Reward for successful landings
 		for plane in env_state.planes:
+			# Reward for successful landings
 			if plane.landed_this_tick:
-				reward += 1.0
-
-    	# Reward for successful takeoff
+				reward += 10.0
+    		# Reward for successful takeoff
 			if plane.took_off_this_tick:
-				reward += 1.0
+				reward += 10.0
 
     	# Penalty for invalid or illegal commands
-			if command_executed.is_invalid:
-				reward -= 10.0
+		if command_executed.is_invalid:
+			reward -= 10.0
 
-			if command_executed.caused_conflict:
-				reward -= 50.0
+		if command_executed.caused_conflict:
+			reward -= 50.0
 
     	# Penalty for a crash
-			for plane in env_state.planes:
-				if plane.crashed:
-					reward -= 100.0
+		for plane in env_state.planes:
+			if plane.crashed:
+				reward -= 100.0
 
     	# Small time pressure penalty per plane still in air
 		reward -= 0.01 * env_state.num_planes_in_air
