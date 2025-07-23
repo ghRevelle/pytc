@@ -8,6 +8,8 @@ from commands import CommandType
 import utils
 import shapely.geometry
 from airport import Runway
+from plane import *
+from planestates import *
 
 class CommandHandler(ABC):
 	"""Abstract base class for command handlers."""
@@ -140,6 +142,7 @@ class NoCommandHandler(CommandHandler):
 		return command_type == CommandType.NONE
 	
 	def execute(self, plane, command, tick) -> None:
+		plane.state = PlaneState.GROUND
 		return None
 
 class CruiseCommandHandler(CommandHandler):
@@ -149,6 +152,9 @@ class CruiseCommandHandler(CommandHandler):
 		return command_type == CommandType.CRUISE
 	
 	def execute(self, plane, command, tick) -> None:
+
+		plane.state = PlaneState.AIR
+
 		# Try to achieve a vertrate proportional to the altitudinal error
 		alt_error = plane.crz_alt - plane.alt
 		v_z_target = max(-plane.dsc_rate, min(plane.asc_rate, alt_error * 0.1))
@@ -183,6 +189,9 @@ class TurnCommandHandler(CommandHandler):
 		return command_type == CommandType.TURN
 	
 	def execute(self, plane, command, tick) -> None:
+
+		plane.state = PlaneState.AIR
+
 		current_hdg = plane.hdg
 		desired_hdg = command.argument
 
@@ -200,6 +209,9 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 		return command_type == CommandType.LINE_UP_AND_WAIT
 	
 	def execute(self, plane, command, tick) -> None:
+
+		plane.state = PlaneState.GROUND
+
 		target_runway = command.argument
 		
 		# Validation using shared method
@@ -236,6 +248,9 @@ class LandingCommandHandler(CommandHandler):
 		return command_type == CommandType.CLEARED_TO_LAND
 	
 	def execute(self, plane, command, tick) -> None:
+
+		plane.state = PlaneState.AIR
+
 		target_runway = command.argument
 		
 		# Validation using shared method
@@ -310,7 +325,11 @@ class LandingCommandHandler(CommandHandler):
 	
 	def _handle_landing_complete(self, plane, command, tick):
 		"""Handle landing completion."""
-		print(f"Plane {plane.callsign} with ID {plane.id} has landed.")
+
+		plane.state = PlaneState.LANDING
+		plane.thistick[0] = True
+
+		#print(f"Plane {plane.callsign} with ID {plane.id} has landed.")
 		plane.acc_xy = 0
 		command.command_type = CommandType.NONE
 		command.last_update = tick
@@ -322,6 +341,8 @@ class TakeoffCommandHandler(CommandHandler):
 		return command_type == CommandType.CLEARED_FOR_TAKEOFF
 	
 	def execute(self, plane, command, tick) -> None:
+
+		plane.state = PlaneState.GROUND
 
 		# Ground roll -> accelerate to minimum takeoff speed
 		if plane.gspd < plane.stall_speed:
@@ -335,7 +356,11 @@ class TakeoffCommandHandler(CommandHandler):
 			
 		# Climb until 1000 ft
 		else:
+			plane.state = PlaneState.TAKINGOFF
+			plane.thistick[1] = True
+
 			command.command_type = CommandType.CRUISE
+
 			print(f"Plane {plane.callsign} takeoff complete. Now cruising.")
 
 class GoAroundCommandHandler(CommandHandler):
@@ -350,6 +375,9 @@ class GoAroundCommandHandler(CommandHandler):
 		return command_type == CommandType.GO_AROUND
 
 	def execute(self, plane, command, tick) -> None:
+
+		plane.state = PlaneState.AIR
+
 		if self.init_hdg is None:
 			self.init_hdg = plane.hdg
 		if self.target_hdg is None:

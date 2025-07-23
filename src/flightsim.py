@@ -1,5 +1,6 @@
 # Flight simulator class
 from plane import Plane
+from planestates import *
 from pygame_display import *
 from airport import *
 from commands import *
@@ -106,6 +107,12 @@ class FlightSimulator:
 
 	def tick(self):
 		"""Run a single tick of the simulation."""
+		# Initialize the list of crashed planes
+		crashed_planes = []
+
+		for plane in crashed_planes:
+			self.plane_manager.delete_plane(plane.id)
+
 		for event in pygame.event.get(): # Check for quit events
 			if event.type == pygame.QUIT:
 				self.pg_display.stop_display()
@@ -119,10 +126,32 @@ class FlightSimulator:
 		for plane in self.plane_manager.planes:
 			plane.tick(self.current_tick)
 			plane_states.append(plane.get_state())
+
+		# Check all planes for crashes
+		for i in range(0, len(self.plane_manager.planes)):
+			for j in range(0, len(self.plane_manager.planes)):
+				if self.plane_manager.planes[i] != self.plane_manager.planes[j]:
+					plane1 = self.plane_manager.planes[i]
+					plane2 = self.plane_manager.planes[j]
+					
+					check_distance = utils.calculate_craft_distance(plane1.lat, plane1.lon, plane2.lat, plane2.lon, plane1.alt, plane2.alt)
+
+					if check_distance <= 300:
+						plane1.thistick[2] = True
+						plane2.thistick[2] = True
+					
+					elif check_distance <= 30:
+						plane1.thistick[2] = True
+						plane2.thistick[2] = True
+
+						crashed_planes.append(plane1)
+						crashed_planes.append(plane2)
 		
 		# Update display once with all plane states
 		if plane_states:
 			self.pg_display.update_display(plane_states)
+		
+		#print(compute_reward(self, self))
 			
 		self.current_tick += 1  # Increment the tick count
 	
@@ -133,10 +162,13 @@ class FlightSimulator:
 
 		for plane in env_state.planes:
 			# Reward for successful landings
-			if plane.landed_this_tick:
+			if plane.thistick[0] == True:
+				print(f"A plane just landed.")
 				reward += 10.0
-    		# Reward for successful takeoff
-			if plane.took_off_this_tick:
+
+			# Reward for successful takeoff
+			if plane.thistick[1] == True:
+				print(f"A plane just took off.")
 				reward += 10.0
 
     	# Penalty for invalid or illegal commands
@@ -148,9 +180,10 @@ class FlightSimulator:
 
     	# Penalty for a crash
 		for plane in env_state.planes:
-			if plane.crashed:
+			if plane.thistick[2] == True:
+				print(f"Plane with ID {plane.id} just crashed.")
 				reward -= 100.0
-
+			
     	# Small time pressure penalty per plane still in air
 		reward -= 0.01 * env_state.num_planes_in_air
 
