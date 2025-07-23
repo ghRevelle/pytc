@@ -158,6 +158,20 @@ class Plane:
 		"""
 		self.traj = traj
 
+	def get_pos_ll(self) -> tuple:
+		"""Get the current position of the plane in latitude and longitude.
+		Returns:
+			tuple: The (latitude, longitude) position of the plane.
+		"""
+		return self.lat, self.lon
+
+	def get_pos_xy(self) -> tuple:
+		"""Get the current position of the plane in world coordinates.
+		Returns:
+			tuple: The (x, y) position of the plane in METERS
+		"""
+		return utils.latlon_to_meters(self.lat, self.lon)
+
 	# commands
 	def change_command(self, new_command: Command):
 		if not isinstance(new_command, Command):
@@ -190,8 +204,6 @@ class Plane:
 		# Get the plane's position and trajectory line
 		plane_pos_xy = (self.lon, self.lat)
 		traj_line = self.get_traj_line()
-		tx1, ty1 = traj_line.coords[0]
-		tx2, ty2 = traj_line.coords[1]
 		# Get the target line coordinates
 		rx1, ry1 = target_line.coords[0]
 		rx2, ry2 = target_line.coords[1]
