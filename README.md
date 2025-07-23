@@ -13,13 +13,16 @@ PyTC is comprised of several major parts:
 
 ## Contents  
 
-- **data**
+- **data/**
+    - cleaned_data/
+        - contains cleaned data
+    - filtered_data/
+        - contains filtered but not cleaned data
+    - data_cleaner.ipynb: clean data
     - data_filter.py: filter operations (takeoff and landing) data by airport
     - data_scraper.py: scrape data from ADS-B Exchange, filtered by ICAO hex codes
-    - filtered_aircraft.csv: contains filtered data of all planes that took off or landed at Rapid City Regional Airport on July 1, 2024
-    - filtered_operations.csv: contains the time and runway of planes that took off or landed at Rapid City Regional Airport on July 1, 2024
     - sources.txt: list of our sources
-- **src**
+- **src/**
     - \_\_init\_\_.py: registers our custom gymnasium environment
     - airport.py: airport and runway class
     - commands.py: command dataclass
