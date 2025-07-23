@@ -10,6 +10,7 @@ class CommandType(Enum):
     GO_AROUND = 4            # begin go around procedure; simulated behavior based on typical go around procedure, including simulated time loss and return to approach
     ABORT_TAKEOFF = 5        # abort takeoff; assumption: plane moves to the end of the runway to taxiway, reenters queue at the back
     TURN = 6                 # rarely used; will use for testing
+    CRUISE = 7               # default for planes in the air
 
 @dataclass
 class Command:
