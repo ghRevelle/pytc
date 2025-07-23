@@ -1,5 +1,4 @@
 import shapely, math
-from plane import Plane
 
 def lerp(amt, low, high):
 	"""Linearly interpolates between two numbers.
@@ -23,7 +22,7 @@ def get_turn_rate(bank_angle, gspd):
 	
 	return abs(1091 * math.tan(bank_angle) / gspd)
 
-def calculate_craft_distance(plane1 : Plane, plane2 : Plane):
+def calculate_craft_distance(lat1, lon1, lat2, lon2, alt1, alt2):
 	"""Finds the 3D distance between two aircraft.
 	Args:
 		plane1: The first aircraft to compare.
@@ -32,18 +31,18 @@ def calculate_craft_distance(plane1 : Plane, plane2 : Plane):
 		float: The 3D distance between the aircraft in meters."""
 	
 	# Latitude difference in meters (constant ~111,320 m per degree)
-	dlat_meters = abs(plane1.lat - plane2.lat) * 111320.0
+	dlat_meters = abs(lat1 - lat2) * 111320.0
 	
 	# Longitude difference in meters (varies with latitude)
 	# Use average latitude for the longitude conversion
-	avg_lat = (plane1.lat + plane2.lat) / 2
-	dlon_meters = abs(plane1.lon - plane2.lon) * 111320.0 * math.cos(math.radians(avg_lat))
+	avg_lat = (lat1 + lat2) / 2
+	dlon_meters = abs(lon1 - lon2) * 111320.0 * math.cos(math.radians(avg_lat))
 	
 	# Calculate horizontal distance
 	horizontal_distance = math.sqrt(dlat_meters**2 + dlon_meters**2)
 	
 	# Altitude difference (requires alt in meters)
-	altitude_difference = abs(plane1.alt - plane2.alt)
+	altitude_difference = abs(alt1 - alt2)
 	
 	# Calculate 3D distance using Pythagorean theorem
 	return math.sqrt(horizontal_distance**2 + altitude_difference**2)

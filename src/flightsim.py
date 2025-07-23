@@ -1,5 +1,6 @@
 # Flight simulator class
 from plane import Plane
+from planestates import *
 from pygame_display import *
 from airport import *
 from commands import *
@@ -153,10 +154,13 @@ class FlightSimulator:
 
 		for plane in env_state.planes:
 			# Reward for successful landings
-			if plane.landed_this_tick:
+			if plane.thistick[0] == True:
+				print(f"A plane just landed.")
 				reward += 10.0
-    		# Reward for successful takeoff
-			if plane.took_off_this_tick:
+
+			# Reward for successful takeoff
+			if plane.thistick[1] == True:
+				print(f"A plane just took off.")
 				reward += 10.0
 
     	# Penalty for invalid or illegal commands
@@ -168,7 +172,8 @@ class FlightSimulator:
 
     	# Penalty for a crash
 		for plane in env_state.planes:
-			if plane.crashed:
+			if plane.thistick[2] == True:
+				print(f"Plane with ID {plane.id} just crashed.")
 				reward -= 100.0
 
     	# Small time pressure penalty per plane still in air
