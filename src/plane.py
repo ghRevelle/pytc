@@ -97,8 +97,7 @@ class Plane:
 		}
 		
 		# Convert heading to an integer
-		if not isinstance(state_dict['hdg'], int):
-			state_dict['hdg'] = int(round(state_dict['hdg']))
+		state_dict['hdg'] = state_dict['hdg']
 		
 		return state_dict
 	
@@ -220,6 +219,7 @@ class Plane:
 		diff = (desired_hdg - current_hdg + 360) % 360
 		if abs(diff) <= self.turn_rate:
 			self.hdg = desired_hdg
+			return
 		elif diff <= 180:
 			self.hdg = (current_hdg + self.turn_rate) % 360
 		else:
