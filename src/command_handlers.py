@@ -152,8 +152,11 @@ class CruiseCommandHandler(CommandHandler):
 		return command_type == CommandType.CRUISE
 	
 	def execute(self, plane, command, tick) -> None:
-		
-		plane.state = PlaneState.AIR
+
+		if abs(plane.alt - plane.crz_alt) < 5:
+			plane.state = PlaneState.WAITING_FOR_LANDING
+		else:
+			plane.state = PlaneState.AIR
 
 		# Try to achieve a vertrate proportional to the altitudinal error
 		alt_error = plane.crz_alt - plane.alt
@@ -190,7 +193,10 @@ class TurnCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
-		plane.state = PlaneState.AIR
+		if abs(plane.alt - plane.crz_alt) < 5:
+			plane.state = PlaneState.WAITING_FOR_LANDING
+		else:
+			plane.state = PlaneState.AIR
 
 		current_hdg = plane.hdg
 		desired_hdg = command.argument
@@ -251,8 +257,6 @@ class LandingCommandHandler(CommandHandler):
 		return command_type == CommandType.CLEARED_TO_LAND
 	
 	def execute(self, plane, command, tick) -> None:
-
-		plane.state = PlaneState.AIR
 
 		target_runway = command.argument
 		
@@ -377,7 +381,10 @@ class GoAroundCommandHandler(CommandHandler):
 
 	def execute(self, plane, command, tick) -> None:
 
-		plane.state = PlaneState.AIR
+		if abs(plane.alt - plane.crz_alt) < 5:
+			plane.state = PlaneState.WAITING_FOR_LANDING
+		else:
+			plane.state = PlaneState.AIR
 
 		if self.init_hdg is None:
 			self.init_hdg = plane.hdg
