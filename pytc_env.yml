@@ -1,6 +1,6 @@
 name: pytc
 dependencies:
-- python=3.11
+- python=3.12.4
 - numpy
 - pandas
 - scikit-learn
