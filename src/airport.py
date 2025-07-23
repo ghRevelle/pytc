@@ -68,3 +68,11 @@ class Airport:
             self.runways = runways
         
         self.queue = []
+
+    def add_to_queue(self, plane_id, runway):
+        """Add a plane to the takeoff queue for a specific runway."""
+        self.queue.append((plane_id, runway))
+
+    def remove_from_queue(self, plane_id):
+        """Remove a plane from the takeoff queue."""
+        self.queue = [item for item in self.queue if item[0] != plane_id]
