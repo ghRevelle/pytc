@@ -136,7 +136,11 @@ class FlightSimulator:
 					
 					check_distance = utils.calculate_craft_distance(plane1.lat, plane1.lon, plane2.lat, plane2.lon, plane1.alt, plane2.alt)
 
-					if check_distance <= 30:
+					if check_distance <= 300:
+						plane1.thistick[2] = True
+						plane2.thistick[2] = True
+					
+					elif check_distance <= 30:
 						plane1.thistick[2] = True
 						plane2.thistick[2] = True
 
@@ -179,7 +183,7 @@ class FlightSimulator:
 			if plane.thistick[2] == True:
 				print(f"Plane with ID {plane.id} just crashed.")
 				reward -= 100.0
-
+			
     	# Small time pressure penalty per plane still in air
 		reward -= 0.01 * env_state.num_planes_in_air
 
