@@ -9,14 +9,14 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import csv
 
-df_filtered = pd.read_csv('filtered_operations.csv')  # Load the filtered operations data
+df_filtered = pd.read_csv('data/filtered_data/filtered_operations_20250301.csv')  # Load the filtered operations data
 # Extract ICAOs from the filtered DataFrame
 target_icaos = df_filtered['icao']
 # Convert to a list
 target_icaos_list = target_icaos.tolist()
 
 target_icaos = target_icaos_list # This will be the list of ICAOs you want to filter
-OUTPUT_CSV = "filtered_aircraft.csv" # Rename as needed
+OUTPUT_CSV = "data/filtered_data/filtered_aircraft_20250301.csv" # Rename as needed
 
 fieldnames = [
     "timestamp",
@@ -44,7 +44,7 @@ fieldnames = [
 def fetch_and_process(timestamp):
     ts = timestamp.strftime("%H%M%S")
     timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-    url = f"https://samples.adsbexchange.com/readsb-hist/2024/07/01/{ts}Z.json.gz" # Adjust URL as needed for date and time
+    url = f"https://samples.adsbexchange.com/readsb-hist/2025/03/01/{ts}Z.json.gz" # Adjust URL as needed for date and time
     try:
         response = requests.get(url, stream=True, timeout=10)
         if response.status_code != 200:
@@ -94,8 +94,8 @@ def fetch_and_process(timestamp):
         return []
 
 def main():
-    start_time = datetime(2024, 7, 1, 0, 0, 0)
-    end_time = datetime(2024, 7, 1, 23, 59, 55)  # full day, every 5 seconds
+    start_time = datetime(2025, 3, 1, 0, 0, 0)
+    end_time = datetime(2025, 3, 1, 23, 59, 55)  # full day, every 5 seconds
     delta = timedelta(seconds=5)
 
     timestamps = []
@@ -108,7 +108,7 @@ def main():
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
             for rows in executor.map(fetch_and_process, timestamps):
                 for row in rows:
                     writer.writerow(row)
