@@ -62,35 +62,6 @@ def calculate_intersection(line1: shapely.geometry.LineString, line2: shapely.ge
 			raise ValueError("No intersection found.")
 		else:
 			return intersection.coords[0]
-		
-def is_parallel(line1: shapely.geometry.LineString, line2: shapely.geometry.LineString) -> bool:
-		"""Check if two lines are parallel.
-		Args:
-			line1 (shapely.geometry.LineString): The first line.
-			line2 (shapely.geometry.LineString): The second line.
-		Returns:
-			bool: True if the lines are parallel, False otherwise.
-		"""
-		# Get the start and end points of each line
-		line1_coords = list(line1.coords)
-		line2_coords = list(line2.coords)
-		
-		# Calculate direction vectors for both lines
-		# For line1: vector from first point to last point
-		dx1 = line1_coords[-1][0] - line1_coords[0][0]
-		dy1 = line1_coords[-1][1] - line1_coords[0][1]
-		
-		# For line2: vector from first point to last point
-		dx2 = line2_coords[-1][0] - line2_coords[0][0]
-		dy2 = line2_coords[-1][1] - line2_coords[0][1]
-		
-		# Calculate the cross product of the direction vectors
-		# If cross product is 0 (or very close to 0), lines are parallel
-		cross_product = dx1 * dy2 - dy1 * dx2
-		
-		# Use a small tolerance for floating point comparison
-		tolerance = 1e-10
-		return abs(cross_product) < tolerance
 
 def get_meters_per_degree_lat() -> float:
 		"""Get the meters per degree of latitude.
@@ -105,20 +76,6 @@ def get_meters_per_degree_lon(lat: float=44.04882) -> float:
 		Returns:
 			float: Meters per degree of longitude at the specified latitude."""
 		return 111320.0 * math.cos(math.radians(lat))
-
-def is_collinear(line1: shapely.geometry.LineString, line2: shapely.geometry.LineString) -> bool:
-		"""Check if two lines are collinear.
-		Args:
-			line1 (shapely.geometry.LineString): The first line.
-			line2 (shapely.geometry.LineString): The second line.
-		Returns:
-			bool: True if the lines are collinear, False otherwise.
-		"""
-		if not is_parallel(line1, line2):
-			return False
-		
-		# Check if the start or end points of one line are on the other line
-		return (line1.distance(line2) < 1e-10 or line2.distance(line1) < 1e-10)
 
 def meters_to_degrees(heading: int, meters: float) -> float:
 		"""

@@ -45,7 +45,8 @@ class CommandHandler(ABC):
 		)
 	
 	def _initialize_runway_alignment(self, plane, target_runway, command):
-		"""Initialize runway alignment parameters."""
+		"""Initialize runway alignment parameters.
+		DEPRECATED: Use the new RealignCommandHandler instead."""
 		plane.turn_start_time = plane.find_turn_initiation_time(target_runway.get_line_xy(), command.last_update)
 	
 	def _handle_runway_alignment(self, plane, target_hdg, tick, command):
@@ -58,11 +59,14 @@ class CommandHandler(ABC):
 	
 	def _is_aligned_to_runway(self, plane, target_runway):
 		"""Check if the plane is aligned with the target runway."""
-		return utils.is_collinear(
-			plane.get_traj_line(),
-			target_runway.get_line_xy()
-		)
-	
+		parallel = math.isclose(plane.hdg, target_runway.hdg, abs_tol=1e-5)
+		online = utils.point_to_line_distance(
+			utils.latlon_to_meters(plane.lat, plane.lon),
+			utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude),
+			utils.latlon_to_meters(target_runway.get_end_point_ll().latitude, target_runway.get_end_point_ll().longitude)
+		) < 50
+		return parallel and online
+
 
 class RealignCommandHandler(CommandHandler):
 	"""Handler for realigning planes to the runway centerline."""
@@ -111,7 +115,7 @@ class RealignCommandHandler(CommandHandler):
 				utils.latlon_to_meters(target_runway.get_end_point_ll().latitude, target_runway.get_end_point_ll().longitude)
 			)
 			self.dir = self.dir or self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
-			print(f"Plane {plane.callsign} is realigning to runway {target_runway.name} on tick {tick}, direction {self.dir}, current distance {current_dist:.2f} meters, initial distance {self.init_dist:.2f} meters.")
+			# print(f"Plane {plane.callsign} is realigning to runway {target_runway.name} on tick {tick}, direction {self.dir}, current distance {current_dist:.2f} meters, initial distance {self.init_dist:.2f} meters.")
 			if current_dist > self.init_dist / 2:
 				if self.dir == "left":
 					plane._turn(plane.hdg, (target_runway.hdg - 90) % 360)
@@ -136,7 +140,6 @@ class RealignCommandHandler(CommandHandler):
 
 		# 2D cross product
 		cross = heading[0] * to_target[1] - heading[1] * to_target[0]
-		print(heading)
 		if cross > 0:
 			return "left"
 		elif cross < 0:
@@ -254,30 +257,32 @@ class LandingCommandHandler(CommandHandler):
 		target_dist = self._calculate_runway_distance(plane, target_runway)
 		
 		# Initialize landing parameters if needed
-		if plane.turn_start_time == -1:
-			self._initialize_landing(plane, target_runway, command)
+		if not hasattr(plane, 'tod') or plane.tod is None or not hasattr(plane, 'rod') or plane.rod is None or not hasattr(plane, 'desired_acc_xy') or plane.desired_acc_xy is None:
+			self._initialize_landing(plane, target_runway, command) # TODO: STOP ADDING RANDOM ATTRIBUTES TO THE PLANE OBJECT
 		
-		# Execute landing phases
-		elif tick >= plane.turn_start_time and command.last_update < plane.turn_start_time:
-			alignment_complete = self._handle_runway_alignment(plane, target_hdg, tick, command)
-			# Continue to descent phase after alignment
-		elif command.last_update >= plane.turn_start_time and target_dist < plane.tod and plane.alt > 0:
+		if not self._is_aligned_to_runway(plane, target_runway):
+			raise ValueError("Plane is not aligned to the runway for landing.")
+		
+		if target_dist < plane.tod and plane.alt > 0: 
 			self._handle_descent_phase(plane, target_dist)
 		elif plane.alt <= 0 and plane.gspd > 0:
 			self._handle_ground_phase(plane)
 		elif plane.gspd <= 0:
 			self._handle_landing_complete(plane, command, tick)
-	
-	def _initialize_landing(self, plane, target_runway, command):
+			plane.tod = None  # Reset top of descent after landing
+			plane.desired_acc_xy = None  # Reset desired horizontal acceleration after landing
+			plane.rod = None  # Reset rate of descent after landing
+		
+
+	def _initialize_landing(self, plane: Plane, target_runway: Runway, command: Command) -> None:
 		"""Initialize landing parameters (extends base runway alignment)."""
-		# Use shared runway alignment initialization
-		self._initialize_runway_alignment(plane, target_runway, command)
 		# Add landing-specific initialization
+		
 		plane.tod = plane._calculate_tod(plane.alt)
 		plane.rod = plane._calculate_rod(plane.gspd)
 		plane.desired_acc_xy = plane._calculate_target_acc_descend(plane.gspd, plane.alt)
-	
-	def _handle_descent_phase(self, plane, target_dist):
+
+	def _handle_descent_phase(self, plane: Plane, target_dist: float) -> None:
 		"""Handle the descent phase of landing."""
 		plane.rod = plane._calculate_rod(plane.gspd)
 		
@@ -311,19 +316,18 @@ class LandingCommandHandler(CommandHandler):
 				max_value=plane.acc_xy_max,
 				max_change=plane.acc_xy_max
 			)
-	
-	def _handle_ground_phase(self, plane):
+
+	def _handle_ground_phase(self, plane: Plane) -> None:
 		"""Handle the ground phase after touchdown."""
 		plane.v_z = 0
 		plane.acc_xy = -plane.acc_xy_max
 	
-	def _handle_landing_complete(self, plane, command, tick):
+	def _handle_landing_complete(self, plane: Plane, command: Command, tick: int) -> None:
 		"""Handle landing completion."""
 
 		plane.state = PlaneState.LANDING
-		plane.thistick[0] = True
+		plane.landed_this_tick = True
 
-		#print(f"Plane {plane.callsign} with ID {plane.id} has landed.")
 		plane.acc_xy = 0
 		command.command_type = CommandType.NONE
 		command.last_update = tick

@@ -253,11 +253,11 @@ class Plane:
 		# 	self.stall_speed
 		# )
 
-	def _calculate_tod(self, current_alt):
+	def _calculate_tod(self, current_alt) -> float:
 		"""Calculate the top of descent to a target position in nautical miles."""
 		return current_alt * 3 / 1000  # Distance to start descent in nautical miles
 
-	def _calculate_rod(self, current_speed):
+	def _calculate_rod(self, current_speed) -> float:
 		"""Calculate the rate of descent to a target position in meters per second."""
 		return 5 * utils.mps_to_knots(current_speed) * 0.00508
 	
