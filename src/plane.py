@@ -98,7 +98,7 @@ class Plane:
 				self.asc_rate = 12.7 # m/s
 				self.dsc_rate = 19.05 # m/s, or asc_rate * 1.5
 				self.acc_z_max = 1.5 # m/s^2, total guess
-				self.acc_xy_max = 3 # m/s^2, this is an informed guesstimate
+				self.acc_xy_max = 2.8 # m/s^2, this is an informed guesstimate
 
 			#case "BE9L":
 
