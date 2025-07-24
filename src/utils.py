@@ -45,7 +45,7 @@ def calculate_craft_distance(lat1, lon1, lat2, lon2, alt1, alt2):
 	horizontal_distance = math.sqrt(dlat_meters**2 + dlon_meters**2)
 	
 	# Altitude difference (requires alt in meters)
-	altitude_difference = abs(alt1 - alt2)
+	altitude_difference = alt1 - alt2
 	
 	# Calculate 3D distance using Pythagorean theorem
 	return math.sqrt(horizontal_distance**2 + altitude_difference**2)

@@ -18,10 +18,9 @@ class Plane:
 				'model' (str): Plane model
 
 				'state' (Enum): Plane's current state (just AIR by default)
-				'thistick' (List): List of bools tracking whether the plane:
-				0	landed_this_tick,
-				1	tookoff_this_tick,
-				2	crashed_this_tick
+				'landed_this_tick' (bool): Whether or not the plane landed this tick.
+				'tookoff_this_tick' (bool): Whether or not the plane took off this tick.
+				'crashed_this_tick' (bool): Whether or not the plane crashed this tick.
 
 				'turn_rate' (float): Turn rate of the plane in deg/sec (based on model)
 				'stall_speed' (float): Plane's minimum speed in m/s (based on model)
@@ -57,7 +56,9 @@ class Plane:
 		self.state = init_state['state']
 		self.id = init_state['id']
 
-		self.thistick = [False, False, False]
+		self.landed_this_tick = False
+		self.tookoff_this_tick = False
+		self.crashed_this_tick = False
 
 		self.acc_xy = init_state.get('acc_xy', 0.0)  # Optional, default to 0.0
 		self.id = init_state['id']
@@ -321,13 +322,15 @@ class Plane:
 			acc = max_change * abs((current - target) / scale)
 			return min(current + acc, max_value)
 
-	def tick(self, tick):
+	def tick(self, tick) -> 'Plane':
 		"""
 		Update the plane's position based on its ground speed and heading.
 		Update the plane's groundspeed based on its vertrate and turnrate.
+		Args:
+			tick (int): The current simulation tick.
+		Returns:
+			Plane: The updated plane object for chaining.
 		"""
-
-		self.thistick = [False, False, False]
 
 		# Process commands using the command processor
 		if not hasattr(self, '_command_processor'):
@@ -337,6 +340,8 @@ class Plane:
 		
 		# Update physics and position
 		self._update_position()
+
+		return self
 
 	def _update_position(self):
 		"""Update the plane's physical state and position."""

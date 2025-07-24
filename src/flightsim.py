@@ -38,6 +38,8 @@ class FlightSimulator:
 		# Initialize the slot manager
 		self.plane_manager = plane_manager
 
+		self.crashed_planes = []  # List to keep track of crashed planes
+
 	def get_tps(self):
 		"""Get the effective ticks per second, accounting for turbo mode."""
 		if hasattr(self.pg_display, 'turbo_mode') and self.pg_display.turbo_mode:
@@ -95,11 +97,6 @@ class FlightSimulator:
 
 	def tick(self):
 		"""Run a single tick of the simulation."""
-		# Initialize the list of crashed planes
-		crashed_planes = []
-
-		for plane in crashed_planes:
-			self.plane_manager.delete_plane(plane.id)
 
 		for event in pygame.event.get(): # Check for quit events
 			if event.type == pygame.QUIT:
@@ -110,41 +107,40 @@ class FlightSimulator:
 			if self.current_tick == command.last_update:
 				self.command_plane(command)
 				self.command_queue.remove(command)  # Remove command after execution
-		# Update all plane states
-		plane_states = []
-		for plane in self.plane_manager.planes:
-			plane.tick(self.current_tick)
-			plane_states.append(plane.get_state())
+		
+		# Update all plane states using list comprehension
+		plane_states = [plane.tick(self.current_tick).get_state() for plane in self.plane_manager.planes]
 
 		# Check all planes for crashes
-		for i in range(0, len(self.plane_manager.planes)):
-			for j in range(0, len(self.plane_manager.planes)):
-				if self.plane_manager.planes[i] != self.plane_manager.planes[j]:
-					plane1 = self.plane_manager.planes[i]
-					plane2 = self.plane_manager.planes[j]
-
-					# does not count close planes on the ground as being a collision or near-collision
-					if plane1.state == PlaneState.GROUND and plane2.state == PlaneState.GROUND:
-						continue
+		planes = self.plane_manager.planes
+		for i, plane1 in enumerate(planes):
+			for plane2 in planes[i+1:]: # avoid checking a plane against itself
+				# Skip ground planes to avoid collision detection in airport queue
+				if plane1.state == plane2.state == PlaneState.GROUND:
+					continue
+				
+				check_distance = utils.calculate_craft_distance(plane1.lat, plane1.lon, plane2.lat, plane2.lon, plane1.alt, plane2.alt)
+				
+				# <= 300 meters is considered a near-collision; the DRL is punished as if the planes crashed
+				if check_distance <= 300:
+					plane1.crashed_this_tick = plane2.crashed_this_tick = True
 					
-					check_distance = utils.calculate_craft_distance(plane1.lat, plane1.lon, plane2.lat, plane2.lon, plane1.alt, plane2.alt)
+					# <= 30 meters is considered a collision; the DRL is punished, and the planes get destroyed
+					if check_distance <= 30:
+						self.crashed_planes.extend([plane1, plane2])
 
-					if check_distance <= 300:
-						plane1.thistick[2] = True
-						plane2.thistick[2] = True
-					
-					elif check_distance <= 30:
-						plane1.thistick[2] = True
-						plane2.thistick[2] = True
-
-						crashed_planes.append(plane1)
-						crashed_planes.append(plane2)
-		
 		# Update display once with all plane states
 		if plane_states:
 			self.pg_display.update_display(plane_states)
+
+		while self.crashed_planes:
+			self.plane_manager.delete_plane(self.crashed_planes.pop().id)
 		
 		#print(compute_reward(self, self))
+
+		# Reset plane flags using list comprehension
+		[setattr(plane, attr, False) for plane in self.plane_manager.planes 
+		 for attr in ['landed_this_tick', 'tookoff_this_tick', 'crashed_this_tick']]
 			
 		self.current_tick += 1  # Increment the tick count
 	
@@ -155,12 +151,12 @@ class FlightSimulator:
 
 		for plane in env_state.planes:
 			# Reward for successful landings
-			if plane.thistick[0] == True:
+			if plane.landed_this_tick == True:
 				print(f"A plane just landed.")
 				reward += 10.0
 
 			# Reward for successful takeoff
-			if plane.thistick[1] == True:
+			if plane.tookoff_this_tick == True:
 				print(f"A plane just took off.")
 				reward += 10.0
 
@@ -173,7 +169,7 @@ class FlightSimulator:
 
     	# Penalty for a crash
 		for plane in env_state.planes:
-			if plane.thistick[2] == True:
+			if plane.crashed_this_tick == True:
 				print(f"Plane with ID {plane.id} just crashed.")
 				reward -= 100.0
 			
