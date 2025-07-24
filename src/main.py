@@ -46,6 +46,7 @@ fs.add_plane_to_manager(
 		'v_z': 0,
 		'gspd': 83.8546382418,
 		'hdg': test_runways['Runway14'].hdg,  # Heading towards Runway14
+		'state': PlaneState.AIR,
 	},
 )
 
