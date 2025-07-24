@@ -17,9 +17,10 @@ class Pygame_Display:
 		self.h = h
 		self.x_c = self.w // 2
 		self.y_c = self.h // 2
-		self.lon_c = 0
-		self.lat_c = 0
-		self.zoom = 2500
+		# Center on the coordinates we're optimized for
+		self.lon_c = -103.06126  # Longitude center (Rapid City area)
+		self.lat_c = 44.04882    # Latitude center (Rapid City area)
+		self.zoom = 10  # Much lower zoom for aviation-appropriate scale
 
 		# FPS tracking
 		self.clock = pygame.time.Clock()
@@ -89,7 +90,7 @@ class Pygame_Display:
 		
 		# Handle viewport movement with arrow keys
 		# Movement speed inversely proportional to zoom (more zoomed in = slower movement)
-		move_speed = 0.001 / (self.zoom / 2500)  # Base movement speed scaled by zoom
+		move_speed = 0.00005 / (self.zoom / 2500)  # Base movement speed scaled by zoom
 		
 		if pressed_keys[pygame.K_UP]:
 			self.lat_c += move_speed
@@ -137,34 +138,34 @@ class Pygame_Display:
 			plane_state = self.last_states.get(plane_id, {})
 			plane_lon = plane_state.get('lon', self.x_c)
 			plane_lat = plane_state.get('lat', self.y_c)
-			plane_x, plane_y = self.wgs84_to_xy(plane_lon, plane_lat)
+			plane_x, plane_y = self.wgs84_to_display(plane_lon, plane_lat)
 
 			# Draw trail dots (excluding the last/current position)
 			# Batch coordinate conversion for better performance
 			trail_coords = []
 			for pos in trail[:-1]:
-				x, y = self.wgs84_to_xy(pos[0], pos[1])
+				x, y = self.wgs84_to_display(pos[0], pos[1])
 				trail_coords.append((x, y))
 			
 			# Draw all trail dots
 			for x, y in trail_coords:
 				pygame.draw.circle(self.fg, color, (x, y), 1)
 
-			# Draw the plane's trajectory...
-			# ...as a series of dots (we'll use this later)
-			#for pos in self.last_states[plane_id]['traj'][:-1]:
-			#	x, y = self.wgs84_to_xy(pos[0], pos[1])
-			#	pygame.draw.circle(self.fg, color, (x, y), 2)
-
-			# ...as a singular line (using this for visibility now)
-			if 'traj' in plane_state and len(plane_state['traj']) >= 2:
-				firpos = plane_state['traj'][0]
-				x, y = self.wgs84_to_xy(firpos[0], firpos[1])
-
-				laspos = plane_state['traj'][-1]
-				u, v = self.wgs84_to_xy(laspos[0], laspos[1])
-
-				pygame.draw.line(self.fg, color, (x, y), (u, v))
+			# Draw trajectory line extending from aircraft in heading direction
+			if 'hdg' in plane_state:
+				hdg = plane_state.get('hdg', 0)
+				# Calculate trajectory line length (e.g., 10 nautical miles ahead)
+				trajectory_length_nm = 1
+				trajectory_length_pixels = self.nm_to_display(trajectory_length_nm)
+				
+				# Convert heading to radians (heading 0° = North, clockwise)
+				angle = np.deg2rad(hdg - 90)  # Adjust for screen coordinates where 0° is East
+				
+				# Calculate end point of trajectory line
+				end_x = plane_x + trajectory_length_pixels * np.cos(angle)
+				end_y = plane_y + trajectory_length_pixels * np.sin(angle)
+				
+				pygame.draw.line(self.fg, color, (plane_x, plane_y), (end_x, end_y), 2)
 
 			# Draw triangle at the current position (reuse coordinates from trail)
 			if trail:
@@ -244,17 +245,29 @@ class Pygame_Display:
 		"""Render static background elements (nautical mile circles, center point)."""
 		self.bg.fill((0, 0, 0))
 		
-		# Convert world origin (0, 0) to screen coordinates
-		origin_x, origin_y = self.wgs84_to_xy(0, 0)
+		# Use a fixed reference point for the range rings (e.g., airport center or control tower)
+		# This prevents the rings from moving when the viewport is panned
+		if hasattr(self, 'airport') and self.airport.runways:
+			# Use the center of the first runway as the reference point
+			first_runway = next(iter(self.airport.runways.values()))
+			ref_lat = (first_runway.start_point.latitude + first_runway.end_point.latitude) / 2
+			ref_lon = (first_runway.start_point.longitude + first_runway.end_point.longitude) / 2
+		else:
+			# Fall back to the initial center coordinates as fixed reference
+			ref_lat = 44.04882  # Rapid City area
+			ref_lon = -103.06126
 		
-		# Draw nautical mile circles centered at world origin
+		# Convert fixed reference point to screen coordinates
+		origin_x, origin_y = self.wgs84_to_display(ref_lon, ref_lat)
+		
+		# Draw nautical mile circles centered at the fixed reference point
 		for i in range(2, 12, 2):  # Draw circles at 2, 4, 6, 8, and 10 NM
-			radius = self.nm_to_xy(i)
+			radius = self.nm_to_display(i)
 			pygame.draw.circle(self.bg, (0, 255, 0, 255), (origin_x, origin_y), radius, 1)
 			# Draw the radius label (using cached font)
 			radius_label = self.nm_label_font.render(f"{i} NM", True, (0, 255, 0))
 			self.bg.blit(radius_label, (origin_x + radius - radius_label.get_width() // 2 + 5, origin_y - radius_label.get_height() // 2))
-		# Draw the center point at world origin
+		# Draw the center point at the fixed reference location
 		pygame.draw.circle(self.bg, (255, 0, 0), (origin_x, origin_y), 5)
 
 	def _render_airport(self):
@@ -263,8 +276,9 @@ class Pygame_Display:
 		
 		# Draw runways
 		for runway in self.airport.runways.values():
-			start_x, start_y = self.wgs84_to_xy(runway.start_point[1], runway.start_point[0])
-			end_x, end_y = self.wgs84_to_xy(runway.end_point[1], runway.end_point[0])
+			# Use the proper methods to get coordinates from geopy.Point objects
+			start_x, start_y = self.wgs84_to_display(runway.start_point.longitude, runway.start_point.latitude)
+			end_x, end_y = self.wgs84_to_display(runway.end_point.longitude, runway.end_point.latitude)
 			color = (255, 255, 255) if not runway.is_occupied else (255, 0, 0)
 			# Calculate the angle of the runway
 			dx = end_x - start_x
@@ -273,7 +287,7 @@ class Pygame_Display:
 			if length == 0:
 				continue  # Avoid division by zero
 
-			runway_width = self.nm_to_xy(units.nautical(feet=200))  # pixels, adjust as needed
+			runway_width = self.nm_to_display(units.nautical(feet=200))  # pixels, adjust as needed
 			angle = np.arctan2(dy, dx)
 
 			# Calculate the four corners of the rectangle
@@ -339,10 +353,18 @@ class Pygame_Display:
 	def stop_display(self):
 		pygame.quit()
 
-	def wgs84_to_xy(self, lon, lat) -> tuple:
-		"""Convert WGS84 coordinates to display coordinates."""
-		x = int((lon - self.lon_c) * self.zoom + self.x_c)
-		y = int((self.lat_c - lat) * self.zoom + self.y_c) # y is inverted in display coordinates
+	def wgs84_to_display(self, lon, lat) -> tuple:
+		"""Convert WGS84 coordinates to display coordinates using proper coordinate conversion."""
+		# Convert lat/lon to meters using our location-specific conversion
+		x_meters, y_meters = utils.latlon_to_meters(lat, lon, origin_lat=self.lat_c, origin_lon=self.lon_c)
+		
+		# Convert meters to screen coordinates
+		# The zoom factor acts as pixels per meter - higher zoom = more zoomed in
+		# Default zoom of 2500 means we're showing roughly 2500 pixels per meter, which is way too zoomed in
+		# Let's use a more reasonable scale: zoom factor as pixels per kilometer
+		scale_factor = self.zoom / 1000.0  # Convert zoom from "pixels per meter" to "pixels per kilometer"
+		x = int(x_meters * scale_factor + self.x_c)
+		y = int(-y_meters * scale_factor + self.y_c)  # Negative y because screen y increases downward
 		return x, y
 	
 	def state_to_display(self, state) -> dict:
@@ -361,6 +383,9 @@ class Pygame_Display:
 		# Mark airport content as needing redraw
 		self._airport_rendered = False
 
-	def nm_to_xy(self, dist):
+	def nm_to_display(self, dist):
 		"""Convert distance in nautical miles to pixels."""
-		return int(dist * 0.0168 * self.zoom)
+		# Convert nautical miles to meters, then to pixels using the same scale as wgs84_to_xy
+		meters = dist * 1852.0  # 1 nautical mile = 1852 meters
+		scale_factor = self.zoom / 1000.0  # Same scale factor as in wgs84_to_xy
+		return int(meters * scale_factor)

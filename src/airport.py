@@ -5,7 +5,7 @@ import shapely
 import utils
 
 class Runway:
-    def __init__(self, start_point, end_point, is_occupied=False):
+    def __init__(self, start_point, end_point, name=None, is_occupied=False):
         """Initilize a runway with the following attributes:
             start_point (tuple) : latitude, longitude of start point
             end_point (tuple) : latitude, longitude of end point
@@ -15,6 +15,8 @@ class Runway:
         """Start point of the runway in (lat, lon) format"""
         self.end_point = geopy.Point(end_point[0], end_point[1])
         """End point of the runway in (lat, lon) format"""
+        self.name = name
+        """Name of the runway"""
         # self.hdg = 90 - math.degrees(math.atan2(
         #     end_point[1] - start_point[1], end_point[0] - start_point[0]))
         self.hdg = utils.calculate_bearing(start_point, end_point)
@@ -47,7 +49,7 @@ class Runway:
         return (self.end_point.longitude, self.end_point.latitude)
 
     def get_line_xy(self):
-        """Get the runway line as a shapely LineString object.
+        """Get the runway line as a shapely LineString object using the latitude and longitude of the start and end points.
         Returns:
             object: The runway line as a shapely LineString object.
         """

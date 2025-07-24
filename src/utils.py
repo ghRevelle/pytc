@@ -24,6 +24,7 @@ def get_turn_rate(bank_angle, gspd):
 	
 	return abs(1091 * math.tan(bank_angle) / gspd)
 
+
 def calculate_craft_distance(lat1, lon1, lat2, lon2, alt1, alt2):
 	"""Finds the 3D distance between two aircraft.
 	Args:
@@ -33,12 +34,12 @@ def calculate_craft_distance(lat1, lon1, lat2, lon2, alt1, alt2):
 		float: The 3D distance between the aircraft in meters."""
 	
 	# Latitude difference in meters (constant ~111,320 m per degree)
-	dlat_meters = abs(lat1 - lat2) * 111320.0
+	dlat_meters = abs(lat1 - lat2) * get_meters_per_degree_lat()
 	
 	# Longitude difference in meters (varies with latitude)
 	# Use average latitude for the longitude conversion
 	avg_lat = (lat1 + lat2) / 2
-	dlon_meters = abs(lon1 - lon2) * 111320.0 * math.cos(math.radians(avg_lat))
+	dlon_meters = abs(lon1 - lon2) * get_meters_per_degree_lon(avg_lat)
 	
 	# Calculate horizontal distance
 	horizontal_distance = math.sqrt(dlat_meters**2 + dlon_meters**2)
@@ -90,7 +91,21 @@ def is_parallel(line1: shapely.geometry.LineString, line2: shapely.geometry.Line
 		# Use a small tolerance for floating point comparison
 		tolerance = 1e-10
 		return abs(cross_product) < tolerance
-		
+
+def get_meters_per_degree_lat() -> float:
+		"""Get the meters per degree of latitude.
+		Returns:
+			float: Meters per degree of latitude."""
+		return 111320.0  # Average meters per degree latitude (WGS84)
+
+def get_meters_per_degree_lon(lat: float=44.04882) -> float:
+		"""Get the meters per degree of longitude at a given latitude.
+		Args:
+			lat (float): Latitude in degrees.
+		Returns:
+			float: Meters per degree of longitude at the specified latitude."""
+		return 111320.0 * math.cos(math.radians(lat))
+
 def is_collinear(line1: shapely.geometry.LineString, line2: shapely.geometry.LineString) -> bool:
 		"""Check if two lines are collinear.
 		Args:
@@ -113,8 +128,8 @@ def meters_to_degrees(heading: int, meters: float) -> float:
 		Returns: distance in degrees
 		"""
 		# Project meters onto latitude and longitude axes
-		dlat = meters * math.cos(math.radians(heading)) / 111320.0
-		dlon = meters * math.sin(math.radians(heading)) / 111320.0
+		dlat = meters * math.cos(math.radians(heading)) / get_meters_per_degree_lat()
+		dlon = meters * math.sin(math.radians(heading)) / get_meters_per_degree_lon()
 		# Return the total angular distance (Euclidean in degree space)
 		return math.hypot(dlat, dlon)
 
@@ -127,7 +142,7 @@ def degrees_to_meters(heading: int, degrees: float) -> float:
 		"""
 		dlat = degrees * math.cos(math.radians(heading))
 		dlon = degrees * math.sin(math.radians(heading))
-		meters = math.hypot(dlat * 111320.0, dlon * 111320.0)
+		meters = math.hypot(dlat * get_meters_per_degree_lat(), dlon * get_meters_per_degree_lon())
 		return meters
 
 def degrees_to_nautical_miles(heading: int, degrees: float) -> float:
@@ -157,38 +172,81 @@ def calculate_bearing(start_point, end_point):
         bearing = math.degrees(math.atan2(x, y))
         return int(round((bearing + 360) % 360))
 
-def latlon_to_unit_vector(lat_deg, lon_deg):
-    lat = math.radians(lat_deg)
-    lon = math.radians(lon_deg)
-    x = math.cos(lat) * math.cos(lon)
-    y = math.cos(lat) * math.sin(lon)
-    z = math.sin(lat)
-    return np.array([x, y, z])
+def point_to_line_distance(point, line_start, line_end):
+    x0, y0 = point
+    x1, y1 = line_start
+    x2, y2 = line_end
 
-def point_to_great_circle_distance(point: geopy.Point, line_point1: geopy.Point, line_point2: geopy.Point, radius=6371000.0):
-    """
-    Args:
-        point: geopy.Point - the point you want to measure from
-        line_point1: geopy.Point - first point on the great circle
-        line_point2: geopy.Point - second point on the great circle
-        radius: Radius of the sphere (default is Earth's radius in m)
+    dx = x2 - x1
+    dy = y2 - y1
 
-    Returns:
-        Shortest distance from the point to the great circle, in same units as radius (default meters)
-    """
-    p = latlon_to_unit_vector(point.latitude, point.longitude)
-    a = latlon_to_unit_vector(line_point1.latitude, line_point1.longitude)
-    b = latlon_to_unit_vector(line_point2.latitude, line_point2.longitude)
+    apx = x0 - x1
+    apy = y0 - y1
 
-    n = np.cross(a, b)
+    cross = abs(apx * dy - apy * dx)
 
-    angle_rad = math.asin(abs(np.dot(n, p)) / np.linalg.norm(n))
+    # Magnitude of AB
+    length_ab = math.hypot(dx, dy)
+
+    # Avoid division by zero (degenerate line)
+    if length_ab == 0:
+        raise ValueError("The line segment must have distinct endpoints.")
+
+    # Distance from point to line
+    return cross / length_ab
+
+def heading_angle_to_unit_vector(angle):
+	return np.array([np.cos(angle  / (2 * np.pi)), np.sin(angle  / (2 * np.pi))])
+
+def latlon_to_meters(lat: float, lon: float, origin_lat: float = 44.04882, origin_lon: float = -103.06126) -> tuple:
+	"""
+	Convert latitude and longitude to meters using a local coordinate system.
+	Optimized for 44.04882° N / 103.06126° W region.
+	Args:
+		lat (float): Latitude in degrees
+		lon (float): Longitude in degrees
+		origin_lat (float): Origin latitude for the local coordinate system (default: 44.04882)
+		origin_lon (float): Origin longitude for the local coordinate system (default: -103.06126)
+	Returns:
+		tuple: (x_meters, y_meters) - coordinates in meters relative to origin
+	"""
+	# Calculate differences from origin
+	dlat = lat - origin_lat
+	dlon = lon - origin_lon
 	
-    return radius * angle_rad
+	# Convert latitude difference to meters (constant ~111,320 m per degree)
+	y_meters = dlat * get_meters_per_degree_lat()
+	
+	# Convert longitude difference to meters (varies with latitude)
+	# Use average latitude for the longitude conversion
+	avg_lat = (lat + origin_lat) / 2
+	x_meters = dlon * get_meters_per_degree_lon(avg_lat)
+	
+	return (x_meters, y_meters)
 
-
-def heading_angle_to_unit_vector(angle_rad):
-	return np.array([np.cos(angle_rad), np.sin(angle_rad)])
+def meters_to_latlon(x_meters: float, y_meters: float, origin_lat: float = 44.04882, origin_lon: float = -103.06126) -> tuple:
+	"""
+	Convert meters back to latitude and longitude coordinates.
+	Optimized for 44.04882° N / 103.06126° W region.
+	Args:
+		x_meters (float): X coordinate in meters
+		y_meters (float): Y coordinate in meters
+		origin_lat (float): Origin latitude for the local coordinate system (default: 44.04882)
+		origin_lon (float): Origin longitude for the local coordinate system (default: -103.06126)
+	Returns:
+		tuple: (latitude, longitude) in degrees
+	"""
+	# Convert y_meters back to latitude difference
+	dlat = y_meters / get_meters_per_degree_lat()
+	lat = origin_lat + dlat
+	
+	# Convert x_meters back to longitude difference
+	# Use the calculated latitude for the longitude conversion
+	avg_lat = (lat + origin_lat) / 2
+	dlon = x_meters / (get_meters_per_degree_lon(avg_lat))
+	lon = origin_lon + dlon
+	
+	return (lat, lon)
 
 def extend_line(line: shapely.geometry.LineString, distance: float) -> shapely.geometry.LineString:
 	"""
@@ -210,3 +268,4 @@ def extend_line(line: shapely.geometry.LineString, distance: float) -> shapely.g
 	new_end = np.array(end) + direction * distance
 
 	return shapely.geometry.LineString([new_start, new_end])
+

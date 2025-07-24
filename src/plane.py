@@ -43,7 +43,6 @@ class Plane:
 				'hdg' (int): Heading of the plane in degrees.
 				'gspd' (float): Ground speed of the plane in meters per second.
 				'v_z' (float): Vertical speed (climb/sink rate) in meters per second.
-				'traj' (list): List of the plane's trajectory points in world coordinates.
 				'vel' (tuple): The plane's next world point
 
 				
@@ -61,9 +60,8 @@ class Plane:
 		self.thistick = [False, False, False]
 
 		self.acc_xy = init_state.get('acc_xy', 0.0)  # Optional, default to 0.0
-
-		self.traj = None
-		self._calculate_velocity()
+		self.id = init_state['id']
+		self._calculate_next_pt()
 
 		self.model = "A320" # default value
 
@@ -117,7 +115,7 @@ class Plane:
 		"""Get the current state of the plane.
 		Returns:
 			object: The current state of the plane.
-			Contains keys: 'callsign', 'lat', 'lon', 'alt', 'v_z', 'gspd', 'hdg', 'traj', 'state'.
+			Contains keys: 'callsign', 'lat', 'lon', 'alt', 'v_z', 'gspd', 'hdg'.
 		"""
 		state_dict = {
         	'callsign': self.callsign,
@@ -126,49 +124,33 @@ class Plane:
         	'alt': self.alt,
         	'hdg': self.hdg,
         	'gspd': self.gspd,
-        	'v_z': self.v_z,
-			'traj': self.traj,
-			'state' : self.state
+        	'v_z': self.v_z
 		}
 		
-		# Convert heading to an integer
-		state_dict['hdg'] = state_dict['hdg']
-		
 		return state_dict
-	
-	def set_state(self, input_dict) -> None:
-		self.callsign = input_dict['callsign']
-		self.lat = input_dict['lat']
-		self.lon = input_dict['lon']
-		self.alt = input_dict['alt']
-		self.hdg = input_dict['hdg']
-		self.gspd = input_dict['gspd']
-		self.v_z = input_dict['v_z']
-		self.state = input_dict['state']
-		self.id = input_dict['id']
-	
-	def get_traj(self) -> object:
-		"""Get the current trajectory of the plane.
-		Returns:
-			object: The list of plane trajectory points.
-			Returns as a list.
-		"""
-		return self.traj
 	
 	def get_traj_line(self):
 		"""Get the current trajectory line of the plane.
 		Returns:
 			object: The trajectory line as a shapely LineString object.
 		"""
-		self._calculate_velocity()
+		self._calculate_next_pt()
 		next_point = self.next_pt
 		return shapely.geometry.LineString([(self.lon, self.lat), (next_point.longitude, next_point.latitude)])
 
-	def set_traj(self, traj):
-		"""Set the current trajectory of the plane.
-		Right now, used only for rendering purposes.
+	def get_pos_ll(self) -> tuple:
+		"""Get the current position of the plane in latitude and longitude.
+		Returns:
+			tuple: The (latitude, longitude) position of the plane.
 		"""
-		self.traj = traj
+		return self.lat, self.lon
+
+	def get_pos_xy(self) -> tuple:
+		"""Get the current position of the plane in world coordinates.
+		Returns:
+			tuple: The (x, y) position of the plane in METERS
+		"""
+		return utils.latlon_to_meters(self.lat, self.lon)
 
 	# commands
 	def change_command(self, new_command: Command):
@@ -202,8 +184,6 @@ class Plane:
 		# Get the plane's position and trajectory line
 		plane_pos_xy = (self.lon, self.lat)
 		traj_line = self.get_traj_line()
-		tx1, ty1 = traj_line.coords[0]
-		tx2, ty2 = traj_line.coords[1]
 		# Get the target line coordinates
 		rx1, ry1 = target_line.coords[0]
 		rx2, ry2 = target_line.coords[1]
@@ -214,14 +194,6 @@ class Plane:
 
 		# 2. Find the intersection point of the extended target and trajectory lines
 
-		# Extend the target and trajectory lines to ensure intersection
-		# Find slopes
-		# slope_target = (ry2 - ry1) / (rx2 - rx1) if (rx2 - rx1) != 0 else 99999 # HACK: close enough to infinity
-		# slope_traj = (ty2 - ty1) / (tx2 - tx1) if (tx2 - tx1) != 0 else 99999
-		# extend_distance = 3 # how many degrees of lat/lon to extend the lines by
-		# # Extend lines
-		# extended_target = shapely.geometry.LineString([(rx1 - extend_distance, ry1 - extend_distance*slope_target), (rx2 + extend_distance, ry2 + extend_distance*slope_target)])
-		# extended_traj = shapely.geometry.LineString([(tx1 - extend_distance, ty1 - extend_distance*slope_traj), (tx2 + extend_distance, ty2 + extend_distance*slope_traj)])
 		extended_target = utils.extend_line(target_line, 3)
 		extended_traj = utils.extend_line(traj_line, 3)
 		# Find intersection
@@ -258,7 +230,7 @@ class Plane:
 		return int(round(distance_meters / self.gspd + current_tick))  # Time = distance / speed + current time
 
 	# class methods
-	def _calculate_velocity(self):
+	def _calculate_next_pt(self):
 		# Calculate the next position based on ground speed and heading
 		self.next_pt = geopy.distance.distance(meters=self.gspd).destination((self.lat,self.lon), bearing=self.hdg)
 	
@@ -365,7 +337,6 @@ class Plane:
 		
 		# Update physics and position
 		self._update_position()
-		self._update_trajectory()
 
 	def _update_position(self):
 		"""Update the plane's physical state and position."""
@@ -388,21 +359,10 @@ class Plane:
 		if self.gspd > self.nex_speed:
 			self.gspd = self.nex_speed
 		# Update velocity for the next tick
-		self._calculate_velocity()
+		self._calculate_next_pt()
 		
 		# 3. Update position based on velocity
 		self.lat = self.next_pt.latitude
 		self.lon = self.next_pt.longitude
 		self.alt += self.v_z
 		
-
-	def _update_trajectory(self):
-		"""Update the plane's trajectory visualization."""
-		# Compute the heading unit vector by changing heading to radians
-		hdg_rads = math.radians(self.hdg)
-		ux = math.cos(hdg_rads)
-		uy = math.sin(hdg_rads)
-
-		hdg_vec = (ux, uy)
-		
-		self.traj = [(self.lon + hdg_vec[1] / 1000 * i, self.lat + hdg_vec[0] / 1000 * i) for i in range(0, 11)]
