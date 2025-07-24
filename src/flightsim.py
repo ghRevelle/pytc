@@ -40,6 +40,9 @@ class FlightSimulator:
 
 		self.crashed_planes = []  # List to keep track of crashed planes
 
+	def pass_airport_to_pm(self, airport):
+		self.plane_manager.set_airport(airport)
+
 	def get_tps(self):
 		"""Get the effective ticks per second, accounting for turbo mode."""
 		if hasattr(self.pg_display, 'turbo_mode') and self.pg_display.turbo_mode:
