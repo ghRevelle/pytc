@@ -79,15 +79,15 @@ class RealignCommandHandler(CommandHandler):
 		self._validate_runway_command(target_runway, command, plane)
 		
 		target_hdg = target_runway.hdg
-		self.init_dist = self.init_dist if self.init_dist is not None else utils.point_to_great_circle_distance(
-			geopy.Point(plane.lat, plane.lon),
-			target_runway.get_start_point_ll(),
-			target_runway.get_end_point_ll()
+		self.init_dist = self.init_dist if self.init_dist is not None else utils.point_to_line_distance(
+			utils.latlon_to_meters(plane.lat, plane.lon),
+			utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude),
+			utils.latlon_to_meters(target_runway.get_end_point_ll().latitude, target_runway.get_end_point_ll().longitude)
 		)
-		current_dist = utils.point_to_great_circle_distance(
-			geopy.Point(plane.lat, plane.lon),
-			target_runway.get_start_point_ll(),
-			target_runway.get_end_point_ll()
+		current_dist = utils.point_to_line_distance(
+			utils.latlon_to_meters(plane.lat, plane.lon),
+			utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude),
+			utils.latlon_to_meters(target_runway.get_end_point_ll().latitude, target_runway.get_end_point_ll().longitude)
 		)
 		self.dir = self.dir if self.dir is not None else self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
 		
@@ -95,12 +95,12 @@ class RealignCommandHandler(CommandHandler):
 		
 		if self.dir == "left":
 			if current_dist > self.init_dist / 2:
-				plane._turn(plane.hdg, (plane.hdg - 90) % 360)
+				plane._turn(plane.hdg, (target_runway.hdg - 90) % 360)
 			else:
 				plane._turn(plane.hdg, target_hdg)
 		elif self.dir == "right":
 			if current_dist > self.init_dist / 2:
-				plane._turn(plane.hdg, (plane.hdg + 90) % 360)
+				plane._turn(plane.hdg, (target_runway.hdg + 90) % 360)
 			else:
 				plane._turn(plane.hdg, target_hdg)
 		else:
@@ -110,7 +110,7 @@ class RealignCommandHandler(CommandHandler):
 
 
 	@staticmethod
-	def _get_direction(pos, heading_angle_rad, target_pos):
+	def _get_direction(pos, heading, target_pos):
 		"""Determine the direction to the target position relative to the plane's heading.
 		Args:
 			pos (tuple): The current position of the plane (x, y).
@@ -120,7 +120,7 @@ class RealignCommandHandler(CommandHandler):
 			str: The direction to the target position ("left", "right", or "straight ahead (or behind)").
 		"""
 
-		heading = utils.heading_angle_to_unit_vector(heading_angle_rad)
+		heading = utils.heading_angle_to_unit_vector(heading)
 		to_target = (target_pos[0] - pos[0], target_pos[1] - pos[1])
 
 		# 2D cross product
