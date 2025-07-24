@@ -5,13 +5,11 @@ from airport import Runway, Airport
 from commands import *
 from planestates import PlaneState
 
-# Use coordinates relative to 44.04882° N / 103.06126° W (Rapid City, SD area)
+# Use coordinates relative to 32.7329° N, -117.1897° W (San Diego)
 # Create runways with realistic coordinates for this location
 test_runways = {
-	'Runway14': Runway((44.05383, -103.06500), (44.03283, -103.04933), "Runway14"),  # NE-SW runway
-	'Runway32': Runway((44.03283, -103.04933), (44.05383, -103.06500), "Runway32"),  # SW-NE runway
-	'Runway05': Runway((44.04783, -103.06383), (44.05250, -103.05167), "Runway05"),  # NW-SE runway
-	'Runway23': Runway((44.05250, -103.05167), (44.04783, -103.06383), "Runway23"),  # SE-NW runway
+	'Runway9': Runway((32.73713, -117.20433), (32.73, -117.175), "Runway9"),  # NW-SE runway
+	'Runway27': Runway((32.73, -117.175), (32.73713, -117.20433), "Runway27"),  # SE-NW runway
 }
 
 test_airport = Airport(test_runways)
@@ -20,8 +18,8 @@ fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_mana
 fs.pass_airport_to_pm(test_airport)
 
 # Base coordinates around Rapid City area
-base_lat = 44.04882
-base_lon = -103.06126
+base_lat = 32.7329
+base_lon = -117.1897
 
 for i in range(5):
 	# Create 5 planes with random positions and speeds
@@ -46,7 +44,7 @@ fs.add_plane_to_manager(
 		'alt': 400,
 		'v_z': 0,
 		'gspd': 83.8546382418,
-		'hdg': test_runways['Runway14'].hdg,  # Heading towards Runway14
+		'hdg': test_runways['Runway9'].hdg,  # Heading towards Runway9
 		'state': PlaneState.AIR,
 	},
 )
@@ -77,7 +75,7 @@ fs.add_command(Command(
 # Alternatively, use add_command_by_callsign, easier for testing
 
 ua6 = fs.plane_manager.planes[-1]
-runway = test_runways['Runway14']
+runway = test_runways['Runway27']
 
 fs.add_command_by_callsign('UA6', CommandType.REALIGN, last_update=0, argument=runway)
 fs.run(ticks=2500)  # Run the simulation for 500 ticks

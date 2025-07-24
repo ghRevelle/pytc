@@ -18,9 +18,9 @@ class Pygame_Display:
 		self.x_c = self.w // 2
 		self.y_c = self.h // 2
 		# Center on the coordinates we're optimized for
-		self.lon_c = -103.06126  # Longitude center (Rapid City area)
-		self.lat_c = 44.04882    # Latitude center (Rapid City area)
-		self.zoom = 10  # Much lower zoom for aviation-appropriate scale
+		self.lat_c = 32.7329  # Latitude center (San Diego)
+		self.lon_c = -117.1897  # Longitude center (San Diego)
+		self.zoom = 20  # Much lower zoom for aviation-appropriate scale
 
 		# FPS tracking
 		self.clock = pygame.time.Clock()
@@ -90,7 +90,7 @@ class Pygame_Display:
 		
 		# Handle viewport movement with arrow keys
 		# Movement speed inversely proportional to zoom (more zoomed in = slower movement)
-		move_speed = 0.00005 / (self.zoom / 2500)  # Base movement speed scaled by zoom
+		move_speed = 0.00005 / (self.zoom / 1250)  # Base movement speed scaled by zoom
 		
 		if pressed_keys[pygame.K_UP]:
 			self.lat_c += move_speed
@@ -254,8 +254,8 @@ class Pygame_Display:
 			ref_lon = (first_runway.start_point.longitude + first_runway.end_point.longitude) / 2
 		else:
 			# Fall back to the initial center coordinates as fixed reference
-			ref_lat = 44.04882  # Rapid City area
-			ref_lon = -103.06126
+			ref_lat = 32.7329  # San Diego
+			ref_lon = -117.1897
 		
 		# Convert fixed reference point to screen coordinates
 		origin_x, origin_y = self.wgs84_to_display(ref_lon, ref_lat)
