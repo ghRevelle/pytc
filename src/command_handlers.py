@@ -111,7 +111,7 @@ class RealignCommandHandler(CommandHandler):
 			)
 			self.dir = self.dir or self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
 			
-			print(f"Plane {plane.callsign} is realigning to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} at tick {tick}. Direction: {self.dir}, Current Distance: {current_dist}, Initial Distance: {self.init_dist}")
+			#print(f"Plane {plane.callsign} is realigning to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} at tick {tick}. Direction: {self.dir}, Current Distance: {current_dist}, Initial Distance: {self.init_dist}")
 			
 			if self.dir == "left":
 				if current_dist > self.init_dist / 2:
