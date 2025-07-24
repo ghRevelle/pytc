@@ -40,8 +40,8 @@ for i in range(5):
 fs.add_plane_to_manager(
 	{
 		'callsign': 'UA6',
-		'lat': base_lat + 0.2,  # North of the airport
-		'lon': base_lon + 0.05,  # West of the airport
+		'lat': base_lat + 0.1,  # North of the airport
+		'lon': base_lon - 0.1,  # West of the airport
 		'alt': 400,
 		'v_z': 0,
 		'gspd': 83.8546382418,

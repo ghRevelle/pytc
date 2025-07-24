@@ -87,18 +87,6 @@ class FlightSimulator:
 	def run(self, ticks=500):
 		"""Run the flight simulation for a specified number of ticks."""
 		while self.current_tick < ticks:
-			if self.current_tick == 200:
-				self.plane_manager.delete_plane_by_callsign('UA4')  # Example of deleting a plane at tick 200
-			elif self.current_tick == 300:
-				self.plane_manager.add_plane({ # Example of adding a new plane at tick 300
-					'callsign': 'UA7',
-					'lat': 0.01,
-					'lon': 0.01,
-					'alt': 5000,
-					'v_z': 0,
-					'gspd': 50,
-					'hdg': 90
-				})
 			self.tick()
 			effective_tps = self.get_tps()
 			time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
@@ -121,6 +109,7 @@ class FlightSimulator:
 		for command in self.command_queue:  # Process all commands in the queue
 			if self.current_tick == command.last_update:
 				self.command_plane(command)
+				self.command_queue.remove(command)  # Remove command after execution
 		# Update all plane states
 		plane_states = []
 		for plane in self.plane_manager.planes:

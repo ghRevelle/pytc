@@ -173,27 +173,40 @@ def calculate_bearing(start_point, end_point):
         return int(round((bearing + 360) % 360))
 
 def point_to_line_distance(point, line_start, line_end):
-    x0, y0 = point
-    x1, y1 = line_start
-    x2, y2 = line_end
-
-    dx = x2 - x1
-    dy = y2 - y1
-
-    apx = x0 - x1
-    apy = y0 - y1
-
-    cross = abs(apx * dy - apy * dx)
-
-    # Magnitude of AB
-    length_ab = math.hypot(dx, dy)
-
+    """
+    Calculate the perpendicular distance from a point to a line segment.
+    
+    Args:
+        point: (x, y) coordinates of the point
+        line_start: (x, y) coordinates of the line start
+        line_end: (x, y) coordinates of the line end
+    
+    Returns:
+        float: Perpendicular distance from point to line
+    """
+    # Convert inputs to numpy arrays for vectorized operations
+    p = np.array(point)
+    a = np.array(line_start)
+    b = np.array(line_end)
+    
+    # Vector from line start to end
+    ab = b - a
+    
+    # Vector from line start to point
+    ap = p - a
+    
+    # Calculate cross product magnitude (2D cross product gives area of parallelogram)
+    cross_product = np.abs(np.cross(ap, ab))
+    
+    # Calculate line segment length
+    line_length = np.linalg.norm(ab)
+    
     # Avoid division by zero (degenerate line)
-    if length_ab == 0:
+    if line_length == 0:
         raise ValueError("The line segment must have distinct endpoints.")
-
-    # Distance from point to line
-    return cross / length_ab
+    
+    # Distance is area divided by base length
+    return cross_product / line_length
 
 def heading_angle_to_unit_vector(angle):
 	return np.array([np.cos(angle  / (2 * np.pi)), np.sin(angle  / (2 * np.pi))])

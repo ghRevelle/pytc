@@ -130,7 +130,7 @@ class Plane:
 		return state_dict
 	
 	def get_traj_line(self):
-		"""Get the current trajectory line of the plane.
+		"""Get the current trajectory line of the plane in xy space (degrees longitude, degrees latitude).
 		Returns:
 			object: The trajectory line as a shapely LineString object.
 		"""

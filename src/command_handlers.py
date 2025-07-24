@@ -58,7 +58,7 @@ class CommandHandler(ABC):
 	def _is_aligned_to_runway(self, plane, target_runway):
 		"""Check if the plane is aligned with the target runway."""
 		return utils.is_collinear(
-			shapely.geometry.LineString([(plane.lon, plane.lat), (plane.next_pt.lon, plane.next_pt.lat)]),
+			plane.get_traj_line(),
 			target_runway.get_line_xy()
 		)
 	
@@ -68,7 +68,8 @@ class RealignCommandHandler(CommandHandler):
 
 	def __init__(self):
 		self.init_dist = None
-		self.dir = None  # Direction to turn: "left", "right", or "straight ahead"
+		self.dir = None  # Direction to turn: "left" or "right"
+		self.parallel = False  # Flag to track if the parallel alignment is complete
 
 	def can_handle(self, command_type: CommandType) -> bool:
 		return command_type == CommandType.REALIGN
@@ -82,9 +83,23 @@ class RealignCommandHandler(CommandHandler):
 		
 		# Validation using shared method
 		self._validate_runway_command(target_runway, command, plane)
+
+		if self._is_aligned_to_runway(plane, target_runway): # check if already aligned and done
+			# If already aligned, switch to cruise mode
+			command.command_type = CommandType.CRUISE
+			self.__init__()  # Reset state for next realignment
+			return
 		
-		if abs(target_hdg - plane.hdg) == np.isclose(-0.01, 0.01):
-			self.init_dist = self.init_dist if self.init_dist is not None else utils.point_to_line_distance(
+		# If not already parallel to the runway...
+		if not self.parallel:
+			plane._turn(plane.hdg, target_hdg) # Turn towards the runway heading
+			if np.isclose(plane.hdg, target_hdg, atol=1e-5):
+				self.parallel = True
+	
+		# If the aircraft is already parallel to the runway...
+		else:
+			# Double-turn into the runway
+			self.init_dist = self.init_dist or utils.point_to_line_distance(
 				utils.latlon_to_meters(plane.lat, plane.lon),
 				utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude),
 				utils.latlon_to_meters(target_runway.get_end_point_ll().latitude, target_runway.get_end_point_ll().longitude)
@@ -94,7 +109,7 @@ class RealignCommandHandler(CommandHandler):
 				utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude),
 				utils.latlon_to_meters(target_runway.get_end_point_ll().latitude, target_runway.get_end_point_ll().longitude)
 			)
-			self.dir = self.dir if self.dir is not None else self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
+			self.dir = self.dir or self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
 			
 			print(f"Plane {plane.callsign} is realigning to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} at tick {tick}. Direction: {self.dir}, Current Distance: {current_dist}, Initial Distance: {self.init_dist}")
 			
@@ -107,35 +122,8 @@ class RealignCommandHandler(CommandHandler):
 				if current_dist > self.init_dist / 2:
 					plane._turn(plane.hdg, (target_runway.hdg + 90) % 360)
 				else:
-					plane._turn(plane.hdg, target_hdg)
-			else:
-				self.init_dist = None  # Reset initial distance if already aligned
-				plane.dir = None  # Reset direction
-				command.command_type = CommandType.CRUISE  # If already aligned, switch to cruise mode
-		else:		
-			# Initialize alignment if needed
-			if plane.turn_start_time == -1:
-				self._initialize_runway_alignment(plane, target_runway, command)
+					plane._turn(plane.hdg, target_hdg)	
 			
-			# Execute runway alignment
-			elif tick >= plane.turn_start_time and command.last_update < plane.turn_start_time:
-				alignment_complete = self._handle_runway_alignment(plane, target_hdg, tick, command)
-				if alignment_complete:
-					print(f"Plane {plane.callsign} lined up to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} and waiting.")
-			
-			# If already aligned, just maintain position and heading
-			elif command.last_update >= plane.turn_start_time:
-				# Maintain runway heading and zero speed
-				plane._turn(plane.hdg, target_hdg)
-				plane.acc_xy = plane.proportional_change(
-					current=plane.acc_xy,
-					target=0,  # Stop acceleration
-					min_value=-plane.acc_xy_max,
-					max_value=plane.acc_xy_max,
-					max_change=plane.acc_xy_max
-				)
-
-
 	@staticmethod
 	def _get_direction(pos, heading, target_pos):
 		"""Determine the direction to the target position relative to the plane's heading.
