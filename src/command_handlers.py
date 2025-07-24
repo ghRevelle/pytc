@@ -69,44 +69,71 @@ class RealignCommandHandler(CommandHandler):
 	def __init__(self):
 		self.init_dist = None
 		self.dir = None  # Direction to turn: "left", "right", or "straight ahead"
+
 	def can_handle(self, command_type: CommandType) -> bool:
 		return command_type == CommandType.REALIGN
 	
 	def execute(self, plane, command, tick) -> None:
+
+		plane.state = PlaneState.AIR
+
 		target_runway = command.argument
+		target_hdg = target_runway.hdg
 		
 		# Validation using shared method
 		self._validate_runway_command(target_runway, command, plane)
 		
-		target_hdg = target_runway.hdg
-		self.init_dist = self.init_dist if self.init_dist is not None else utils.point_to_great_circle_distance(
-			geopy.Point(plane.lat, plane.lon),
-			target_runway.get_start_point_ll(),
-			target_runway.get_end_point_ll()
-		)
-		current_dist = utils.point_to_great_circle_distance(
-			geopy.Point(plane.lat, plane.lon),
-			target_runway.get_start_point_ll(),
-			target_runway.get_end_point_ll()
-		)
-		self.dir = self.dir if self.dir is not None else self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
-		
-		print(f"Plane {plane.callsign} is realigning to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} at tick {tick}. Direction: {self.dir}, Current Distance: {current_dist}, Initial Distance: {self.init_dist}")
-		
-		if self.dir == "left":
-			if current_dist > self.init_dist / 2:
-				plane._turn(plane.hdg, (plane.hdg - 90) % 360)
+		if abs(target_hdg - plane.hdg) == np.isclose(-0.01, 0.01):
+			self.init_dist = self.init_dist if self.init_dist is not None else utils.point_to_great_circle_distance(
+				geopy.Point(plane.lat, plane.lon),
+				target_runway.get_start_point_ll(),
+				target_runway.get_end_point_ll()
+			)
+			current_dist = utils.point_to_great_circle_distance(
+				geopy.Point(plane.lat, plane.lon),
+				target_runway.get_start_point_ll(),
+				target_runway.get_end_point_ll()
+			)
+			self.dir = self.dir if self.dir is not None else self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
+			
+			print(f"Plane {plane.callsign} is realigning to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} at tick {tick}. Direction: {self.dir}, Current Distance: {current_dist}, Initial Distance: {self.init_dist}")
+			
+			if self.dir == "left":
+				if current_dist > self.init_dist / 2:
+					plane._turn(plane.hdg, (plane.hdg - 90) % 360)
+				else:
+					plane._turn(plane.hdg, target_hdg)
+			elif self.dir == "right":
+				if current_dist > self.init_dist / 2:
+					plane._turn(plane.hdg, (plane.hdg + 90) % 360)
+				else:
+					plane._turn(plane.hdg, target_hdg)
 			else:
+				self.init_dist = None  # Reset initial distance if already aligned
+				plane.dir = None  # Reset direction
+				command.command_type = CommandType.CRUISE  # If already aligned, switch to cruise mode
+		else:		
+			# Initialize alignment if needed
+			if plane.turn_start_time == -1:
+				self._initialize_runway_alignment(plane, target_runway, command)
+			
+			# Execute runway alignment
+			elif tick >= plane.turn_start_time and command.last_update < plane.turn_start_time:
+				alignment_complete = self._handle_runway_alignment(plane, target_hdg, tick, command)
+				if alignment_complete:
+					print(f"Plane {plane.callsign} lined up to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} and waiting.")
+			
+			# If already aligned, just maintain position and heading
+			elif command.last_update >= plane.turn_start_time:
+				# Maintain runway heading and zero speed
 				plane._turn(plane.hdg, target_hdg)
-		elif self.dir == "right":
-			if current_dist > self.init_dist / 2:
-				plane._turn(plane.hdg, (plane.hdg + 90) % 360)
-			else:
-				plane._turn(plane.hdg, target_hdg)
-		else:
-			self.init_dist = None  # Reset initial distance if already aligned
-			plane.dir = None  # Reset direction
-			command.command_type = CommandType.CRUISE  # If already aligned, switch to cruise mode
+				plane.acc_xy = plane.proportional_change(
+					current=plane.acc_xy,
+					target=0,  # Stop acceleration
+					min_value=-plane.acc_xy_max,
+					max_value=plane.acc_xy_max,
+					max_change=plane.acc_xy_max
+				)
 
 
 	@staticmethod
@@ -226,29 +253,6 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 		plane.lat = target_runway.get_start_point_xy()[1]
 
 		plane.state = PlaneState.WAITING_FOR_TAKEOFF
-		
-		""" This code is all deprecated---it was written under the misinterpretation that lineupandwait meant line up to land!
-		# Initialize alignment if needed
-		if plane.turn_start_time == -1:
-			self._initialize_runway_alignment(plane, target_runway, command)
-		
-		# Execute runway alignment
-		elif tick >= plane.turn_start_time and command.last_update < plane.turn_start_time:
-			alignment_complete = self._handle_runway_alignment(plane, target_hdg, tick, command)
-			if alignment_complete:
-				print(f"Plane {plane.callsign} lined up to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} and waiting.")
-		
-		# If already aligned, just maintain position and heading
-		elif command.last_update >= plane.turn_start_time:
-			# Maintain runway heading and zero speed
-			plane._turn(plane.hdg, target_hdg)
-			plane.acc_xy = plane.proportional_change(
-				current=plane.acc_xy,
-				target=0,  # Stop acceleration
-				min_value=-plane.acc_xy_max,
-				max_value=plane.acc_xy_max,
-				max_change=plane.acc_xy_max
-			)"""
 
 class LandingCommandHandler(CommandHandler):
 	"""Handler for landing commands."""
