@@ -17,6 +17,7 @@ test_runways = {
 test_airport = Airport(test_runways)
 
 fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_manager = PlaneManager())
+fs.pass_airport_to_pm(test_airport)
 
 # Base coordinates around Rapid City area
 base_lat = 44.04882
