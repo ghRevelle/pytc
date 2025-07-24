@@ -33,15 +33,15 @@ class Runway:
     def get_end_point_ll(self) -> geopy.Point:
         """Get the end point of the runway as a geopy.Point(latitude, longitude)."""
         return self.end_point
-    
-    def get_start_point_xy(self):
+
+    def get_start_point_xy(self) -> tuple[float, float]:
         """Get the start point of the runway as a tuple (longitude, latitude).
         Returns:
             tuple: The start point of the runway in (longitude, latitude) format.
         """
         return (self.start_point.longitude, self.start_point.latitude)
-    
-    def get_end_point_xy(self):
+
+    def get_end_point_xy(self) -> tuple[float, float]:
         """Get the end point of the runway as a tuple (longitude, latitude).
         Returns:
             tuple: The end point of the runway in (longitude, latitude) format.

@@ -4,7 +4,7 @@ import math
 
 import geopy
 import numpy as np
-from commands import CommandType
+from commands import Command, CommandType
 import utils
 import shapely.geometry
 from airport import Runway
@@ -20,12 +20,13 @@ class CommandHandler(ABC):
 		pass
 	
 	@abstractmethod
-	def execute(self, plane, command, tick) -> None:
+	def execute(self, plane: Plane, command: Command, tick: int) -> None:
 		"""Execute the command logic for the given plane."""
 		pass
 	
 	# Shared runway alignment functionality
-	def _validate_runway_command(self, target_runway, command, plane):
+	@staticmethod
+	def _validate_runway_command(target_runway, command, plane):
 		"""Validate runway-related command parameters."""
 		if not isinstance(target_runway, Runway):
 			raise TypeError("Argument must be a Runway object.")
@@ -79,10 +80,10 @@ class RealignCommandHandler(CommandHandler):
 		plane.state = PlaneState.AIR
 
 		target_runway = command.argument
-		target_hdg = target_runway.hdg
+		if not isinstance(target_runway, Runway):
+			raise ValueError("Invalid runway argument: must be a Runway object")
 		
-		# Validation using shared method
-		self._validate_runway_command(target_runway, command, plane)
+		target_hdg = target_runway.hdg
 
 		if self._is_aligned_to_runway(plane, target_runway): # check if already aligned and done
 			# If already aligned, switch to cruise mode
@@ -99,6 +100,9 @@ class RealignCommandHandler(CommandHandler):
 		# If the aircraft is already parallel to the runway...
 		else:
 			# Double-turn into the runway
+			print(f"Plane {plane.callsign} is realigning to runway {target_runway.name} on tick {tick}, is parallel:", utils.is_parallel(
+				plane.get_traj_line(), target_runway.get_line_xy()
+			))
 			self.init_dist = self.init_dist or utils.point_to_line_distance(
 				utils.latlon_to_meters(plane.lat, plane.lon),
 				utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude),
@@ -111,18 +115,13 @@ class RealignCommandHandler(CommandHandler):
 			)
 			self.dir = self.dir or self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
 			
-			print(f"Plane {plane.callsign} is realigning to runway {target_runway.name if hasattr(target_runway, 'name') else 'unknown'} at tick {tick}. Direction: {self.dir}, Current Distance: {current_dist}, Initial Distance: {self.init_dist}")
-			
-			if self.dir == "left":
-				if current_dist > self.init_dist / 2:
-					plane._turn(plane.hdg, (target_runway.hdg - 90) % 360)
-				else:
-					plane._turn(plane.hdg, target_hdg)
-			elif self.dir == "right":
-				if current_dist > self.init_dist / 2:
+			if current_dist > self.init_dist / 2:
+				if self.dir == "left":
+						plane._turn(plane.hdg, (target_runway.hdg - 90) % 360)
+				elif self.dir == "right":
 					plane._turn(plane.hdg, (target_runway.hdg + 90) % 360)
-				else:
-					plane._turn(plane.hdg, target_hdg)	
+			else:
+				plane._turn(plane.hdg, target_hdg)	
 			
 	@staticmethod
 	def _get_direction(pos, heading, target_pos):
@@ -232,9 +231,8 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 	def execute(self, plane, command, tick) -> None:
 
 		target_runway = command.argument
-		
-		# Validation using shared method
-		self._validate_runway_command(target_runway, command, plane)
+		if not isinstance(target_runway, Runway):
+			raise ValueError("Invalid runway argument: must be a Runway object")
 
 		plane.hdg = target_runway.hdg
 		plane.lon = target_runway.get_start_point_xy()[0]

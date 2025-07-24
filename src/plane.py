@@ -5,7 +5,6 @@ import geopy.distance
 import numpy as np
 import utils
 from commands import *
-from command_handlers import CommandProcessor
 from planestates import *
 
 class Plane:
@@ -334,6 +333,7 @@ class Plane:
 
 		# Process commands using the command processor
 		if not hasattr(self, '_command_processor'):
+			from command_handlers import CommandProcessor
 			self._command_processor = CommandProcessor()
 		
 		self._command_processor.process_command(self, self.command, tick)
