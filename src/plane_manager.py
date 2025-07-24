@@ -1,4 +1,6 @@
 from plane import Plane
+from airport import *
+from planestates import PlaneState
 
 class PlaneManager:
     def __init__(self, plane_infos=[], max_slots=10):
@@ -11,9 +13,18 @@ class PlaneManager:
                 raise TypeError("Plane info must be a dictionary.")
             self.add_plane(plane_info)
 
+    def set_airport(self, airport: Airport):
+        self.airport = airport
+
     def add_plane(self, init_state: dict):
         init_state['id'] = self.get_id(init_state['callsign'])
-        self.planes.append(Plane(init_state))
+
+        new_plane = Plane(init_state)
+
+        self.planes.append(new_plane)
+
+        if init_state['state'] == PlaneState.GROUND and self.airport:
+            self.airport.queue.append((new_plane.id, self.airport.runways['Runway14']))
 
     # get a new id for a plane or return a plane's current id
     def get_id(self, callsign: str) -> int:
