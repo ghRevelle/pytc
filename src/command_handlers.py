@@ -100,9 +100,6 @@ class RealignCommandHandler(CommandHandler):
 		# If the aircraft is already parallel to the runway...
 		else:
 			# Double-turn into the runway
-			print(f"Plane {plane.callsign} is realigning to runway {target_runway.name} on tick {tick}, is parallel:", utils.is_parallel(
-				plane.get_traj_line(), target_runway.get_line_xy()
-			))
 			self.init_dist = self.init_dist or utils.point_to_line_distance(
 				utils.latlon_to_meters(plane.lat, plane.lon),
 				utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude),
@@ -114,10 +111,10 @@ class RealignCommandHandler(CommandHandler):
 				utils.latlon_to_meters(target_runway.get_end_point_ll().latitude, target_runway.get_end_point_ll().longitude)
 			)
 			self.dir = self.dir or self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
-			
+			print(f"Plane {plane.callsign} is realigning to runway {target_runway.name} on tick {tick}, direction {self.dir}, current distance {current_dist:.2f} meters, initial distance {self.init_dist:.2f} meters.")
 			if current_dist > self.init_dist / 2:
 				if self.dir == "left":
-						plane._turn(plane.hdg, (target_runway.hdg - 90) % 360)
+					plane._turn(plane.hdg, (target_runway.hdg - 90) % 360)
 				elif self.dir == "right":
 					plane._turn(plane.hdg, (target_runway.hdg + 90) % 360)
 			else:
@@ -139,7 +136,7 @@ class RealignCommandHandler(CommandHandler):
 
 		# 2D cross product
 		cross = heading[0] * to_target[1] - heading[1] * to_target[0]
-
+		print(heading)
 		if cross > 0:
 			return "left"
 		elif cross < 0:
@@ -250,8 +247,8 @@ class LandingCommandHandler(CommandHandler):
 
 		target_runway = command.argument
 		
-		# Validation using shared method
-		self._validate_runway_command(target_runway, command, plane)
+		if not isinstance(target_runway, Runway):
+			raise ValueError("Invalid runway argument: must be a Runway object")
 		
 		target_hdg = target_runway.hdg
 		target_dist = self._calculate_runway_distance(plane, target_runway)
@@ -352,7 +349,7 @@ class TakeoffCommandHandler(CommandHandler):
 		# Climb until 1000 ft
 		else:
 			plane.state = PlaneState.TAKINGOFF
-			plane.thistick[1] = True
+			plane.tookoff_this_tick = True
 
 			command.command_type = CommandType.CRUISE
 

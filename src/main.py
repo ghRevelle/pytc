@@ -39,8 +39,8 @@ for i in range(5):
 fs.add_plane_to_manager(
 	{
 		'callsign': 'UA6',
-		'lat': base_lat + 0.1,  # North of the airport
-		'lon': base_lon - 0.1,  # West of the airport
+		'lat': base_lat + 0.05,  # North of the airport
+		'lon': base_lon - 0.05,  # West of the airport
 		'alt': 400,
 		'v_z': 0,
 		'gspd': 83.8546382418,
@@ -75,7 +75,7 @@ fs.add_command(Command(
 # Alternatively, use add_command_by_callsign, easier for testing
 
 ua6 = fs.plane_manager.planes[-1]
-runway = test_runways['Runway27']
+runway = test_runways['Runway9']
 
 fs.add_command_by_callsign('UA6', CommandType.REALIGN, last_update=0, argument=runway)
 fs.run(ticks=2500)  # Run the simulation for 500 ticks
