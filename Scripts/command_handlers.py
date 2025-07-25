@@ -157,7 +157,7 @@ class NoCommandHandler(CommandHandler):
 		return command_type == CommandType.NONE
 	
 	def execute(self, plane, command, tick) -> None:
-		plane.state = PlaneState.GROUND
+		plane.state = PlaneState.QUEUED
 		return None
 
 class CruiseCommandHandler(CommandHandler):
@@ -330,8 +330,21 @@ class LandingCommandHandler(CommandHandler):
 		plane.landed_this_tick = True
 
 		plane.acc_xy = 0
-		command.command_type = CommandType.NONE
+		command.command_type = CommandType.TAXI
 		command.last_update = tick
+
+class TaxiCommandHandler(CommandHandler):
+	"""Command handler for post-landing operations."""
+
+	def can_handle(self, command_type: CommandType) -> bool:
+		return command_type == CommandType.TAXI
+
+	def execute(self, plane, command, tick) -> None:
+		plane.state = PlaneState.TAXIING
+		if plane.time_waited == 90:
+			plane.state = PlaneState.MARKED_FOR_DELETION
+		else:
+			plane.time_waited += 1
 
 class TakeoffCommandHandler(CommandHandler):
 	"""Handler for takeoff commands."""
@@ -423,7 +436,8 @@ class CommandProcessor:
 			TakeoffCommandHandler(),
 			GoAroundCommandHandler(),
 			CruiseCommandHandler(),
-			RealignCommandHandler()
+			RealignCommandHandler(),
+			TaxiCommandHandler()
 		]
 	
 	def process_command(self, plane, command, tick):

@@ -129,7 +129,7 @@ class Pygame_Display:
 				continue
 
 			# this works!
-			if self.last_states.get(plane_id, {}).get('state') == PlaneState.GROUND:
+			if self.last_states.get(plane_id, {}).get('state') == PlaneState.QUEUED:
 				continue
 				
 			color = self.plane_colors[plane_id]

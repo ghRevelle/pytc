@@ -56,7 +56,7 @@ fs.pass_airport_to_pm(test_airport)
 # 		'v_z' : 0,
 # 		'gspd' : 0,
 # 		'hdg' : 0.0,
-# 		'state' : PlaneState.GROUND
+# 		'state' : PlaneState.QUEUED
 # 	}
 # )
 
@@ -72,8 +72,8 @@ print(fs.plane_manager.show_ids())
 
 for i in range(2500):
 	# Run the simulation for 2500 ticks
-	if i % 10 == 0:
-		fs.plane_manager.print_planes(i)
+	# if i % 10 == 0:
+	# 	fs.plane_manager.print_planes(i)
 	fs.tick()
 
 #fs.run(ticks=2500)  # Run the simulation for 2e500 ticks

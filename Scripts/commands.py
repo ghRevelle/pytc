@@ -12,6 +12,7 @@ class CommandType(Enum):
     TURN = 6                 # rarely used; will use for 
     REALIGN = 7              # realign plane to runway centerline; used for planes that are not aligned with the runway after landing or takeoff
     CRUISE = 8               # default for planes in the air
+    TAXI = 9                 # planes which have just landed and are taxiing away
 
 @dataclass
 class Command:

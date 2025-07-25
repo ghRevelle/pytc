@@ -121,12 +121,12 @@ class FlightSimulator:
 		# Update all plane states using list comprehension
 		plane_states = [plane.tick(self.current_tick).get_state() for plane in self.plane_manager.planes]
 
-		# Check all planes for crashes
+		# Check all planes for crashes and deletions
 		planes = self.plane_manager.planes
 		for i, plane1 in enumerate(planes):
 			for plane2 in planes[i+1:]: # avoid checking a plane against itself
 				# Skip ground planes to avoid collision detection in airport queue
-				if plane1.state == plane2.state == PlaneState.GROUND:
+				if plane1.state == plane2.state == PlaneState.QUEUED:
 					continue
 				
 				check_distance = utils.calculate_craft_distance(plane1.lat, plane1.lon, plane2.lat, plane2.lon, plane1.alt, plane2.alt)
@@ -138,6 +138,9 @@ class FlightSimulator:
 					# <= 30 meters is considered a collision; the DRL is punished, and the planes get destroyed
 					if check_distance <= 30:
 						self.crashed_planes.extend([plane1, plane2])
+			
+			if plane1.state == PlaneState.MARKED_FOR_DELETION:
+				self.plane_manager.delete_plane(plane1.id)
 
 		# Update display once with all plane states
 		if plane_states:

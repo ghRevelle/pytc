@@ -59,6 +59,8 @@ class Plane:
 		self.tookoff_this_tick = False
 		self.crashed_this_tick = False
 
+		self.time_waited = 0
+
 		self.acc_xy = init_state.get('acc_xy', 0.0)  # Optional, default to 0.0
 		self.id = init_state['id']
 		self._calculate_next_pt()
