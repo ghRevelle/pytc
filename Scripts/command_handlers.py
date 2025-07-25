@@ -268,7 +268,7 @@ class LandingCommandHandler(CommandHandler):
 		plane.hdg = target_hdg  # Ensure the plane is aligned with the runway heading
 		
 		if target_dist < plane.tod and plane.alt > 0: 
-			self._handle_descent_phase(plane, target_dist)
+			self._handle_descent_phase(plane, target_dist, target_runway)
 		elif plane.alt <= 0 and plane.gspd > 0:
 			self._handle_ground_phase(plane)
 		elif plane.gspd <= 0:
@@ -286,7 +286,7 @@ class LandingCommandHandler(CommandHandler):
 		plane.rod = plane._calculate_rod(plane.gspd)
 		plane.desired_acc_xy = plane._calculate_target_acc_descend(plane.gspd, plane.alt)
 
-	def _handle_descent_phase(self, plane: Plane, target_dist: float) -> None:
+	def _handle_descent_phase(self, plane: Plane, target_dist: float, target_runway: Runway) -> None:
 		"""Handle the descent phase of landing."""
 		plane.rod = plane._calculate_rod(plane.gspd)
 		
@@ -294,6 +294,8 @@ class LandingCommandHandler(CommandHandler):
 			descent_rate = -(plane.alt * plane.gspd / target_dist)
 		# else:
 		descent_rate = -plane.rod
+
+		plane.hdg = target_runway.hdg
 		
 		plane.v_z = descent_rate
 		# plane.proportional_change(
