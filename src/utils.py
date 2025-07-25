@@ -169,15 +169,15 @@ def heading_angle_to_unit_vector(angle):
 	angle = math.radians(450 - angle)  # Convert to standard mathematical angle in radians
 	return np.array([np.cos(angle), np.sin(angle)])
 
-def latlon_to_meters(lat: float, lon: float, origin_lat: float = 44.04882, origin_lon: float = -103.06126) -> tuple:
+def latlon_to_meters(lat: float, lon: float, origin_lat: float = 32.7329, origin_lon: float = -117.1897) -> tuple:
 	"""
 	Convert latitude and longitude to meters using a local coordinate system.
-	Optimized for 44.04882° N / 103.06126° W region.
+	Optimized for 32.7329° N / 117.1897° W region.
 	Args:
 		lat (float): Latitude in degrees
 		lon (float): Longitude in degrees
-		origin_lat (float): Origin latitude for the local coordinate system (default: 44.04882)
-		origin_lon (float): Origin longitude for the local coordinate system (default: -103.06126)
+		origin_lat (float): Origin latitude for the local coordinate system (default: 32.7329)
+		origin_lon (float): Origin longitude for the local coordinate system (default: -117.1897)
 	Returns:
 		tuple: (x_meters, y_meters) - coordinates in meters relative to origin
 	"""
@@ -195,15 +195,15 @@ def latlon_to_meters(lat: float, lon: float, origin_lat: float = 44.04882, origi
 	
 	return (x_meters, y_meters)
 
-def meters_to_latlon(x_meters: float, y_meters: float, origin_lat: float = 44.04882, origin_lon: float = -103.06126) -> tuple:
+def meters_to_latlon(x_meters: float, y_meters: float, origin_lat: float = 32.7329, origin_lon: float = -117.1897) -> tuple:
 	"""
 	Convert meters back to latitude and longitude coordinates.
-	Optimized for 44.04882° N / 103.06126° W region.
+	Optimized for 32.7329° N / 117.1897° W region.
 	Args:
 		x_meters (float): X coordinate in meters
 		y_meters (float): Y coordinate in meters
-		origin_lat (float): Origin latitude for the local coordinate system (default: 44.04882)
-		origin_lon (float): Origin longitude for the local coordinate system (default: -103.06126)
+		origin_lat (float): Origin latitude for the local coordinate system (default: 32.7329)
+		origin_lon (float): Origin longitude for the local coordinate system (default: -117.1897)
 	Returns:
 		tuple: (latitude, longitude) in degrees
 	"""
