@@ -143,8 +143,7 @@ class FlightSimulator:
 				self.plane_manager.delete_plane(plane1.id)
 
 		# Update display once with all plane states
-		if plane_states:
-			self.pg_display.update_display(plane_states)
+		self.pg_display.update_display(plane_states)
 
 		while self.crashed_planes:
 			self.plane_manager.delete_plane(self.crashed_planes.pop().id)

@@ -41,6 +41,17 @@ rolling_initial_state = [
 		'hdg': test_runways[9].hdg,  # Heading towards Runway9
 		'state': PlaneState.AIR,
 		'time_added': 500  # Time added to the simulation
+	},
+	{
+		'callsign': 'AA11',
+		'lat': base_lat + 0.075,  # North of the airport
+		'lon': base_lon - 0.25,  # West of the airport
+		'alt': 400,
+		'v_z': 0,
+		'gspd': 83.8546382418,
+		'hdg': test_runways[9].hdg,  # Heading towards Runway9
+		'state': PlaneState.AIR,
+		'time_added': 100  # Time added to the simulation
 	}
 ]
 
@@ -75,5 +86,6 @@ for i in range(2500):
 	# if i % 10 == 0:
 	# 	fs.plane_manager.print_planes(i)
 	fs.tick()
+	print(f"Tick {i}")
 
 #fs.run(ticks=2500)  # Run the simulation for 2e500 ticks
