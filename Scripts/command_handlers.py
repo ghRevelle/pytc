@@ -256,7 +256,8 @@ class LandingCommandHandler(CommandHandler):
 		if not isinstance(target_runway, Runway):
 			raise ValueError("Invalid runway argument: must be a Runway object")
 		
-		target_hdg = target_runway.hdg
+		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading
+
 		target_dist = self._calculate_runway_distance(plane, target_runway)
 		
 		# Initialize landing parameters if needed
@@ -265,7 +266,6 @@ class LandingCommandHandler(CommandHandler):
 		
 		if not self._is_aligned_to_runway(plane, target_runway):
 			raise ValueError(f"{plane.callsign} is not aligned to the runway for landing.")
-		plane.hdg = target_hdg  # Ensure the plane is aligned with the runway heading
 		
 		if target_dist < plane.tod and plane.alt > 0: 
 			self._handle_descent_phase(plane, target_dist, target_runway)
