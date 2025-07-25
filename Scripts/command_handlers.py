@@ -44,10 +44,10 @@ class CommandHandler(ABC):
 			)
 		)
 	
-	def _initialize_runway_alignment(self, plane, target_runway, command):
-		"""Initialize runway alignment parameters.
-		DEPRECATED: Use the new RealignCommandHandler instead."""
-		plane.turn_start_time = plane.find_turn_initiation_time(target_runway.get_line_xy(), command.last_update)
+	# def _initialize_runway_alignment(self, plane, target_runway, command):
+	# 	"""Initialize runway alignment parameters.
+	# 	DEPRECATED: Use the new RealignCommandHandler instead."""
+	# 	plane.turn_start_time = plane.find_turn_initiation_time(target_runway.get_line_xy(), command.last_update)
 	
 	def _handle_runway_alignment(self, plane, target_hdg, tick, command):
 		"""Handle the runway alignment phase."""
@@ -88,12 +88,6 @@ class RealignCommandHandler(CommandHandler):
 			raise ValueError("Invalid runway argument: must be a Runway object")
 		
 		target_hdg = target_runway.hdg
-
-		if self._is_aligned_to_runway(plane, target_runway): # check if already aligned and done
-			# If already aligned, switch to cruise mode
-			command.command_type = CommandType.CRUISE
-			self.__init__()  # Reset state for next realignment
-			return
 		
 		# If not already parallel to the runway...
 		if not self.parallel:
@@ -123,6 +117,13 @@ class RealignCommandHandler(CommandHandler):
 					plane._turn(plane.hdg, (target_runway.hdg + 90) % 360)
 			else:
 				plane._turn(plane.hdg, target_hdg)	
+
+			
+			if self._is_aligned_to_runway(plane, target_runway): # check if already aligned and done
+				# If already aligned, switch to cruise mode
+				command.command_type = CommandType.CRUISE
+				self.__init__()  # Reset state for next realignment
+				return
 			
 	@staticmethod
 	def _get_direction(pos, heading, target_pos):

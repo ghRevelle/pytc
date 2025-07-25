@@ -70,4 +70,4 @@ class PlaneManager:
     
     def print_planes(self, tick):
         for plane in self.planes:
-            print(f"ID: {plane.id}, Callsign: {plane.callsign}, State: {plane.state}, tick: {tick}")
+            print(f"lat: {plane.lat}, lon: {plane.lon}, ID: {plane.id}, Callsign: {plane.callsign}, State: {plane.state}, command: {plane.command.command_type} tick: {tick}")

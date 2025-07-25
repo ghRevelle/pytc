@@ -153,7 +153,7 @@ class Pygame_Display:
 
 			# Draw trajectory line extending from aircraft in heading direction
 			if 'hdg' in plane_state:
-				hdg = plane_state.get('hdg', 0)
+				hdg = plane_state.get('hdg', 0.0)
 				# Calculate trajectory line length (e.g., 10 nautical miles ahead)
 				trajectory_length_nm = 1
 				trajectory_length_pixels = self.nm_to_display(trajectory_length_nm)
@@ -170,7 +170,7 @@ class Pygame_Display:
 			# Draw triangle at the current position (reuse coordinates from trail)
 			if trail:
 				# Use the already calculated plane_x, plane_y instead of recalculating
-				hdg = plane_state.get('hdg', 0)  # Default heading north
+				hdg = plane_state.get('hdg', 0.0)  # Default heading north
 					
 				angle = np.deg2rad(hdg-90)
 				# Triangle points

@@ -47,32 +47,32 @@ rolling_initial_state = [
 fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_manager = PlaneManager(), rolling_initial_state=rolling_initial_state)
 fs.pass_airport_to_pm(test_airport)
 
-fs.add_plane_to_manager(
-	{
-		'callsign' : 'RG1',
-		'lat' : 0.0,
-		'lon' : 0.0,
-		'alt' : 0,
-		'v_z' : 0,
-		'gspd' : 0,
-		'hdg' : 0,
-		'state' : PlaneState.GROUND
-	}
-)
+# fs.add_plane_to_manager(
+# 	{
+# 		'callsign' : 'RG1',
+# 		'lat' : 0.0,
+# 		'lon' : 0.0,
+# 		'alt' : 0,
+# 		'v_z' : 0,
+# 		'gspd' : 0,
+# 		'hdg' : 0.0,
+# 		'state' : PlaneState.GROUND
+# 	}
+# )
 
 runway = test_runways[9]
 
-fs.add_command_by_callsign('UA6', CommandType.REALIGN, last_update=0, argument=runway)
+fs.add_command_by_callsign('UA6', CommandType.REALIGN, last_update=100, argument=runway)
 fs.add_command_by_callsign('UA6', CommandType.CLEARED_TO_LAND, last_update=200, argument=runway)
 
-fs.add_command_by_callsign('UA93', CommandType.REALIGN, last_update=500, argument=runway)
+fs.add_command_by_callsign('UA93', CommandType.REALIGN, last_update=600, argument=runway)
 fs.add_command_by_callsign('UA93', CommandType.CLEARED_TO_LAND, last_update=700, argument=runway)
 
 print(fs.plane_manager.show_ids())
 
 for i in range(2500):
 	# Run the simulation for 2500 ticks
-	if i % 5 == 0:
+	if i % 10 == 0:
 		fs.plane_manager.print_planes(i)
 	fs.tick()
 

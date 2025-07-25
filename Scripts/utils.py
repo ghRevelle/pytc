@@ -67,7 +67,7 @@ def get_meters_per_degree_lat() -> float:
 		"""Get the meters per degree of latitude.
 		Returns:
 			float: Meters per degree of latitude."""
-		return 111320.0  # Average meters per degree latitude (WGS84)
+		return 110883.79  # Average meters per degree latitude (WGS84)
 
 def get_meters_per_degree_lon(lat: float=44.04882) -> float:
 		"""Get the meters per degree of longitude at a given latitude.
@@ -75,7 +75,7 @@ def get_meters_per_degree_lon(lat: float=44.04882) -> float:
 			lat (float): Latitude in degrees.
 		Returns:
 			float: Meters per degree of longitude at the specified latitude."""
-		return 111320.0 * math.cos(math.radians(lat))
+		return 110883.79 * math.cos(math.radians(lat))
 
 def meters_to_degrees(heading: float, meters: float) -> float:
 		"""
@@ -117,7 +117,7 @@ def mps_to_knots(mps: float) -> float:
 def knots_to_mps(knots: float) -> float:
 	return knots / 1.94384
 
-def calculate_bearing(start_point, end_point):
+def calculate_bearing(start_point, end_point) -> float:
         """Calculate the bearing from (lat1, lon1) to (lat2, lon2) in degrees."""
         lat1, lon1 = start_point
         lat2, lon2 = end_point
@@ -127,7 +127,7 @@ def calculate_bearing(start_point, end_point):
         x = math.sin(dLon) * math.cos(lat2)
         y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1) * math.cos(lat2) * math.cos(dLon))
         bearing = math.degrees(math.atan2(x, y))
-        return int(round((bearing + 360) % 360))
+        return (bearing + 360) % 360
 
 def point_to_line_distance(point, line_start, line_end):
     """
