@@ -16,15 +16,14 @@ PyTC is comprised of several major parts:
 - **data/**
     - cleaned_data/
         - contains cleaned data
-    - filtered_data/
-        - contains filtered but not cleaned data
-    - data_cleaner.ipynb: clean data
-    - data_filter.py: filter operations (takeoff and landing) data by airport
-    - data_scraper.py: scrape data from ADS-B Exchange, filtered by ICAO hex codes
+    - data_cleaner.ipynb: cleans data
+    - data_filter.py: filters operations (takeoff and landing) data by airport
+    - data_scraper.py: scrapes data from ADS-B Exchange, filtered by ICAO hex codes
     - sources.txt: list of our sources
 - **src/**
     - \_\_init\_\_.py: registers our custom gymnasium environment
     - airport.py: airport and runway class
+    - command_handlers.py: multiple command-handling classes to handle plane movements
     - commands.py: command dataclass
     - DRL_algorithm.py: DRL algorithm, training function, etc.
     - DRL_env.py: custom gymnasium training environment
@@ -32,6 +31,7 @@ PyTC is comprised of several major parts:
     - **main.py**: run tests here
     - plane_manager.py: plane manager class (stores plane data)
     - plane.py: plane class
+    - planestates.py: plane states Enum
     - pygame_display.py: Pygame display class
     - utils.py: useful conversion functions
 - **pytc_env.yml**: virtual environment information  
@@ -45,12 +45,11 @@ To clean data, use data_cleaner.ipynb and do the following:
 
 ## Notes  
 
-Rapid City Regional Airport is a regional airport we chose for our testing.  
+San Diego International Airport is the airport we chose for our testing.  
 
 Why?  
 
-- It is not too large: it has just two runways and services either GA or small commercial aircraft
-- It does not have a lot of traffic from surrounding airports
+- It has 1 runway: this makes our model as simple as possible
+- It handles mostly commercial aircraft: this means approaching aircraft should be aligned with the runway multiple miles before entering tower airspace
 - It is in the US (more data available)
-- One of our developers has visited before
 
