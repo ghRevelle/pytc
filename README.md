@@ -18,8 +18,7 @@ We want to answer the question: how would DRL algorithms compare to real, human 
 3. [Software and Packages Used](#software-and-packages-used)
 4. [Installation](#installation)
 5. [Usage](#usage)
-6. [Simplifying Assumptions](#simplifying-assumptions)
-7. [Notes](#notes)
+6. [Notes and Simplifying Assumptions](#notes-and-simplifying-assumptions)
 
 ## Description  
 
@@ -101,17 +100,17 @@ To run the tests, use main.py:
 ```bash
 python Scripts/main.py
 ```
-## Notes  
+## Notes and Simplifying Assumptions
 
 We chose San Diego International Airport for our testing. We purposefully overfitted our model to work well for ONLY this airport--in real life, different airports could train a different version of the DRL suited to their specific airport conditions. 
 
-# Why did we choose San Diego?  
+### Why did we choose San Diego?  
 
 - It has one runway: this makes our model as simple as possible
 - It handles mostly commercial aircraft: this means approaching aircraft should be aligned with the runway multiple miles before entering tower airspace (as opposed to the more freeform general aviation alignment conditions)
 - It is in the US (more data available)
 
-## Simplifying Assumptions
+### Simplifying Assumptions
 [under construction]
 
 - Because of approach control’s wonderful work, planes will always spawn near-parallel to their landing runway.
