@@ -26,7 +26,7 @@ class FlightSimulator:
 		self.rolling_initial_state = rolling_initial_state if rolling_initial_state is not None else []
 		for plane_state in self.rolling_initial_state:
 			if plane_state['time_added'] == 0:
-				self.plane_manager.add_plane(plane_state)
+				self.add_plane_to_manager(plane_state)
 
 		if airport is None:
 			raise TypeError("Missing Airport Layout")
@@ -102,8 +102,6 @@ class FlightSimulator:
 		"""Run the flight simulation for a specified number of ticks."""
 		while self.current_tick < ticks:
 			self.tick()
-			effective_tps = self.get_tps()
-			time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
 			
 		self.current_tick = 0  # Reset tick after running
 
@@ -155,6 +153,15 @@ class FlightSimulator:
 		 for attr in ['landed_this_tick', 'tookoff_this_tick', 'crashed_this_tick']]
 			
 		self.current_tick += 1  # Increment the tick count
+
+		# Check for planes to add to state
+		for plane_state in self.rolling_initial_state:
+			if plane_state['time_added'] == self.current_tick:
+				self.add_plane_to_manager(plane_state)
+
+		effective_tps = self.get_tps()
+		time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
+			
 	
 
 	# Pseudocode implementation of a reward function for reinforcement learning

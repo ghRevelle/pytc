@@ -77,7 +77,7 @@ def get_meters_per_degree_lon(lat: float=44.04882) -> float:
 			float: Meters per degree of longitude at the specified latitude."""
 		return 111320.0 * math.cos(math.radians(lat))
 
-def meters_to_degrees(heading: int, meters: float) -> float:
+def meters_to_degrees(heading: float, meters: float) -> float:
 		"""
 		Convert a distance in meters along a given heading to degrees (approximate, WGS84).
 		heading: degrees from north (0 = north, 90 = east)
@@ -90,7 +90,7 @@ def meters_to_degrees(heading: int, meters: float) -> float:
 		# Return the total angular distance (Euclidean in degree space)
 		return math.hypot(dlat, dlon)
 
-def degrees_to_meters(heading: int, degrees: float) -> float:
+def degrees_to_meters(heading: float, degrees: float) -> float:
 		"""
 		Convert a distance in degrees along a given heading to meters (approximate, WGS84).
 		heading: degrees from north (0 = north, 90 = east)
@@ -102,7 +102,7 @@ def degrees_to_meters(heading: int, degrees: float) -> float:
 		meters = math.hypot(dlat * get_meters_per_degree_lat(), dlon * get_meters_per_degree_lon())
 		return meters
 
-def degrees_to_nautical_miles(heading: int, degrees: float) -> float:
+def degrees_to_nautical_miles(heading: float, degrees: float) -> float:
 		"""
 		Convert a distance in degrees along a given heading to nautical miles (approximate, WGS84).
 		heading: degrees from north (0 = north, 90 = east)

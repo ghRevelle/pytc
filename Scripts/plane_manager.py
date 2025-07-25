@@ -3,15 +3,11 @@ from airport import *
 from planestates import PlaneState
 
 class PlaneManager:
-    def __init__(self, plane_infos=[], max_slots=10):
+    def __init__(self, max_slots=10):
         self.planes = []
         self.max_slots = max_slots
         self.id_to_callsign = [''] * max_slots  # id -> callsign
         self.callsign_to_id = {}               # callsign -> id
-        for plane_info in plane_infos:
-            if not isinstance(plane_info, dict):
-                raise TypeError("Plane info must be a dictionary.")
-            self.add_plane(plane_info)
 
     def set_airport(self, airport: Airport):
         self.airport = airport
@@ -71,3 +67,7 @@ class PlaneManager:
     # show list of ids
     def show_ids(self):
         return self.id_to_callsign
+    
+    def print_planes(self, tick):
+        for plane in self.planes:
+            print(f"ID: {plane.id}, Callsign: {plane.callsign}, State: {plane.state}, tick: {tick}")

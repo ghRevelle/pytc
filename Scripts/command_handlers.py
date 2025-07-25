@@ -261,7 +261,7 @@ class LandingCommandHandler(CommandHandler):
 			self._initialize_landing(plane, target_runway, command) # TODO: STOP ADDING RANDOM ATTRIBUTES TO THE PLANE OBJECT
 		
 		if not self._is_aligned_to_runway(plane, target_runway):
-			raise ValueError("Plane is not aligned to the runway for landing.")
+			raise ValueError(f"{plane.callsign} is not aligned to the runway for landing.")
 		
 		if target_dist < plane.tod and plane.alt > 0: 
 			self._handle_descent_phase(plane, target_dist)
