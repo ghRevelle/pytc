@@ -32,47 +32,48 @@ class AirTrafficControlDQN(nn.Module):
         # Output heads
         self.command_head = nn.Linear(128, n_commands)   # logits for command
         self.plane_head = nn.Linear(128, n_planes)       # logits for target plane
-        self.argument_head = nn.Linear(128, 1)           # regression for heading / runway ID
 
     def forward(self, x):
         x = self.fc(x)
         command_logits = self.command_head(x)            # (batch, n_commands)
         plane_logits = self.plane_head(x)                # (batch, n_planes)
-        argument = torch.tanh(self.argument_head(x))     # (batch, 1)
-        argument = argument * 360                        # map to [–360, +360] or clamp for specific uses
-        return command_logits, plane_logits, argument
- 
+        return command_logits, plane_logits
+
+
 def compute_dqn_loss(policy_net, target_net, batch, gamma=0.99):
     losses = []
 
     for state, action, reward, next_state, done in batch:
-        command_logits, plane_logits, arg_pred = policy_net(state)
-        next_command_logits, next_plane_logits, next_arg_pred = target_net(next_state)
-
+        command_logits, plane_logits = policy_net(state)
+        next_command_logits, next_plane_logits = target_net(next_state)
 
         # Get Q(s,a)
-        q_pred = extract_q_value(command_logits, plane_logits, arg_pred, action)
+        q_pred = extract_q_value(command_logits, plane_logits, [action])
 
         # Get Q_target = r + γ * max_a' Q(s',a')
         with torch.no_grad():
             next_q_pred = compute_max_q_value(next_command_logits, next_plane_logits)
-            q_target = reward if done else reward + gamma * next_q_pred
+            q_target = reward + gamma * next_q_pred * (~done)
 
         loss = F.mse_loss(q_pred, q_target)
         losses.append(loss)
 
     return torch.stack(losses).mean()
 
-def extract_q_value(command_logits, plane_logits, arg_pred, actions):
+
+def extract_q_value(command_logits, plane_logits, actions):
     # actions: list/array of tuples (cmd_idx, plane_idx, arg_val)
     q_vals = []
-    for i, (cmd_idx, plane_idx, arg_val) in enumerate(actions):
-        cmd_logit = command_logits[i, cmd_idx]
-        plane_logit = plane_logits[i, plane_idx]
-        arg_q = -((arg_pred[i] - arg_val) ** 2)
-        q_val = cmd_logit + plane_logit + arg_q
+    log_cmd_probs = F.log_softmax(command_logits, dim=1)
+    log_plane_probs = F.log_softmax(plane_logits, dim=1)
+
+    for i, (cmd_idx, plane_idx, _) in enumerate(actions):
+        cmd_logit = log_cmd_probs[i, cmd_idx]
+        plane_logit = log_plane_probs[i, plane_idx]
+        q_val = cmd_logit + plane_logit
         q_vals.append(q_val)
     return torch.stack(q_vals)
+
 
 def compute_max_q_value(command_logits, plane_logits):
     # Max over possible command/plane pairs
@@ -80,16 +81,16 @@ def compute_max_q_value(command_logits, plane_logits):
     max_q = torch.max(all_qs.view(all_qs.size(0), -1), dim=1).values
     return max_q
 
+
 class AirTrafficControlEnv(gym.Env):
     def __init__(self, flight_simulator):
         super().__init__()
         self.sim = flight_simulator
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(120,), dtype=np.float32)
-        
+
         self.action_space = spaces.Dict({
             "command": spaces.Discrete(7),      # NONE to TURN
             "plane_id": spaces.Discrete(10),    # plane slots
-            "argument": spaces.Box(low=0, high=360, shape=(1,), dtype=np.float32)
         })
 
     def reset(self, seed=None, options=None):
@@ -102,9 +103,10 @@ class AirTrafficControlEnv(gym.Env):
         info = {}
         return observation, reward, done, False, info
 
+
 def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
               epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995, target_update=10):
-    
+
     optimizer = optim.Adam(policy_net.parameters(), lr=1e-4)
     memory = deque(maxlen=10000)
     epsilon = epsilon_start
@@ -120,21 +122,20 @@ def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0
                 action = {
                     'command': env.action_space['command'].sample(),
                     'plane_id': env.action_space['plane_id'].sample(),
-                    'argument': env.action_space['argument'].sample()[0]
                 }
             else:
-                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
-                command_logits, plane_logits, argument = policy_net(state_tensor)
-                command = torch.argmax(command_logits).item()
-                plane_id = torch.argmax(plane_logits).item()
-                arg = argument.squeeze().item()
-                action = {'command': command, 'plane_id': plane_id, 'argument': arg}
+                with torch.no_grad():
+                    state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+                    command_logits, plane_logits = policy_net(state_tensor)
+                    command = torch.argmax(command_logits, dim=1).item()
+                    plane_id = torch.argmax(plane_logits, dim=1).item()
+                    action = {'command': command, 'plane_id': plane_id}
 
             next_state, reward, done, _, _ = env.step(action)
             total_reward += reward
 
-            memory.append((state, (action['command'], action['plane_id'], action['argument']),
-                          reward, next_state, done))
+            memory.append((state, (action['command'], action['plane_id'], 0),
+                          reward, next_state, torch.tensor(done)))
             state = next_state
 
             # Train
@@ -143,7 +144,7 @@ def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0
                 batch = [(torch.tensor(s, dtype=torch.float32, device=device),
                           a, torch.tensor(r, dtype=torch.float32, device=device),
                           torch.tensor(ns, dtype=torch.float32, device=device),
-                          d) for s, a, r, ns, d in batch]
+                          torch.tensor(d, dtype=torch.bool, device=device)) for s, a, r, ns, d in batch]
 
                 loss = compute_dqn_loss(policy_net, target_net, batch, gamma)
                 optimizer.zero_grad()
@@ -159,5 +160,28 @@ def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0
 
         print(f"Episode {episode}, Total Reward: {total_reward:.2f}, Epsilon: {epsilon:.3f}")
 
+
+def run_episode(env, policy_net, eval=False):
+    state, _ = env.reset()
+    total_reward = 0
+    done = False
+
+    while not done:
+        if eval:
+            with torch.no_grad():
+                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+                command_logits, plane_logits = policy_net(state_tensor)
+                command = torch.argmax(command_logits, dim=1).item()
+                plane_id = torch.argmax(plane_logits, dim=1).item()
+        else:
+            command = env.action_space['command'].sample()
+            plane_id = env.action_space['plane_id'].sample()
+
+        action = {'command': command, 'plane_id': plane_id}
+        next_state, reward, done, _, _ = env.step(action)
+        total_reward += reward
+        state = next_state
+
+    return total_reward
 
 print("passed initialization test")

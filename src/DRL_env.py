@@ -25,7 +25,6 @@ class AirTrafficControlEnv(gym.Env):
         self.action_space = spaces.Dict({
             "command": spaces.Discrete(len(CommandType)),
             "plane_id": spaces.Discrete(max_planes),
-            "argument": spaces.Box(low=0.0, high=360.0, shape=(1,), dtype=np.float32),
         })
 
     def reset(self, seed=None, options=None):
@@ -46,7 +45,6 @@ class AirTrafficControlEnv(gym.Env):
         command = Command(
             command_type=CommandType(action['command']),
             target_id=action['plane_id'],
-            argument=action['argument'][0],
             last_update=self.current_tick
         )
         self.sim.add_command(command)
