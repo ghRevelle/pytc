@@ -32,12 +32,12 @@ PyTC is comprised of several major parts:
 - **Data/**
     - AnalysisData/
         - contains cleaned data
-    - data_scraper.py: scrapes data from ADS-B Exchange, filtered by ICAO hex codes
     - sources.txt: list of our sources
 - **Scripts/**
     - ProcessingScripts/
         - data_cleaner.ipynb: cleans data
         - data_filter.py: filters operations (takeoff and landing) data by airport
+        - data_scraper.py: scrapes data from ADS-B Exchange, filtered by ICAO hex codes
     - \_\_init\_\_.py: registers our custom gymnasium environment
     - airport.py: airport and runway class
     - command_handlers.py: multiple command-handling classes to handle plane movements
@@ -56,8 +56,9 @@ PyTC is comprised of several major parts:
 ## Software and Packages Used
 
 - Python 3.12.4
-- pygame
+- torch
 - gymnasium
+- pygame
 - numpy
 - pandas
 - scikit-learn
@@ -88,11 +89,13 @@ Before starting, ensure you have Python 3.12 and [Conda](https://docs.conda.io/p
 
 ## Usage
 
-To clean data, use data_cleaner.ipynb and do the following:
-1. Load your filtered csv file
-2. Run the code cells for your desired form of cleaning (clean aircraft vs operations)
-3. You now have a clean csv file
+### Data Collection  
+1. Download operations.csv.gz from ADS-B Exchange for a specific date
+2. Use **data_filter.py** to filter operations data to one specific airport
+3. Use **data_scraper.py** to scrape plane data for every 5-second interval in the day, filtered by your filtered operations
+4. Use **data_cleaner.ipynb** to clean your aircraft and operations data
 
+### Testing  
 To run the tests, use main.py:
 ```bash
 python Scripts/main.py
