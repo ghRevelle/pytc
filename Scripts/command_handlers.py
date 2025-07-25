@@ -265,6 +265,7 @@ class LandingCommandHandler(CommandHandler):
 		
 		if not self._is_aligned_to_runway(plane, target_runway):
 			raise ValueError(f"{plane.callsign} is not aligned to the runway for landing.")
+		plane.hdg = target_hdg  # Ensure the plane is aligned with the runway heading
 		
 		if target_dist < plane.tod and plane.alt > 0: 
 			self._handle_descent_phase(plane, target_dist)
@@ -291,16 +292,17 @@ class LandingCommandHandler(CommandHandler):
 		
 		if target_dist < 1:
 			descent_rate = -(plane.alt * plane.gspd / target_dist)
-		else:
-			descent_rate = -plane.rod
+		# else:
+		descent_rate = -plane.rod
 		
-		plane.v_z = plane.proportional_change(
-			current=plane.v_z,
-			target=descent_rate,
-			min_value=-plane.dsc_rate,
-			max_value=plane.asc_rate,
-			max_change=plane.acc_z_max
-		)
+		plane.v_z = descent_rate
+		# plane.proportional_change(
+		# 	current=plane.v_z,
+		# 	target=descent_rate,
+		# 	min_value=-plane.dsc_rate,
+		# 	max_value=plane.asc_rate,
+		# 	max_change=plane.acc_z_max
+		# )
 		
 		# Handle speed control during descent
 		if plane.gspd > plane.ldg_speed:

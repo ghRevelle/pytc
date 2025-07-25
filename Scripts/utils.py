@@ -219,6 +219,10 @@ def meters_to_latlon(x_meters: float, y_meters: float, origin_lat: float = 32.73
 	
 	return (lat, lon)
 
+def meters_to_feet(meters: float) -> float:
+	"""Convert meters to feet."""
+	return meters * 3.28084
+
 def extend_line(line: shapely.geometry.LineString, distance: float) -> shapely.geometry.LineString:
 	"""
 	Extend a line in both directions by a fixed distance.

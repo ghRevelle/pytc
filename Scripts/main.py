@@ -22,8 +22,8 @@ test_airport = Airport(test_runways)
 rolling_initial_state = [
 	{
 		'callsign': 'UA6',
-		'lat': base_lat + 0.075,  # North of the airport
-		'lon': base_lon - 0.25,  # West of the airport
+		'lat': base_lat + 0.15,  # North of the airport
+		'lon': base_lon - 0.5,  # West of the airport
 		'alt': 400,
 		'v_z': 0.0,
 		'gspd': 83.8546382418,
@@ -44,8 +44,8 @@ rolling_initial_state = [
 	},
 	{
 		'callsign': 'AA11',
-		'lat': base_lat + 0.075,  # North of the airport
-		'lon': base_lon - 0.25,  # West of the airport
+		'lat': base_lat + 0.15,  # North of the airport
+		'lon': base_lon - 0.5,  # West of the airport
 		'alt': 400,
 		'v_z': 0.0,
 		'gspd': 83.8546382418,
@@ -70,14 +70,14 @@ fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_mana
 
 runway = test_runways[9]
 
-fs.add_command_by_callsign('UA6', CommandType.REALIGN, last_update=100, argument=runway)
-fs.add_command_by_callsign('UA6', CommandType.CLEARED_TO_LAND, last_update=200, argument=runway)
+fs.add_command_by_callsign('UA6', CommandType.REALIGN, last_update=200, argument=runway)
+fs.add_command_by_callsign('UA6', CommandType.CLEARED_TO_LAND, last_update=300, argument=runway)
 
 fs.add_command_by_callsign('UA93', CommandType.REALIGN, last_update=600, argument=runway)
 fs.add_command_by_callsign('UA93', CommandType.CLEARED_TO_LAND, last_update=700, argument=runway)
 
-fs.add_command_by_callsign('AA11', CommandType.REALIGN, last_update=120, argument=runway)
-fs.add_command_by_callsign('AA11', CommandType.CLEARED_TO_LAND, last_update=200, argument=runway)
+fs.add_command_by_callsign('AA11', CommandType.REALIGN, last_update=200, argument=runway)
+fs.add_command_by_callsign('AA11', CommandType.CLEARED_TO_LAND, last_update=300, argument=runway)
 
 fs.add_command_by_callsign('RG1', CommandType.LINE_UP_AND_WAIT, last_update=500, argument=runway)
 fs.add_command_by_callsign('RG1', CommandType.CLEARED_FOR_TAKEOFF, last_update=550, argument=runway)

@@ -257,7 +257,7 @@ class Plane:
 
 	def _calculate_tod(self, current_alt) -> float:
 		"""Calculate the top of descent to a target position in nautical miles."""
-		return current_alt * 3 / 1000  # Distance to start descent in nautical miles
+		return utils.meters_to_feet(current_alt) * 3 / 1000  # Distance to start descent in nautical miles
 
 	def _calculate_rod(self, current_speed) -> float:
 		"""Calculate the rate of descent to a target position in meters per second."""
