@@ -18,7 +18,8 @@ We want to answer the question: how would DRL algorithms compare to real, human 
 3. [Software and Packages Used](#software-and-packages-used)
 4. [Installation](#installation)
 5. [Usage](#usage)
-6. [Notes](#notes)
+6. [Simplifying Assumptions](#simplifying-assumptions)
+7. [Notes](#notes)
 
 ## Description  
 
@@ -102,11 +103,19 @@ python Scripts/main.py
 ```
 ## Notes  
 
-San Diego International Airport is the airport we chose for our testing.  
+We chose San Diego International Airport for our testing. We purposefully overfitted our model to work well for ONLY this airport--in real life, different airports could train a different version of the DRL suited to their specific airport conditions. 
 
-Why?  
+# Why did we choose San Diego?  
 
-- It has 1 runway: this makes our model as simple as possible
-- It handles mostly commercial aircraft: this means approaching aircraft should be aligned with the runway multiple miles before entering tower airspace
+- It has one runway: this makes our model as simple as possible
+- It handles mostly commercial aircraft: this means approaching aircraft should be aligned with the runway multiple miles before entering tower airspace (as opposed to the more freeform general aviation alignment conditions)
 - It is in the US (more data available)
 
+## Simplifying Assumptions
+[under construction]
+
+- Because of approach control’s wonderful work, planes will always spawn near-parallel to their landing runway.
+- Because of approach control's wonderful work, planes will always spawn less than two turn radii away from the approach line.
+- A plane going around will climb to cruising altitude and despawn from the situation -> in real life, the plane would be sent out ~50 nm and put in a pattern; it's realistically not going to come back over the course of a simulation episode
+- We will not consider emergencies, strange go-arounds, edge scenarios, etc. that we find in our data -> our model serves as a proof-of-concept and shouldn't need to respond to uncommon scenarios
+- Auto-throttle is always on for all of the planes -> this means that aircraft do not lose/gain speed in turns (though climbs and descents do influence speed slightly)
