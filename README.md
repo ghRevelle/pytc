@@ -1,17 +1,33 @@
-# PyTC  
+<!-- badges: start -->
 
-Python Tower Controller (PyTC) is a software package including a deep reinforcement learning algorithm and a flight radar simulator. It it not meant to be a replacement for Tower Control; it is a proof-of-concept of a DRL algorithm that could potentially serve the role of a Tower Controller.
+![Static Badge](https://img.shields.io/badge/lifecycle-wip-red)
+![Static Badge](https://img.shields.io/badge/license-MIT-white)
+![Static Badge](https://img.shields.io/badge/python-3.12.4-blue)
 
-We want to answer the question: how would DRL algorithms compare to real, human Tower Controllers? This issue has become pertinent recently, since the worsening strain on ATCs and Tower Controllers has led to disastrous air accidents in the US. While we don't claim to have a solution to such a multifaceted issue, we did want to examine how we could use machine learning to produce a viable AI Tower Controller. In the future, a tool similar to ours could take some burden off of Tower Controllers, or, if AI becomes truly robust and trusted, could serve as an Tower Controller "hub", communicating with and directing autonomous commercial aircraft without human intervention.
+<!-- badges: end -->
+
+# PyTC : Python Tower Controller 
+
+Python Tower Controller (PyTC) is a software package that aims to train a deep reinforcement learning (DRL) algorithm to act as a Tower Controller for an airport. The PyTC package includes said DRL, as well as a Pygame-based simulation of the San Diego Intl. Airport and its associated aircraft (developed in-house).
+
+We want to answer the question: how would DRL algorithms compare to real, human Tower Controllers? This issue has become pertinent recently, since the worsening strain on ATCs and Tower Controllers has led to disastrous air accidents in the US. While we don't claim to have a solution to such a multifaceted issue, we did want to examine how we could use machine learning to produce a viable AI Tower Controller. In the future, a tool similar to ours could take some burden off of Tower Controllers, or, if AI becomes truly robust and trusted, could serve as an Tower Controller "hub," communicating with and directing autonomous commercial aircraft without human intervention.
+
+## Table of Contents
+1. [Description](#description)
+2. [File Tree](#file-tree)
+3. [Software and Packages Used](#software-and-packages-used)
+4. [Installation](#installation)
+5. [Usage](#usage)
+6. [Notes](#notes)
 
 ## Description  
 
 PyTC is comprised of several major parts:  
-1. Sample training data and data manipulating algorithms
+1. Sample training data and data-scraping algorithms
 2. A DRL algorithm, training environment, and training function
 3. A flight simulator to process commands issued by the algorithm
 
-## Contents  
+## File Tree  
 
 - **Data/**
     - AnalysisData/
@@ -35,7 +51,20 @@ PyTC is comprised of several major parts:
     - planestates.py: plane states Enum
     - pygame_display.py: Pygame display class
     - utils.py: useful conversion functions
-- **pytc_env.yml**: virtual environment information  
+- **pytc_env.yml**: virtual environment information
+
+## Software and Packages Used
+
+- Python 3.12.4
+- pygame
+- gymnasium
+- numpy
+- pandas
+- scikit-learn
+- geopy
+- shapely
+- requests
+- pip
 
 ## Installation
 
