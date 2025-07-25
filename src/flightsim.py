@@ -12,7 +12,6 @@ class FlightSimulator:
 
 	# Simulation speed. In real life, 1 tick = 1 second
 	base_tps = 25
-	current_tick = 0
 
 	def __init__(self, display_size=(640, 480), planes=None, airport=None, plane_manager=None):
 		"""Initialize the flight simulator with a display size, optional planes, optional airport layout.
@@ -155,13 +154,18 @@ class FlightSimulator:
 		for plane in env_state.planes:
 			# Reward for successful landings
 			if plane.landed_this_tick == True:
-				print(f"A plane just landed.")
+				print(f"{plane.callsign} has landed. (ID: {plane.id})")
 				reward += 10.0
 
 			# Reward for successful takeoff
 			if plane.tookoff_this_tick == True:
-				print(f"A plane just took off.")
+				print(f"{plane.callsign} has taken off. (ID: {plane.id})")
 				reward += 10.0
+
+			# Penalty for crashing
+			if plane.crashed_this_tick == True:
+				print(f"{plane.callsign} just crashed. (ID: {plane.id})")
+				reward -= 100.0
 
     	# Penalty for invalid or illegal commands
 		if command_executed.is_invalid:
@@ -169,12 +173,6 @@ class FlightSimulator:
 
 		if command_executed.caused_conflict:
 			reward -= 50.0
-
-    	# Penalty for a crash
-		for plane in env_state.planes:
-			if plane.crashed_this_tick == True:
-				print(f"Plane with ID {plane.id} just crashed.")
-				reward -= 100.0
 			
     	# Small time pressure penalty per plane still in air
 		reward -= 0.01 * env_state.num_planes_in_air
