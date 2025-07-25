@@ -13,14 +13,15 @@ PyTC is comprised of several major parts:
 
 ## Contents  
 
-- **data/**
-    - cleaned_data/
+- **Data/**
+    - AnalysisData/
         - contains cleaned data
-    - data_cleaner.ipynb: cleans data
-    - data_filter.py: filters operations (takeoff and landing) data by airport
     - data_scraper.py: scrapes data from ADS-B Exchange, filtered by ICAO hex codes
     - sources.txt: list of our sources
-- **src/**
+- **Scripts/**
+    - ProcessingScripts/
+        - data_cleaner.ipynb: cleans data
+        - data_filter.py: filters operations (takeoff and landing) data by airport
     - \_\_init\_\_.py: registers our custom gymnasium environment
     - airport.py: airport and runway class
     - command_handlers.py: multiple command-handling classes to handle plane movements
@@ -36,13 +37,37 @@ PyTC is comprised of several major parts:
     - utils.py: useful conversion functions
 - **pytc_env.yml**: virtual environment information  
 
-## Instructions  
+## Installation
+
+Before starting, ensure you have Python 3.12 and [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) installed.
+1. Clone the repository:  
+   ```bash
+   git clone https://github.com/ghRevelle/pytc.git
+    ``` 
+2. Navigate to the project directory:  
+   ```bash
+   cd pytc
+   ```
+3. Create a virtual environment:  
+   ```bash
+   conda env create -f pytc_env.yml # Create a virtual environment named 'pytc'
+   ```
+4. Activate the virtual environment:  
+   ```bash
+   conda activate pytc
+   ```
+
+## Usage
 
 To clean data, use data_cleaner.ipynb and do the following:
 1. Load your filtered csv file
 2. Run the code cells for your desired form of cleaning (clean aircraft vs operations)
 3. You now have a clean csv file
 
+To run the tests, use main.py:
+```bash
+python Scripts/main.py
+```
 ## Notes  
 
 San Diego International Airport is the airport we chose for our testing.  
