@@ -25,7 +25,7 @@ rolling_initial_state = [
 		'lat': base_lat + 0.075,  # North of the airport
 		'lon': base_lon - 0.25,  # West of the airport
 		'alt': 400,
-		'v_z': 0,
+		'v_z': 0.0,
 		'gspd': 83.8546382418,
 		'hdg': test_runways[9].hdg,  # Heading towards Runway9
 		'state': PlaneState.AIR,
@@ -36,7 +36,7 @@ rolling_initial_state = [
 		'lat': base_lat + 0.075,  # North of the airport
 		'lon': base_lon - 0.25,  # West of the airport
 		'alt': 400,
-		'v_z': 0,
+		'v_z': 0.0,
 		'gspd': 83.8546382418,
 		'hdg': test_runways[9].hdg,  # Heading towards Runway9
 		'state': PlaneState.AIR,
@@ -47,29 +47,26 @@ rolling_initial_state = [
 		'lat': base_lat + 0.075,  # North of the airport
 		'lon': base_lon - 0.25,  # West of the airport
 		'alt': 400,
-		'v_z': 0,
+		'v_z': 0.0,
 		'gspd': 83.8546382418,
 		'hdg': test_runways[9].hdg,  # Heading towards Runway9
 		'state': PlaneState.AIR,
-		'time_added': 100  # Time added to the simulation
-	}
+		'time_added': 20  # Time added to the simulation
+	},
+	{
+		'callsign' : 'RG1',
+ 		'lat' : 0.0,
+ 		'lon' : 0.0,
+ 		'alt' : 0.0,
+ 		'v_z' : 0.0,
+ 		'gspd' : 0.0,
+ 		'hdg' : 0.0,
+ 		'state' : PlaneState.QUEUED,
+		'time_added' : 0  # Time added to the simulation
+ 	}
 ]
 
 fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_manager = PlaneManager(), rolling_initial_state=rolling_initial_state)
-fs.pass_airport_to_pm(test_airport)
-
-# fs.add_plane_to_manager(
-# 	{
-# 		'callsign' : 'RG1',
-# 		'lat' : 0.0,
-# 		'lon' : 0.0,
-# 		'alt' : 0,
-# 		'v_z' : 0,
-# 		'gspd' : 0,
-# 		'hdg' : 0.0,
-# 		'state' : PlaneState.QUEUED
-# 	}
-# )
 
 runway = test_runways[9]
 
@@ -79,13 +76,24 @@ fs.add_command_by_callsign('UA6', CommandType.CLEARED_TO_LAND, last_update=200, 
 fs.add_command_by_callsign('UA93', CommandType.REALIGN, last_update=600, argument=runway)
 fs.add_command_by_callsign('UA93', CommandType.CLEARED_TO_LAND, last_update=700, argument=runway)
 
-print(fs.plane_manager.show_ids())
+fs.add_command_by_callsign('AA11', CommandType.REALIGN, last_update=120, argument=runway)
+fs.add_command_by_callsign('AA11', CommandType.CLEARED_TO_LAND, last_update=220, argument=runway)
+
+fs.add_command_by_callsign('RG1', CommandType.LINE_UP_AND_WAIT, last_update=500, argument=runway)
+fs.add_command_by_callsign('RG1', CommandType.CLEARED_FOR_TAKEOFF, last_update=550, argument=runway)
+
 
 for i in range(2500):
 	# Run the simulation for 2500 ticks
 	# if i % 10 == 0:
 	# 	fs.plane_manager.print_planes(i)
+
+	if i > 490:
+		for plane in fs.plane_manager.planes:
+			if plane.callsign == 'RG1':
+				print(f"Plane {plane.callsign} is in state {plane.state} at tick {i}")
+
 	fs.tick()
-	print(f"Tick {i}")
+	
 
 #fs.run(ticks=2500)  # Run the simulation for 2e500 ticks

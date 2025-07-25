@@ -20,8 +20,8 @@ class FlightSimulator:
 			airport (Airport): Optional airport layout.
 		"""
 		self.display_size = display_size
-		self.airport = airport
 		self.plane_manager = plane_manager
+		self.plane_manager.set_airport(airport)
 
 		self.rolling_initial_state = rolling_initial_state if rolling_initial_state is not None else []
 		for plane_state in self.rolling_initial_state:
@@ -49,8 +49,6 @@ class FlightSimulator:
 
 		self.crashed_planes = []  # List to keep track of crashed planes
 
-	def pass_airport_to_pm(self, airport):
-		self.plane_manager.set_airport(airport)
 
 	def get_tps(self):
 		"""Get the effective ticks per second, accounting for turbo mode."""
@@ -132,12 +130,14 @@ class FlightSimulator:
 				check_distance = utils.calculate_craft_distance(plane1.lat, plane1.lon, plane2.lat, plane2.lon, plane1.alt, plane2.alt)
 				
 				# <= 300 meters is considered a near-collision; the DRL is punished as if the planes crashed
-				if check_distance <= 300:
+				if check_distance <= 300 and check_distance > 30:
 					plane1.crashed_this_tick = plane2.crashed_this_tick = True
+					#print(f"Planes {plane1.callsign} and {plane2.callsign} just had a close call.")
 					
-					# <= 30 meters is considered a collision; the DRL is punished, and the planes get destroyed
-					if check_distance <= 30:
-						self.crashed_planes.extend([plane1, plane2])
+				# <= 30 meters is considered a collision; the DRL is punished, and the planes get destroyed
+				elif check_distance <= 30:
+					self.crashed_planes.extend([plane1, plane2])
+					#print(f"Planes {plane1.callsign} and {plane2.callsign} just crashed.")
 			
 			if plane1.state == PlaneState.MARKED_FOR_DELETION:
 				self.plane_manager.delete_plane(plane1.id)

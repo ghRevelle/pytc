@@ -104,7 +104,7 @@ class Plane:
 
 			#case "PA28":
 
-		if self.alt > 0:
+		if self.alt > 10.0:
 			self.command = Command(command_type=CommandType.CRUISE, target_id=self.id, last_update=0, argument=None)  # Default command
 		else:
 			self.command = Command(command_type=CommandType.NONE, target_id=self.id, last_update=0)

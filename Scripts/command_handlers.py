@@ -82,7 +82,7 @@ class RealignCommandHandler(CommandHandler):
 	def execute(self, plane, command, tick) -> None:
 
 		plane.state = PlaneState.AIR
-
+		
 		target_runway = command.argument
 		if not isinstance(target_runway, Runway):
 			raise ValueError("Invalid runway argument: must be a Runway object")
@@ -123,6 +123,9 @@ class RealignCommandHandler(CommandHandler):
 				# If already aligned, switch to cruise mode
 				command.command_type = CommandType.CRUISE
 				self.__init__()  # Reset state for next realignment
+
+				print(f"{plane.callsign} now realigned.")
+
 				return
 			
 	@staticmethod
@@ -157,8 +160,7 @@ class NoCommandHandler(CommandHandler):
 		return command_type == CommandType.NONE
 	
 	def execute(self, plane, command, tick) -> None:
-		plane.state = PlaneState.QUEUED
-		return None
+		return
 
 class CruiseCommandHandler(CommandHandler):
 	"""Handler for plane cruise mode."""
@@ -341,8 +343,11 @@ class TaxiCommandHandler(CommandHandler):
 
 	def execute(self, plane, command, tick) -> None:
 		plane.state = PlaneState.TAXIING
+		if plane.time_waited == 0:
+			print(f"{plane.callsign} taxiing off runway.")
 		if plane.time_waited == 90:
 			plane.state = PlaneState.MARKED_FOR_DELETION
+			print(f"{plane.callsign} exited runway.")
 		else:
 			plane.time_waited += 1
 
@@ -354,6 +359,8 @@ class TakeoffCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
+		print(f"{plane.callsign} cleared for takeoff.")
+
 		# Ground roll -> accelerate to minimum takeoff speed
 		if plane.gspd < plane.stall_speed:
 			plane.acc_xy = plane.proportional_change(
@@ -364,7 +371,7 @@ class TakeoffCommandHandler(CommandHandler):
 				max_change=plane.acc_xy_max
 			)
 			
-		# Climb until 1000 ft
+		# Climb to cruising alt/speed
 		else:
 			plane.state = PlaneState.TAKINGOFF
 			plane.tookoff_this_tick = True
@@ -448,5 +455,5 @@ class CommandProcessor:
 			if handler.can_handle(command_type):
 				handler.execute(plane, command, tick)
 				return
-		
-		raise NotImplementedError(f"Unknown command type: {command_type}")
+
+		raise NotImplementedError(f"Unknown command type for plane {plane.callsign}: {command_type}")
