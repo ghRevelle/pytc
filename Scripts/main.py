@@ -12,8 +12,8 @@ base_lon = -117.1897
 # Use coordinates relative to 32.7329° N, -117.1897° W (San Diego)
 # Create runways with realistic coordinates for this location
 test_runways = {
-	'Runway9': Runway((32.73713, -117.20433), (32.73, -117.175), "Runway9"),  # NW-SE runway
-	'Runway27': Runway((32.73, -117.175), (32.73713, -117.20433), "Runway27"),  # SE-NW runway
+	9: Runway((32.73713, -117.20433), (32.73, -117.175), 9),  # NW-SE runway
+	27: Runway((32.73, -117.175), (32.73713, -117.20433), 27),  # SE-NW runway
 }
 
 test_airport = Airport(test_runways)
@@ -25,7 +25,7 @@ rolling_initial_state = [{
 		'alt': 400,
 		'v_z': 0,
 		'gspd': 83.8546382418,
-		'hdg': test_runways['Runway9'].hdg,  # Heading towards Runway9
+		'hdg': test_runways[9].hdg,  # Heading towards Runway9
 		'state': PlaneState.AIR,
 		'time_added': 0  # Time added to the simulation
 	}]
@@ -62,7 +62,7 @@ fs.add_plane_to_manager(
 	}
 )
 
-runway = test_runways['Runway9']
+runway = test_runways[9]
 
 fs.add_command_by_callsign('UA6', CommandType.REALIGN, last_update=0, argument=runway)
 fs.add_command_by_callsign('UA6', CommandType.CLEARED_TO_LAND, last_update=200, argument=runway)

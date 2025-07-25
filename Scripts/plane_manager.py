@@ -24,7 +24,7 @@ class PlaneManager:
         self.planes.append(new_plane)
 
         if init_state['state'] == PlaneState.GROUND and self.airport:
-            self.airport.queue.append((new_plane.id, self.airport.runways['Runway9'])) # we need to alter which runway it can spawn on!
+            self.airport.queue.append((new_plane.id, self.airport.runways[9])) # we need to alter which runway it can spawn on!
 
     # get a new id for a plane or return a plane's current id
     def get_id(self, callsign: str) -> int:
