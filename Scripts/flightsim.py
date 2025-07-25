@@ -132,12 +132,12 @@ class FlightSimulator:
 				# <= 300 meters is considered a near-collision; the DRL is punished as if the planes crashed
 				if check_distance <= 300 and check_distance > 30:
 					plane1.crashed_this_tick = plane2.crashed_this_tick = True
-					#print(f"Planes {plane1.callsign} and {plane2.callsign} just had a close call.")
+					print(f"{plane1.callsign} and {plane2.callsign} had a close call at tick {self.current_tick}.")
 					
 				# <= 30 meters is considered a collision; the DRL is punished, and the planes get destroyed
 				elif check_distance <= 30:
 					self.crashed_planes.extend([plane1, plane2])
-					#print(f"Planes {plane1.callsign} and {plane2.callsign} just crashed.")
+					print(f"{plane1.callsign} and {plane2.callsign} crashed at tick {self.current_tick}.")
 			
 			if plane1.state == PlaneState.MARKED_FOR_DELETION:
 				self.plane_manager.delete_plane(plane1.id)

@@ -124,7 +124,7 @@ class RealignCommandHandler(CommandHandler):
 				command.command_type = CommandType.CRUISE
 				self.__init__()  # Reset state for next realignment
 
-				print(f"{plane.callsign} now realigned.")
+				print(f"{plane.callsign} is aligned with runway {target_runway.name}.")
 
 				return
 			
@@ -359,8 +359,6 @@ class TakeoffCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
-		print(f"{plane.callsign} cleared for takeoff.")
-
 		# Ground roll -> accelerate to minimum takeoff speed
 		if plane.gspd < plane.stall_speed:
 			plane.acc_xy = plane.proportional_change(
@@ -378,7 +376,6 @@ class TakeoffCommandHandler(CommandHandler):
 
 			command.command_type = CommandType.CRUISE
 
-			print(f"Plane {plane.callsign} takeoff complete. Now cruising.")
 
 class GoAroundCommandHandler(CommandHandler):
 	"""Handler for go-around commands."""
