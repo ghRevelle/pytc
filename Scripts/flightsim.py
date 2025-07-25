@@ -13,7 +13,7 @@ class FlightSimulator:
 	# Simulation speed. In real life, 1 tick = 1 second
 	base_tps = 25
 
-	def __init__(self, display_size=(640, 480), airport=None, plane_manager=None):
+	def __init__(self, display_size=(640, 480), airport=None, plane_manager=None, rolling_initial_state=None):
 		"""Initialize the flight simulator with a display size, optional airport layout.
 		Args:
 			display_size (tuple): Size of the display window (width, height).
@@ -22,6 +22,11 @@ class FlightSimulator:
 		self.display_size = display_size
 		self.airport = airport
 		self.plane_manager = plane_manager
+
+		self.rolling_initial_state = rolling_initial_state if rolling_initial_state is not None else []
+		for plane_state in self.rolling_initial_state:
+			if plane_state['time_added'] == 0:
+				self.plane_manager.add_plane(plane_state)
 
 		if airport is None:
 			raise TypeError("Missing Airport Layout")
