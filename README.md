@@ -89,6 +89,10 @@ Before starting, ensure you have Python 3.12 and [Conda](https://docs.conda.io/p
    ```bash
    conda activate pytc
    ```
+5. In the virtual environment, install torch (compatible with Python 3.12 and CUDA 12.8):
+   ```bash
+   pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   ```
 
 ## Usage
 
