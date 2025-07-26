@@ -110,7 +110,7 @@ class RealignCommandHandler(CommandHandler):
 			)
 			self.dir = self.dir or self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
 			# print(f"Plane {plane.callsign} is realigning to runway {target_runway.name} on tick {tick}, direction {self.dir}, current distance {current_dist:.2f} meters, initial distance {self.init_dist:.2f} meters.")
-			if current_dist > self.init_dist / 2:
+			if current_dist > self.init_dist / 2 and self.init_dist > 100:
 				if self.dir == "left":
 					plane._turn(plane.hdg, (target_runway.hdg - 90) % 360)
 				elif self.dir == "right":
@@ -259,7 +259,7 @@ class LandingCommandHandler(CommandHandler):
 		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading
 
 		target_dist = self._calculate_runway_distance(plane, target_runway)
-		
+		print(f"{plane.callsign} is {target_dist:.2f} NM from runway {target_runway.name} at ({plane.lat}, {plane.lon}) with heading {plane.hdg} degrees.")
 		# Initialize landing parameters if needed
 		if not hasattr(plane, 'tod') or plane.tod is None or not hasattr(plane, 'rod') or plane.rod is None or not hasattr(plane, 'desired_acc_xy') or plane.desired_acc_xy is None:
 			self._initialize_landing(plane, target_runway, command) # TODO: STOP ADDING RANDOM ATTRIBUTES TO THE PLANE OBJECT
