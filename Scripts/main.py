@@ -4,7 +4,7 @@ from plane_manager import PlaneManager
 from airport import Runway, Airport
 from commands import *
 from planestates import PlaneState
-from rolling_initial_state import rolling_initial_state_20250301
+from rolling_initial_state_20250301 import rolling_initial_state_20250301
 import time
 
 # Base coordinates around San Diego area
@@ -76,11 +76,11 @@ for state in rolling_initial_state_20250301:
 	elif rolling_initial_state[-1]['state'] == 'landing':
 		rolling_initial_state[-1]['state'] = PlaneState.AIR
 
-print(rolling_initial_state[:10])
-
 fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_manager = PlaneManager(), rolling_initial_state=rolling_initial_state)
 
-runway = test_runways[9]
+print(len(rolling_initial_state))
+
+runway = test_runways[27]
 
 # fs.add_command_by_callsign('UA6', CommandType.REALIGN, last_update=200, argument=runway)
 # fs.add_command_by_callsign('UA6', CommandType.CLEARED_TO_LAND, last_update=300, argument=runway)
