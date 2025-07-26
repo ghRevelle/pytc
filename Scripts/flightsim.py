@@ -20,6 +20,16 @@ class FlightSimulator:
 			airport (Airport): Optional airport layout.
 		"""
 		self.display_size = display_size
+
+		# Start at tick 0
+		self.current_tick = 0
+
+		if airport is None:
+			raise TypeError("Missing Airport Layout")
+
+		if plane_manager is None:
+			raise TypeError("Missing Plane Manager")
+		
 		self.plane_manager = plane_manager
 		self.plane_manager.set_airport(airport)
 
@@ -27,12 +37,6 @@ class FlightSimulator:
 		for plane_state in self.rolling_initial_state:
 			if plane_state['time_added'] == 0:
 				self.add_plane_to_manager(plane_state)
-
-		if airport is None:
-			raise TypeError("Missing Airport Layout")
-
-		if plane_manager is None:
-			raise TypeError("Missing Plane Manager")
 
 		# Initialize the airport layout
 		self.airport = airport
@@ -42,10 +46,6 @@ class FlightSimulator:
 		self.pg_display.setup_airport(self.airport)
 		# Empty command queue
 		self.command_queue = []
-		# Start at tick 0
-		self.current_tick = 0
-		# Initialize the slot manager
-		self.plane_manager = plane_manager
 
 		self.crashed_planes = []  # List to keep track of crashed planes
 
@@ -60,6 +60,7 @@ class FlightSimulator:
 	def add_plane_to_manager(self, plane: dict):
 		"""Add a plane to the simulator."""
 		self.plane_manager.add_plane(plane)
+		print(f"tick: {self.current_tick}")
 
 	# Delete a plane from the plane manager
 	def delete_plane_from_manager(self, id = None, callsign = None):
@@ -94,14 +95,6 @@ class FlightSimulator:
 	def add_command_by_callsign(self, callsign: str, command_type: CommandType, last_update: int, argument):
 		target_id = self.plane_manager.get_id(callsign)
 		self.add_command(Command(command_type, target_id, last_update, argument))
-
-	# Run the simulator for a number of ticks
-	def run(self, ticks=500):
-		"""Run the flight simulation for a specified number of ticks."""
-		while self.current_tick < ticks:
-			self.tick()
-			
-		self.current_tick = 0  # Reset tick after running
 
 	def tick(self):
 		"""Run a single tick of the simulation."""

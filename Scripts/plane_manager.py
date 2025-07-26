@@ -1,3 +1,4 @@
+from hmac import new
 from plane import Plane
 from airport import *
 from planestates import PlaneState
@@ -20,7 +21,10 @@ class PlaneManager:
         self.planes.append(new_plane)
 
         if init_state['state'] == PlaneState.QUEUED and self.airport:
-            self.airport.queue.append((new_plane.id, self.airport.runways[9])) # we need to alter which runway it can spawn on!
+            self.airport.queue.append((new_plane.id, self.airport.runways[init_state['runway']]))
+            print(f"{new_plane.callsign} added to queue on runway {init_state['runway']} (ID: {new_plane.id})")
+        else:
+            print(f"{new_plane.callsign} added at ({new_plane.lat}, {new_plane.lon}) (ID: {new_plane.id})")
 
     # get a new id for a plane or return a plane's current id
     def get_id(self, callsign: str) -> int:

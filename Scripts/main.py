@@ -20,53 +20,6 @@ test_runways = {
 
 test_airport = Airport(test_runways)
 
-# rolling_initial_state = [
-# 	{
-# 		'callsign': 'UA6',
-# 		'lat': base_lat + 0.15,  # North of the airport
-# 		'lon': base_lon - 0.5,  # West of the airport
-# 		'alt': 400,
-# 		'v_z': 0.0,
-# 		'gspd': 83.8546382418,
-# 		'hdg': test_runways[9].hdg,  # Heading towards Runway9
-# 		'state': PlaneState.AIR,
-# 		'time_added': 0  # Time added to the simulation
-# 	},
-# 	{
-# 		'callsign': 'UA93',
-# 		'lat': base_lat + 0.075,  # North of the airport
-# 		'lon': base_lon - 0.25,  # West of the airport
-# 		'alt': 400,
-# 		'v_z': 0.0,
-# 		'gspd': 83.8546382418,
-# 		'hdg': test_runways[9].hdg,  # Heading towards Runway9
-# 		'state': PlaneState.AIR,
-# 		'time_added': 500  # Time added to the simulation
-# 	},
-# 	{
-# 		'callsign': 'AA11',
-# 		'lat': base_lat + 0.15,  # North of the airport
-# 		'lon': base_lon - 0.5,  # West of the airport
-# 		'alt': 400,
-# 		'v_z': 0.0,
-# 		'gspd': 83.8546382418,
-# 		'hdg': test_runways[9].hdg,  # Heading towards Runway9
-# 		'state': PlaneState.AIR,
-# 		'time_added': 20  # Time added to the simulation
-# 	},
-# 	{
-# 		'callsign' : 'RG1',
-#  		'lat' : 0.0,
-#  		'lon' : 0.0,
-#  		'alt' : 0.0,
-#  		'v_z' : 0.0,
-#  		'gspd' : 0.0,
-#  		'hdg' : 0.0,
-#  		'state' : PlaneState.QUEUED,
-# 		'time_added' : 0  # Time added to the simulation
-#  	}
-# ]
-
 rolling_initial_state = []
 
 for state in rolling_initial_state_20250301:
@@ -76,9 +29,14 @@ for state in rolling_initial_state_20250301:
 	elif rolling_initial_state[-1]['state'] == 'landing':
 		rolling_initial_state[-1]['state'] = PlaneState.AIR
 
-fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_manager = PlaneManager(), rolling_initial_state=rolling_initial_state)
+seen = set()
+for state in rolling_initial_state:
+	if state['callsign'] not in seen:
+		seen.add(state['callsign'])
+	else:
+		print(f"Duplicate callsign found: {state['callsign']}")
 
-print(len(rolling_initial_state))
+fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_manager = PlaneManager(), rolling_initial_state=rolling_initial_state)
 
 runway = test_runways[27]
 
@@ -96,7 +54,4 @@ runway = test_runways[27]
 
 for i in range(2500):
 	# Run the simulation for 2500 ticks
-
 	fs.tick()
-
-#fs.run(ticks=2500)  # Run the simulation for 2500 ticks
