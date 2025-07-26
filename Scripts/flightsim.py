@@ -6,6 +6,7 @@ from airport import *
 from commands import *
 from plane_manager import PlaneManager
 import time
+import utils
 
 class FlightSimulator:
 	"""A simple flight simulator to demonstrate plane movement and display."""
@@ -144,6 +145,13 @@ class FlightSimulator:
 		# Check all planes for crashes and deletions
 		planes = self.plane_manager.planes
 		for i, plane1 in enumerate(planes):
+			# Delete planes that have flown out of radar
+			# Assuming 15 nautical miles is the maximum distance for radar visibility
+			if utils.distance_from_base(plane1.lat, plane1.lon) > 27780 and plane1.state != PlaneState.QUEUED: # 15 nautical miles
+				plane1.state = PlaneState.MARKED_FOR_DELETION
+				print(f"{plane1.callsign} has flown out of radar")
+				print(f"tick: {self.current_tick}")
+
 			for plane2 in planes[i+1:]: # avoid checking a plane against itself
 				# Skip ground planes to avoid collision detection in airport queue
 				if plane1.state == plane2.state == PlaneState.QUEUED:
