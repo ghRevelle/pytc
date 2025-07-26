@@ -244,3 +244,16 @@ def extend_line(line: shapely.geometry.LineString, distance: float) -> shapely.g
 
 	return shapely.geometry.LineString([new_start, new_end])
 
+def distance_from_base(lat: float, lon: float, base_lat: float = 32.7329, base_lon: float = -117.1897) -> float:
+	"""
+	Calculate the distance from a given latitude and longitude to a base point.
+	Args:
+		lat (float): Latitude of the point.
+		lon (float): Longitude of the point.
+		base_lat (float): Latitude of the base point (default: 32.7329).
+		base_lon (float): Longitude of the base point (default: -117.1897).
+	Returns:
+		float: Distance in meters from the base point.
+	"""
+	x_meters, y_meters = latlon_to_meters(lat, lon, base_lat, base_lon)
+	return math.sqrt(x_meters**2 + y_meters**2)
