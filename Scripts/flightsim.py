@@ -107,6 +107,7 @@ class FlightSimulator:
 		for command in self.command_queue:  # Process all commands in the queue
 			if self.current_tick == command.last_update:
 				self.command_plane(command)
+				self.print_command(command)  # Print the command for debugging
 				self.command_queue.remove(command)  # Remove command after execution
 		
 		# Update all plane states using list comprehension
@@ -190,3 +191,18 @@ class FlightSimulator:
 		reward -= 0.01 * env_state.num_planes_in_air
 
 		return reward
+
+	def print_command(self, command: Command):
+		if command.command_type == CommandType.CLEARED_FOR_TAKEOFF:
+			print(f"{self.plane_manager.get_callsign(command.target_id)} cleared for takeoff on runway {command.argument.name}")
+		elif command.command_type == CommandType.CLEARED_TO_LAND:
+			print(f"{self.plane_manager.get_callsign(command.target_id)} cleared to land on runway {command.argument.name}")
+		elif command.command_type == CommandType.LINE_UP_AND_WAIT:
+			print(f"{self.plane_manager.get_callsign(command.target_id)} lined up on runway {command.argument.name}")
+		elif command.command_type == CommandType.REALIGN:
+			print(f"{self.plane_manager.get_callsign(command.target_id)} realigning to runway {command.argument.name}")
+		elif command.command_type == CommandType.GO_AROUND:
+			print(f"{self.plane_manager.get_callsign(command.target_id)} going around")
+		elif command.command_type == CommandType.ABORT_TAKEOFF:
+			print(f"{self.plane_manager.get_callsign(command.target_id)} aborting takeoff")
+		print(f"tick: {self.current_tick}")

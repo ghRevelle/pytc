@@ -49,8 +49,8 @@ runway = test_runways[27]
 # fs.add_command_by_callsign('AA11', CommandType.REALIGN, last_update=200, argument=runway)
 # fs.add_command_by_callsign('AA11', CommandType.CLEARED_TO_LAND, last_update=300, argument=runway)
 
-# fs.add_command_by_callsign('RG1', CommandType.LINE_UP_AND_WAIT, last_update=500, argument=runway)
-# fs.add_command_by_callsign('RG1', CommandType.CLEARED_FOR_TAKEOFF, last_update=550, argument=runway)
+fs.add_command_by_callsign('SKW3378', CommandType.LINE_UP_AND_WAIT, last_update=111, argument=runway)
+fs.add_command_by_callsign('SKW3378', CommandType.CLEARED_FOR_TAKEOFF, last_update=150, argument=runway)
 
 for i in range(2500):
 	# Run the simulation for 2500 ticks

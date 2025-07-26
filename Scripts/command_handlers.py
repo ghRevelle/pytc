@@ -124,7 +124,7 @@ class RealignCommandHandler(CommandHandler):
 				command.command_type = CommandType.CRUISE
 				self.__init__()  # Reset state for next realignment
 
-				print(f"{plane.callsign} is aligned with runway {target_runway.name}.")
+				print(f"{plane.callsign} is now aligned with runway {target_runway.name}")
 
 				return
 			
@@ -348,10 +348,10 @@ class TaxiCommandHandler(CommandHandler):
 	def execute(self, plane, command, tick) -> None:
 		plane.state = PlaneState.TAXIING
 		if plane.time_waited == 0:
-			print(f"{plane.callsign} taxiing off runway.")
+			print(f"{plane.callsign} taxiing off runway")
 		if plane.time_waited == 90:
 			plane.state = PlaneState.MARKED_FOR_DELETION
-			print(f"{plane.callsign} exited runway.")
+			print(f"{plane.callsign} exited runway")
 		else:
 			plane.time_waited += 1
 
@@ -377,7 +377,6 @@ class TakeoffCommandHandler(CommandHandler):
 		else:
 			plane.state = PlaneState.TAKINGOFF
 			plane.tookoff_this_tick = True
-
 			command.command_type = CommandType.CRUISE
 
 
