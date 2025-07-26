@@ -245,13 +245,19 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 
 class LandingCommandHandler(CommandHandler):
 	"""Handler for landing commands."""
-	
+
+	def __init__(self):
+		self.tod = None  # Top of descent in nautical miles
+		self.rod = None  # Rate of descent in feet per minute
+		self.started_before_min_dist = False
+
 	def can_handle(self, command_type: CommandType) -> bool:
 		return command_type == CommandType.CLEARED_TO_LAND
 	
 	def execute(self, plane, command, tick) -> None:
 
 		target_runway = command.argument
+
 		
 		if not isinstance(target_runway, Runway):
 			raise ValueError("Invalid runway argument: must be a Runway object")
@@ -259,41 +265,45 @@ class LandingCommandHandler(CommandHandler):
 		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading
 
 		target_dist = self._calculate_runway_distance(plane, target_runway)
-		print(f"{plane.callsign} is {target_dist:.2f} NM from runway {target_runway.name} at ({plane.lat}, {plane.lon}) with heading {plane.hdg} degrees.")
+		if not self.started_before_min_dist:
+			if self.tod is not None and self.tod < target_dist:
+				self.started_before_min_dist = True
+
 		# Initialize landing parameters if needed
-		if not hasattr(plane, 'tod') or plane.tod is None or not hasattr(plane, 'rod') or plane.rod is None or not hasattr(plane, 'desired_acc_xy') or plane.desired_acc_xy is None:
+		if not hasattr(self, 'tod') or self.tod is None or not hasattr(self, 'rod') or self.rod is None or not hasattr(plane, 'desired_acc_xy') or plane.desired_acc_xy is None:
 			self._initialize_landing(plane, target_runway, command) # TODO: STOP ADDING RANDOM ATTRIBUTES TO THE PLANE OBJECT
 		
 		if not self._is_aligned_to_runway(plane, target_runway):
 			raise ValueError(f"{plane.callsign} is not aligned to the runway for landing.")
-		
-		if target_dist < plane.tod and plane.alt > 0: 
+	
+		if target_dist < self.tod and plane.alt > 0:
 			self._handle_descent_phase(plane, target_dist, target_runway)
 		elif plane.alt <= 0 and plane.gspd > 0:
 			self._handle_ground_phase(plane)
 		elif plane.gspd <= 0:
 			self._handle_landing_complete(plane, command, tick)
-			plane.tod = None  # Reset top of descent after landing
+			self.__init__()  # Reset state for next landing
 			plane.desired_acc_xy = None  # Reset desired horizontal acceleration after landing
-			plane.rod = None  # Reset rate of descent after landing
+		else:
+			plane.v_z = 0  # Maintain vertical speed at zero if already on the ground
+			plane.acc_xy = 0  # Maintain horizontal acceleration at zero if already on the ground
 		
 
 	def _initialize_landing(self, plane: Plane, target_runway: Runway, command: Command) -> None:
 		"""Initialize landing parameters (extends base runway alignment)."""
 		# Add landing-specific initialization
 		
-		plane.tod = plane._calculate_tod(plane.alt)
-		plane.rod = plane._calculate_rod(plane.gspd)
+		self.tod = plane._calculate_tod(plane.alt)
+		self.rod = plane._calculate_rod(plane.gspd)
 		plane.desired_acc_xy = plane._calculate_target_acc_descend(plane.gspd, plane.alt)
 
 	def _handle_descent_phase(self, plane: Plane, target_dist: float, target_runway: Runway) -> None:
 		"""Handle the descent phase of landing."""
-		plane.rod = plane._calculate_rod(plane.gspd)
 		
-		if target_dist < 1:
-			descent_rate = -(plane.alt * plane.gspd / target_dist)
+		# if target_dist < 1:
+		# 	descent_rate = -(plane.alt * plane.gspd / target_dist)
 		# else:
-		descent_rate = -plane.rod
+		descent_rate = -self.rod
 
 		plane.hdg = target_runway.hdg
 		
