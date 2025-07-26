@@ -250,6 +250,8 @@ class LandingCommandHandler(CommandHandler):
 	def __init__(self):
 		self.tod = None  # Top of descent in nautical miles
 		self.rod = None  # Rate of descent in feet per minute
+		self.command_was_valid = False  # Flag to track if the command was valid
+		self.has_snapped = False  # Flag to track if the plane has snapped to the runway position
 
 	def can_handle(self, command_type: CommandType) -> bool:
 		return command_type == CommandType.CLEARED_TO_LAND
@@ -275,11 +277,14 @@ class LandingCommandHandler(CommandHandler):
 			self._initialize_landing(plane, target_runway, command) # TODO: STOP ADDING RANDOM ATTRIBUTES TO THE PLANE OBJECT
 
 		target_dist = self._calculate_runway_distance(plane, target_runway)
-		if not self.is_valid_command(command, plane):
-			self.__init__()  # Reset state for next landing
-			command.last_update = tick
-			command.command_type = CommandType.GO_AROUND
-			return
+		if not self.command_was_valid:
+			self.command_was_valid = self.is_valid_command(command, plane)
+			if not self.command_was_valid:
+				self.__init__()  # Reset state for next landing
+				command.last_update = tick
+				command.command_type = CommandType.GO_AROUND
+				print(f"{plane.callsign} is going around due to invalid landing command at tick {tick}.")
+				return
 
 		
 		if not self._is_aligned_to_runway(plane, target_runway):
@@ -313,8 +318,6 @@ class LandingCommandHandler(CommandHandler):
 		# 	descent_rate = -(plane.alt * plane.gspd / target_dist)
 		# else:
 		descent_rate = -self.rod
-
-		plane.hdg = target_runway.hdg
 		
 		plane.v_z = descent_rate
 		# plane.proportional_change(
@@ -342,6 +345,14 @@ class LandingCommandHandler(CommandHandler):
 				max_value=plane.acc_xy_max,
 				max_change=plane.acc_xy_max
 			)
+
+		if not self.has_snapped and target_dist < 0.1:
+			# Snap to the runway position if within 0.1 nautical miles
+			plane.lon = target_runway.get_start_point_xy()[0]
+			plane.lat = target_runway.get_start_point_xy()[1]
+			plane.hdg = target_runway.hdg
+			self.has_snapped = True
+			print(f"{plane.callsign} has snapped to runway {target_runway.name} at ({plane.lat}, {plane.lon})")
 
 	def _handle_ground_phase(self, plane: Plane) -> None:
 		"""Handle the ground phase after touchdown."""
