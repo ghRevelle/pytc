@@ -50,6 +50,7 @@ class FlightSimulator:
 		self.crashed_planes = []  # List to keep track of crashed planes
 
 		self.invalid_command_executed = False  # Flag for invalid command execution
+		self.valid_command_executed = False  # Flag for valid command execution
 
 
 	def get_tps(self):
@@ -126,6 +127,7 @@ class FlightSimulator:
 				return
 		
 		self.invalid_command_executed = False  # Reset invalid command flag for this tick
+		self.valid_command_executed = False  # Reset valid command flag for this tick
 		for command in self.command_queue:  # Process all commands in the queue
 			if self.current_tick == command.last_update:
 				self.check_command_validity(command)  # Check if the command is valid
@@ -133,6 +135,8 @@ class FlightSimulator:
 					self.command_plane(command)
 					self.print_command(command)  # Print the command for debugging
 					self.command_queue.remove(command)  # Remove command after execution
+					if 1 <= command.command_type.value <= 5:  # Only reward for valid DRL-issued commands (Enums 1 to 5)
+						self.valid_command_executed = True
 		
 		# Update all plane states using list comprehension
 		plane_states = [plane.tick(self.current_tick).get_state() for plane in self.plane_manager.planes]
@@ -191,22 +195,27 @@ class FlightSimulator:
 			# Reward for successful landings
 			if plane.landed_this_tick == True:
 				print(f"{plane.callsign} has landed")
-				reward += 10.0
+				reward += 50.0
 
 			# Reward for successful takeoff
 			if plane.tookoff_this_tick == True:
 				print(f"{plane.callsign} has taken off")
-				reward += 10.0
+				reward += 50.0
 
 			# Penalty for crashing
 			if plane.crashed_this_tick == True:
 				print(f"{plane.callsign} just crashed")
-				reward -= 100.0
+				reward -= 1000.0
 
     	# Penalty for invalid or illegal commands
 		if self.invalid_command_executed:
 			reward -= 10.0
-			
+
+		# Reward for valid command execution
+		# This is to encourage the DRL to issue valid commands
+		if self.valid_command_executed:
+			reward += 5.0
+
     	# Small time pressure penalty per plane still in air
 		reward -= 0.01 * len(self.plane_manager.planes)
 
