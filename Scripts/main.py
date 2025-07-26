@@ -71,7 +71,4 @@ for i in range(2500):
 		print(f"Target id after: {target_id}")
 
 		#print(f"After second command: {fs.plane_manager.callsign_to_id}")
-
-		fs.plane_manager.airport.pop_top_of_queue()
-
 	fs.tick()
