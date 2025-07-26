@@ -39,12 +39,10 @@ class FlightSimulator:
 			if plane_state['time_added'] == 0:
 				self.add_plane_to_manager(plane_state)
 
-		# Initialize the airport layout
-		self.airport = airport
 		# Initialize the Pygame display
 		self.pg_display = Pygame_Display(*display_size)
 		# Setup the airport on the display
-		self.pg_display.setup_airport(self.airport)
+		self.pg_display.setup_airport(airport)
 		# Empty command queue
 		self.command_queue = []
 
@@ -135,6 +133,7 @@ class FlightSimulator:
 				if not self.invalid_command_executed:
 					self.command_plane(command)
 					self.print_command(command)  # Print the command for debugging
+					self.plane_manager.airport.pop_top_of_queue() if command.command_type == CommandType.LINE_UP_AND_WAIT else None
 					self.command_queue.remove(command)  # Remove command after execution
 					if 1 <= command.command_type.value <= 5:  # Only reward for valid DRL-issued commands (Enums 1 to 5)
 						self.valid_command_executed = True

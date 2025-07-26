@@ -84,7 +84,3 @@ class Airport:
 
     def pop_top_of_queue(self):
         pop_id = self.queue.pop(0)[0]
-
-        print(f"Plane id at the tope of the queue: {pop_id}")
-
-        return pop_id
