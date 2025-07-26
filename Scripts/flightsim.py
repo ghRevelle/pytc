@@ -49,6 +49,8 @@ class FlightSimulator:
 
 		self.crashed_planes = []  # List to keep track of crashed planes
 
+		self.invalid_command_executed = False  # Flag for invalid command execution
+
 
 	def get_tps(self):
 		"""Get the effective ticks per second, accounting for turbo mode."""
@@ -96,6 +98,24 @@ class FlightSimulator:
 		target_id = self.plane_manager.get_id(callsign)
 		self.add_command(Command(command_type, target_id, last_update, argument))
 
+	def check_command_validity(self, command: Command):
+		"""Check the validity of an executed command."""
+		plane = self.plane_manager.planes[command.target_id]
+		command_type = command.command_type
+		if command_type == CommandType.CLEARED_FOR_TAKEOFF:
+			if plane.state != PlaneState.WAITING_FOR_TAKEOFF:
+				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_TAKEOFF, was: {plane.state}")
+				self.invalid_command_executed = True
+		elif command_type == CommandType.CLEARED_TO_LAND:
+			if plane.state != PlaneState.WAITING_FOR_LANDING:
+				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_LANDING, was: {plane.state}")
+				self.invalid_command_executed = True
+		elif command_type == CommandType.LINE_UP_AND_WAIT:
+			if plane.state != PlaneState.QUEUED:
+				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: QUEUED, was: {plane.state}")
+				self.invalid_command_executed = True
+		return
+
 	def tick(self):
 		"""Run a single tick of the simulation."""
 
@@ -104,11 +124,15 @@ class FlightSimulator:
 				self.pg_display.stop_display()
 				self.current_tick = 0
 				return
+		
+		self.invalid_command_executed = False  # Reset invalid command flag for this tick
 		for command in self.command_queue:  # Process all commands in the queue
 			if self.current_tick == command.last_update:
-				self.command_plane(command)
-				self.print_command(command)  # Print the command for debugging
-				self.command_queue.remove(command)  # Remove command after execution
+				self.check_command_validity(command)  # Check if the command is valid
+				if not self.invalid_command_executed:
+					self.command_plane(command)
+					self.print_command(command)  # Print the command for debugging
+					self.command_queue.remove(command)  # Remove command after execution
 		
 		# Update all plane states using list comprehension
 		plane_states = [plane.tick(self.current_tick).get_state() for plane in self.plane_manager.planes]
@@ -141,8 +165,10 @@ class FlightSimulator:
 
 		while self.crashed_planes:
 			self.plane_manager.delete_plane(self.crashed_planes.pop().id)
-		
-		#print(compute_reward(self, self))
+
+		reward = self.compute_reward()  # Compute the reward for this tick
+		if abs(reward) > 0.1:
+			print(f"Reward for tick {self.current_tick}: {reward}")
 
 		# Reset plane flags using list comprehension
 		[setattr(plane, attr, False) for plane in self.plane_manager.planes 
@@ -158,37 +184,31 @@ class FlightSimulator:
 		effective_tps = self.get_tps()
 		time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
 			
-	
-
-	# Pseudocode implementation of a reward function for reinforcement learning
-	def compute_reward(self, env_state, command_executed, sim_tick):
+	def compute_reward(self):
 		reward = 0.0
 
-		for plane in env_state.planes:
+		for plane in self.plane_manager.planes:
 			# Reward for successful landings
 			if plane.landed_this_tick == True:
-				print(f"{plane.callsign} has landed. (ID: {plane.id})")
+				print(f"{plane.callsign} has landed")
 				reward += 10.0
 
 			# Reward for successful takeoff
 			if plane.tookoff_this_tick == True:
-				print(f"{plane.callsign} has taken off. (ID: {plane.id})")
+				print(f"{plane.callsign} has taken off")
 				reward += 10.0
 
 			# Penalty for crashing
 			if plane.crashed_this_tick == True:
-				print(f"{plane.callsign} just crashed. (ID: {plane.id})")
+				print(f"{plane.callsign} just crashed")
 				reward -= 100.0
 
     	# Penalty for invalid or illegal commands
-		if command_executed.is_invalid:
+		if self.invalid_command_executed:
 			reward -= 10.0
-
-		if command_executed.caused_conflict:
-			reward -= 50.0
 			
     	# Small time pressure penalty per plane still in air
-		reward -= 0.01 * env_state.num_planes_in_air
+		reward -= 0.01 * len(self.plane_manager.planes)
 
 		return reward
 

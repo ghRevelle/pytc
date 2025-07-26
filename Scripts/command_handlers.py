@@ -170,7 +170,7 @@ class CruiseCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
-		if abs(plane.alt - plane.crz_alt) < 5:
+		if abs(plane.alt - plane.crz_alt) < 20:
 			plane.state = PlaneState.WAITING_FOR_LANDING
 		else:
 			plane.state = PlaneState.AIR
@@ -210,7 +210,7 @@ class TurnCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
-		if abs(plane.alt - plane.crz_alt) < 5:
+		if abs(plane.alt - plane.crz_alt) < 20:
 			plane.state = PlaneState.WAITING_FOR_LANDING
 		else:
 			plane.state = PlaneState.AIR
@@ -393,7 +393,7 @@ class GoAroundCommandHandler(CommandHandler):
 
 	def execute(self, plane, command, tick) -> None:
 
-		if abs(plane.alt - plane.crz_alt) < 5:
+		if abs(plane.alt - plane.crz_alt) < 20:
 			plane.state = PlaneState.WAITING_FOR_LANDING
 		else:
 			plane.state = PlaneState.AIR
