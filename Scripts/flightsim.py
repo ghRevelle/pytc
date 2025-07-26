@@ -5,6 +5,7 @@ from pygame_display import *
 from airport import *
 from commands import *
 from plane_manager import PlaneManager
+from command_handlers import LandingCommandHandler
 import time
 import utils
 
@@ -109,7 +110,7 @@ class FlightSimulator:
 				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_TAKEOFF, was: {plane.state}")
 				self.invalid_command_executed = True
 		elif command_type == CommandType.CLEARED_TO_LAND:
-			if plane.state != PlaneState.WAITING_FOR_LANDING:
+			if plane.state != PlaneState.WAITING_FOR_LANDING or not LandingCommandHandler.is_valid_command(command, plane):
 				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_LANDING, was: {plane.state}")
 				self.invalid_command_executed = True
 		elif command_type == CommandType.LINE_UP_AND_WAIT:
@@ -177,12 +178,12 @@ class FlightSimulator:
 		# Update display once with all plane states
 		self.pg_display.update_display(plane_states)
 
-		while self.crashed_planes:
-			self.plane_manager.delete_plane(self.crashed_planes.pop().id)
-
 		reward = self.compute_reward()  # Compute the reward for this tick
 		if abs(reward) > 0.1:
 			print(f"Reward for tick {self.current_tick}: {reward}")
+
+		while self.crashed_planes:
+			self.plane_manager.delete_plane(self.crashed_planes.pop().id)
 
 		# Reset plane flags using list comprehension
 		[setattr(plane, attr, False) for plane in self.plane_manager.planes 

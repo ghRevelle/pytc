@@ -35,7 +35,8 @@ class CommandHandler(ABC):
 		if plane.turn_start_time is None or not isinstance(plane.turn_start_time, int): # TODO: don't go around adding random attributes to the plane object
 			plane.turn_start_time = -1
 	
-	def _calculate_runway_distance(self, plane, target_runway):
+	@staticmethod
+	def _calculate_runway_distance(plane, target_runway):
 		"""Calculate distance to runway in nautical miles."""
 		return utils.degrees_to_nautical_miles(
 			heading=plane.hdg, 
@@ -110,7 +111,7 @@ class RealignCommandHandler(CommandHandler):
 			)
 			self.dir = self.dir or self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
 			# print(f"Plane {plane.callsign} is realigning to runway {target_runway.name} on tick {tick}, direction {self.dir}, current distance {current_dist:.2f} meters, initial distance {self.init_dist:.2f} meters.")
-			if current_dist > self.init_dist / 2:
+			if current_dist > self.init_dist / 2 and self.init_dist > 100:
 				if self.dir == "left":
 					plane._turn(plane.hdg, (target_runway.hdg - 90) % 360)
 				elif self.dir == "right":
@@ -245,57 +246,78 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 
 class LandingCommandHandler(CommandHandler):
 	"""Handler for landing commands."""
-	
+
+	def __init__(self):
+		self.tod = None  # Top of descent in nautical miles
+		self.rod = None  # Rate of descent in feet per minute
+		self.command_was_valid = False  # Flag to track if the command was valid
+		self.has_snapped = False  # Flag to track if the plane has snapped to the runway position
+
 	def can_handle(self, command_type: CommandType) -> bool:
 		return command_type == CommandType.CLEARED_TO_LAND
+	
+	@staticmethod
+	def is_valid_command(command, plane):
+		tod = plane._calculate_tod(plane.alt)
+		current_dist = LandingCommandHandler._calculate_runway_distance(plane, command.argument)
+		return current_dist >= tod and current_dist > 0
 	
 	def execute(self, plane, command, tick) -> None:
 
 		target_runway = command.argument
+
 		
 		if not isinstance(target_runway, Runway):
 			raise ValueError("Invalid runway argument: must be a Runway object")
 		
 		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading
 
-		target_dist = self._calculate_runway_distance(plane, target_runway)
-		
 		# Initialize landing parameters if needed
-		if not hasattr(plane, 'tod') or plane.tod is None or not hasattr(plane, 'rod') or plane.rod is None or not hasattr(plane, 'desired_acc_xy') or plane.desired_acc_xy is None:
+		if not hasattr(self, 'tod') or self.tod is None or not hasattr(self, 'rod') or self.rod is None or not hasattr(plane, 'desired_acc_xy') or plane.desired_acc_xy is None:
 			self._initialize_landing(plane, target_runway, command) # TODO: STOP ADDING RANDOM ATTRIBUTES TO THE PLANE OBJECT
+
+		target_dist = self._calculate_runway_distance(plane, target_runway)
+		if not self.command_was_valid:
+			self.command_was_valid = self.is_valid_command(command, plane)
+			if not self.command_was_valid:
+				self.__init__()  # Reset state for next landing
+				command.last_update = tick
+				command.command_type = CommandType.GO_AROUND
+				print(f"{plane.callsign} is going around due to invalid landing command at tick {tick}.")
+				return
+
 		
 		if not self._is_aligned_to_runway(plane, target_runway):
 			raise ValueError(f"{plane.callsign} is not aligned to the runway for landing.")
-		
-		if target_dist < plane.tod and plane.alt > 0: 
+	
+		if target_dist < self.tod and plane.alt > 0:
 			self._handle_descent_phase(plane, target_dist, target_runway)
 		elif plane.alt <= 0 and plane.gspd > 0:
 			self._handle_ground_phase(plane)
 		elif plane.gspd <= 0:
 			self._handle_landing_complete(plane, command, tick)
-			plane.tod = None  # Reset top of descent after landing
+			self.__init__()  # Reset state for next landing
 			plane.desired_acc_xy = None  # Reset desired horizontal acceleration after landing
-			plane.rod = None  # Reset rate of descent after landing
+		else:
+			plane.v_z = 0  # Maintain vertical speed at zero if already on the ground
+			plane.acc_xy = 0  # Maintain horizontal acceleration at zero if already on the ground
 		
 
 	def _initialize_landing(self, plane: Plane, target_runway: Runway, command: Command) -> None:
 		"""Initialize landing parameters (extends base runway alignment)."""
 		# Add landing-specific initialization
 		
-		plane.tod = plane._calculate_tod(plane.alt)
-		plane.rod = plane._calculate_rod(plane.gspd)
+		self.tod = plane._calculate_tod(plane.alt)
+		self.rod = plane._calculate_rod(plane.gspd)
 		plane.desired_acc_xy = plane._calculate_target_acc_descend(plane.gspd, plane.alt)
 
 	def _handle_descent_phase(self, plane: Plane, target_dist: float, target_runway: Runway) -> None:
 		"""Handle the descent phase of landing."""
-		plane.rod = plane._calculate_rod(plane.gspd)
 		
-		if target_dist < 1:
-			descent_rate = -(plane.alt * plane.gspd / target_dist)
+		# if target_dist < 1:
+		# 	descent_rate = -(plane.alt * plane.gspd / target_dist)
 		# else:
-		descent_rate = -plane.rod
-
-		plane.hdg = target_runway.hdg
+		descent_rate = -self.rod
 		
 		plane.v_z = descent_rate
 		# plane.proportional_change(
@@ -323,6 +345,14 @@ class LandingCommandHandler(CommandHandler):
 				max_value=plane.acc_xy_max,
 				max_change=plane.acc_xy_max
 			)
+
+		if not self.has_snapped and target_dist < 0.1:
+			# Snap to the runway position if within 0.1 nautical miles
+			plane.lon = target_runway.get_start_point_xy()[0]
+			plane.lat = target_runway.get_start_point_xy()[1]
+			plane.hdg = target_runway.hdg
+			self.has_snapped = True
+			print(f"{plane.callsign} has snapped to runway {target_runway.name} at ({plane.lat}, {plane.lon})")
 
 	def _handle_ground_phase(self, plane: Plane) -> None:
 		"""Handle the ground phase after touchdown."""

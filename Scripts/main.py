@@ -46,8 +46,8 @@ fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_mana
 
 runway = test_runways[27]
 
-# fs.add_command_by_callsign('BAW82P', CommandType.REALIGN, last_update=10, argument=runway)
-# fs.add_command_by_callsign('BAW82P', CommandType.CLEARED_TO_LAND, last_update=1000, argument=runway)
+fs.add_command_by_callsign('BAW82P', CommandType.REALIGN, last_update=10, argument=runway)
+fs.add_command_by_callsign('BAW82P', CommandType.CLEARED_TO_LAND, last_update=50, argument=runway)
 
 #fs.add_command_by_callsign('SKW3378', CommandType.LINE_UP_AND_WAIT, last_update=111, argument=runway)
 #fs.add_command_by_callsign('SKW3378', CommandType.CLEARED_FOR_TAKEOFF, last_update=150, argument=runway)
