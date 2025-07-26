@@ -35,11 +35,6 @@ class FlightSimulator:
 		self.plane_manager = plane_manager
 		self.plane_manager.set_airport(airport)
 
-		self.rolling_initial_state = rolling_initial_state if rolling_initial_state is not None else []
-		for plane_state in self.rolling_initial_state:
-			if plane_state['time_added'] == 0:
-				self.add_plane_to_manager(plane_state)
-
 		# Initialize the Pygame display
 		self.pg_display = Pygame_Display(*display_size)
 		# Setup the airport on the display
@@ -48,6 +43,18 @@ class FlightSimulator:
 		self.command_queue = []
 
 		self.crashed_planes = []  # List to keep track of crashed planes
+
+		self.rolling_initial_state = rolling_initial_state if rolling_initial_state is not None else []
+		for plane_state in self.rolling_initial_state:
+			if plane_state['time_added'] == 0:
+				self.add_plane_to_manager(plane_state)
+				if plane_state['state'] == PlaneState.AIR:
+					self.add_command_by_callsign(
+						plane_state['callsign'], 
+						CommandType.REALIGN, 
+						last_update=1, 
+						argument=self.plane_manager.airport.runways[plane_state['runway']]
+					)
 
 		self.invalid_command_executed = False  # Flag for invalid command execution
 		self.valid_command_executed = False  # Flag for valid command execution
@@ -195,6 +202,13 @@ class FlightSimulator:
 		for plane_state in self.rolling_initial_state:
 			if plane_state['time_added'] == self.current_tick:
 				self.add_plane_to_manager(plane_state)
+				if plane_state['state'] == PlaneState.AIR:
+					self.add_command_by_callsign(
+						plane_state['callsign'], 
+						CommandType.REALIGN, 
+						last_update=self.current_tick + 1, 
+						argument=self.plane_manager.airport.runways[plane_state['runway']]
+					)
 
 		# Check for end of simulation
 		if self.plane_manager.check_end_state():
