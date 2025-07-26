@@ -185,6 +185,13 @@ class FlightSimulator:
 			if plane_state['time_added'] == self.current_tick:
 				self.add_plane_to_manager(plane_state)
 
+		# Check for end of simulation
+		if self.plane_manager.check_end_state():
+			print(f"Ending simulation at tick {self.current_tick}")
+			self.pg_display.stop_display()
+			self.current_tick = 0
+			return
+
 		effective_tps = self.get_tps()
 		time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
 			

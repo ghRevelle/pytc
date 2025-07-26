@@ -1,6 +1,7 @@
 from enum import Enum, auto
 from dataclasses import dataclass
 from typing import Optional
+from airport import Runway
 
 class CommandType(Enum):
     NONE = 0                 # no new command
@@ -17,6 +18,6 @@ class CommandType(Enum):
 @dataclass
 class Command:
     command_type: CommandType
-    target_id: int                   # index of the plane; planes and their callsigns will be mapped to an integer ID
-    last_update: int                 # when the command was last updated
-    argument: Optional[int] = None   # runway ID, optional heading for takeoff
+    target_id: int                    # index of the plane; planes and their callsigns will be mapped to an integer ID
+    last_update: int                  # when the command was last updated
+    argument: Optional[Runway] = None # runway object

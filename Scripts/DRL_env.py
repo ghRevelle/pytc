@@ -130,8 +130,7 @@ class AirTrafficControlEnv(gym.Env):
     def _check_done(self):
         if self.current_tick >= self.max_ticks:
             return True
-        if self.fs.plane_manager.all_planes_landed_or_crashed():
-            # TODO: Implement a way to check if all planes are done
+        if self.fs.plane_manager.check_end_state():
             return True
         return False
 
