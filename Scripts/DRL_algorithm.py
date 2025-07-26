@@ -9,6 +9,7 @@ from collections import deque
 import random
 import torch.optim as optim
 from commands import *
+from DRL_env import AirTrafficControlEnv
 
 # Use this to check if GPU is available
 print(f"CUDA is available: {torch.cuda.is_available()}")
@@ -20,7 +21,7 @@ if device.type == "cpu":
 print(f"Using device: {device}")
 
 class AirTrafficControlDQN(nn.Module):
-    def __init__(self, input_dim=120, n_commands=7, n_planes=10):
+    def __init__(self, input_dim=120, n_commands=6, n_planes=10):
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, 128),
@@ -80,29 +81,6 @@ def compute_max_q_value(command_logits, plane_logits):
     all_qs = command_logits.unsqueeze(2) + plane_logits.unsqueeze(1)  # (batch, n_commands, n_planes)
     max_q = torch.max(all_qs.view(all_qs.size(0), -1), dim=1).values
     return max_q
-
-
-class AirTrafficControlEnv(gym.Env):
-    def __init__(self, flight_simulator):
-        super().__init__()
-        self.sim = flight_simulator
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(120,), dtype=np.float32)
-
-        self.action_space = spaces.Dict({
-            "command": spaces.Discrete(7),      # NONE to TURN
-            "plane_id": spaces.Discrete(10),    # plane slots
-        })
-
-    def reset(self, seed=None, options=None):
-        observation = self.sim.reset()  # Should return flat 120-D array
-        return observation, {}
-
-    def step(self, action):
-        reward, done = self.sim.step(action)  # Action must be mapped to internal Command class
-        observation = self.sim.get_state_vector()
-        info = {}
-        return observation, reward, done, False, info
-
 
 def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
               epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995, target_update=10):

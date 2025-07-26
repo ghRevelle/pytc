@@ -1,9 +1,13 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+from Scripts import plane
 from flightsim import FlightSimulator
 from plane_manager import PlaneManager
 from commands import Command, CommandType
+from airport import Runway, Airport
+from commands import *
+from planestates import PlaneState
 
 class AirTrafficControlEnv(gym.Env):
     """Custom Gymnasium environment for tower control using simulator."""
@@ -13,9 +17,16 @@ class AirTrafficControlEnv(gym.Env):
         self.max_planes = max_planes
         self.max_ticks = max_ticks
 
-        # Sim setup
-        self.manager = PlaneManager()
-        self.sim = FlightSimulator(plane_manager=self.manager)
+        self.test_runways = {
+	    9: Runway((32.73713, -117.20433), (32.73, -117.175), 9),  # NW-SE runway
+	    27: Runway((32.73, -117.175), (32.73713, -117.20433), 27),  # SE-NW runway
+        }
+
+        self.test_airport = Airport(self.test_runways)
+
+        # Create a new flight simulator class
+        self.rolling_initial_state = [] # TODO: implement a way to load initial states
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state)
         self.current_tick = 0
 
         # === Spaces ===
@@ -23,7 +34,7 @@ class AirTrafficControlEnv(gym.Env):
 
         # Action = (command_id, plane_id, argument)
         self.action_space = spaces.Dict({
-            "command": spaces.Discrete(len(CommandType)),
+            "command": spaces.Discrete(6),  # NONE to TURN (0 to 5)
             "plane_id": spaces.Discrete(max_planes),
         })
 
@@ -32,11 +43,10 @@ class AirTrafficControlEnv(gym.Env):
         self.current_tick = 0
 
         # Create a new flight simulator class
-        self.manager = PlaneManager()
-        self.sim = FlightSimulator(plane_manager=self.manager)
+        self.rolling_initial_state = []
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state)
 
         # Create starting state
-        self.sim.initialize_scenario_from_real_data(...)  # placeholder for OpenSky snapshot
         observation = self._get_obs()
         return observation, {}
 
@@ -45,12 +55,12 @@ class AirTrafficControlEnv(gym.Env):
         command = Command(
             command_type=CommandType(action['command']),
             target_id=action['plane_id'],
-            last_update=self.current_tick
+            last_update=self.current_tick + 1
         )
-        self.sim.add_command(command)
+        self.fs.add_command(command)
 
         # Advance simulation by one tick
-        self.sim.next_tick()
+        self.fs.tick()
         self.current_tick += 1
 
         obs = self._get_obs()
@@ -65,43 +75,63 @@ class AirTrafficControlEnv(gym.Env):
         Extract current observation as a flat vector from all planes.
         Assumes padded or fixed-size format.
         """
-        plane_states = self.manager.get_plane_states()
+        planes = self.fs.plane_manager.planes
 
         obs = []
-        for state in plane_states:
+        for plane in planes:
             # Encode each plane's state into a vector
-            obs.append(self._encode_plane_state(state))
+            obs.append(self._encode_plane_state(plane))
 
         while len(obs) < self.max_planes:
             obs.append(np.zeros_like(obs[0]))  # padding
 
         return np.concatenate(obs)
 
-    def _encode_plane_state(self, state):
+    def _encode_plane_state(self, plane):
         """Convert a plane's state into a flat array (e.g., lat, lon, alt, gspd, hdg, ...)."""
         return np.array([
-            state.lat, state.lon, state.alt, state.gspd, state.hdg,
-            state.v_z, state.command.command_type.value
+            plane.id, plane.lat, plane.lon, plane.alt, plane.gspd, plane.hdg,
+            plane.v_z, plane.command.command_type.value
         ], dtype=np.float32)
 
     def _state_dim(self):
-        return self.max_planes * 12  # 12 features per plane (adjust as needed)
+        return self.max_planes * 8  # 8 features per plane (adjust as needed)
 
     def _compute_reward(self):
-        """Define your reward logic: +1 for successful landing, -0.01 delay, -100 for crash, etc."""
         reward = 0.0
-        for plane in self.manager.planes:
-            if plane.has_landed:
-                reward += 1.0
-            if plane.crashed:
-                reward -= 100.0
-            reward -= 0.001  # time penalty
+
+        for plane in self.fs.plane_manager.planes:
+			# Reward for successful landings
+            if plane.landed_this_tick == True:
+                reward += 50.0
+
+			# Reward for successful takeoff
+            if plane.tookoff_this_tick == True:
+                reward += 50.0
+
+			# Penalty for crashing
+            if plane.crashed_this_tick == True:
+                reward -= 1000.0
+
+    	# Penalty for invalid or illegal commands
+        if self.fs.invalid_command_executed:
+            reward -= 10.0
+
+		# Reward for valid command execution
+		# This is to encourage the DRL to issue valid commands
+        if self.fs.valid_command_executed:
+            reward += 5.0
+
+    	# Small time pressure penalty per plane still in air
+        reward -= 0.01 * len(self.fs.plane_manager.planes)
+
         return reward
 
     def _check_done(self):
         if self.current_tick >= self.max_ticks:
             return True
-        if self.manager.all_planes_landed_or_crashed():
+        if self.fs.plane_manager.all_planes_landed_or_crashed():
+            # TODO: Implement a way to check if all planes are done
             return True
         return False
 
