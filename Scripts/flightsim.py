@@ -100,7 +100,9 @@ class FlightSimulator:
 
 	def check_command_validity(self, command: Command):
 		"""Check the validity of an executed command."""
-		plane = self.plane_manager.planes[command.target_id]
+		for plane in self.plane_manager.planes:
+			if plane.id == command.target_id:
+				break
 		command_type = command.command_type
 		if command_type == CommandType.CLEARED_FOR_TAKEOFF:
 			if plane.state != PlaneState.WAITING_FOR_TAKEOFF:
@@ -129,11 +131,12 @@ class FlightSimulator:
 		self.valid_command_executed = False  # Reset valid command flag for this tick
 		for command in self.command_queue:  # Process all commands in the queue
 			if self.current_tick == command.last_update:
+				print(f"Command: {command}")
 				self.check_command_validity(command)  # Check if the command is valid
 				if not self.invalid_command_executed:
 					self.command_plane(command)
 					self.print_command(command)  # Print the command for debugging
-					self.plane_manager.airport.pop_top_of_queue() if command.command_type == CommandType.LINE_UP_AND_WAIT else None
+					#self.plane_manager.airport.pop_top_of_queue() if command.command_type == CommandType.LINE_UP_AND_WAIT else None
 					self.command_queue.remove(command)  # Remove command after execution
 					if 1 <= command.command_type.value <= 5:  # Only reward for valid DRL-issued commands (Enums 1 to 5)
 						self.valid_command_executed = True

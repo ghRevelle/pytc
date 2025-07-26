@@ -6,6 +6,7 @@ from commands import *
 from planestates import PlaneState
 from rolling_initial_state_20250301 import rolling_initial_state_20250301
 import time
+import copy
 
 # Base coordinates around San Diego area
 base_lat = 32.7329
@@ -45,17 +46,32 @@ fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_mana
 
 runway = test_runways[27]
 
-fs.add_command_by_callsign('BAW82P', CommandType.REALIGN, last_update=10, argument=runway)
-fs.add_command_by_callsign('BAW82P', CommandType.CLEARED_TO_LAND, last_update=100, argument=runway)
+# fs.add_command_by_callsign('BAW82P', CommandType.REALIGN, last_update=10, argument=runway)
+# fs.add_command_by_callsign('BAW82P', CommandType.CLEARED_TO_LAND, last_update=1000, argument=runway)
 
-fs.add_command_by_callsign('SKW3378', CommandType.LINE_UP_AND_WAIT, last_update=111, argument=runway)
-fs.add_command_by_callsign('SKW3378', CommandType.CLEARED_FOR_TAKEOFF, last_update=150, argument=runway)
+#fs.add_command_by_callsign('SKW3378', CommandType.LINE_UP_AND_WAIT, last_update=111, argument=runway)
+#fs.add_command_by_callsign('SKW3378', CommandType.CLEARED_FOR_TAKEOFF, last_update=150, argument=runway)
 
 for i in range(2500):
-	# Run the simulation for 2500 ticks
-	if i >= 1600 and i < 2000 and i % 100 == 0:
-		target_callsign=fs.plane_manager.get_callsign(fs.plane_manager.airport.get_top_of_queue())
-		target_id = fs.plane_manager.get_id(target_callsign)
+	# # Run the simulation for 2500 ticks
+	if i >= 1400 and i < 1700 and i % 100 == 0:
+		#print(f"Tick {i}: Top of queue for LINE_UP_AND_WAIT: {fs.plane_manager.airport.get_top_of_queue()}")
+		target_id = copy.deepcopy(fs.plane_manager.airport.get_top_of_queue())
+
+		#print(f"Initial cti: {fs.plane_manager.callsign_to_id}")
+
 		fs.add_command(Command(command_type=CommandType.LINE_UP_AND_WAIT, target_id=target_id, last_update=i+1, argument=runway))
-		fs.add_command(Command(command_type=CommandType.CLEARED_FOR_TAKEOFF, target_id=target_id, last_update=i+50, argument=runway))
+		print(f"Target id before: {target_id}")
+
+		#print(f"After first command: {fs.plane_manager.callsign_to_id}")
+
+		fs.add_command(Command(command_type=CommandType.CLEARED_FOR_TAKEOFF, target_id=target_id, last_update=i+2, argument=runway))
+		#print(f"Tick {i+2}: Top of queue for CLEARED_FOR_TAKEOFF: {fs.plane_manager.get_callsign(fs.plane_manager.airport.get_top_of_queue())}")
+
+		print(f"Target id after: {target_id}")
+
+		#print(f"After second command: {fs.plane_manager.callsign_to_id}")
+
+		fs.plane_manager.airport.pop_top_of_queue()
+
 	fs.tick()
