@@ -35,7 +35,8 @@ class CommandHandler(ABC):
 		if plane.turn_start_time is None or not isinstance(plane.turn_start_time, int): # TODO: don't go around adding random attributes to the plane object
 			plane.turn_start_time = -1
 	
-	def _calculate_runway_distance(self, plane, target_runway):
+	@staticmethod
+	def _calculate_runway_distance(plane, target_runway):
 		"""Calculate distance to runway in nautical miles."""
 		return utils.degrees_to_nautical_miles(
 			heading=plane.hdg, 
@@ -249,10 +250,15 @@ class LandingCommandHandler(CommandHandler):
 	def __init__(self):
 		self.tod = None  # Top of descent in nautical miles
 		self.rod = None  # Rate of descent in feet per minute
-		self.started_before_min_dist = False
 
 	def can_handle(self, command_type: CommandType) -> bool:
 		return command_type == CommandType.CLEARED_TO_LAND
+	
+	@staticmethod
+	def is_valid_command(command, plane):
+		tod = plane._calculate_tod(plane.alt)
+		current_dist = LandingCommandHandler._calculate_runway_distance(plane, command.argument)
+		return current_dist >= tod and current_dist > 0
 	
 	def execute(self, plane, command, tick) -> None:
 
@@ -264,14 +270,17 @@ class LandingCommandHandler(CommandHandler):
 		
 		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading
 
-		target_dist = self._calculate_runway_distance(plane, target_runway)
-		if not self.started_before_min_dist:
-			if self.tod is not None and self.tod < target_dist:
-				self.started_before_min_dist = True
-
 		# Initialize landing parameters if needed
 		if not hasattr(self, 'tod') or self.tod is None or not hasattr(self, 'rod') or self.rod is None or not hasattr(plane, 'desired_acc_xy') or plane.desired_acc_xy is None:
 			self._initialize_landing(plane, target_runway, command) # TODO: STOP ADDING RANDOM ATTRIBUTES TO THE PLANE OBJECT
+
+		target_dist = self._calculate_runway_distance(plane, target_runway)
+		if not self.is_valid_command(command, plane):
+			self.__init__()  # Reset state for next landing
+			command.last_update = tick
+			command.command_type = CommandType.GO_AROUND
+			return
+
 		
 		if not self._is_aligned_to_runway(plane, target_runway):
 			raise ValueError(f"{plane.callsign} is not aligned to the runway for landing.")

@@ -5,6 +5,7 @@ from pygame_display import *
 from airport import *
 from commands import *
 from plane_manager import PlaneManager
+from command_handlers import LandingCommandHandler
 import time
 import utils
 
@@ -107,7 +108,7 @@ class FlightSimulator:
 				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_TAKEOFF, was: {plane.state}")
 				self.invalid_command_executed = True
 		elif command_type == CommandType.CLEARED_TO_LAND:
-			if plane.state != PlaneState.WAITING_FOR_LANDING:
+			if plane.state != PlaneState.WAITING_FOR_LANDING or not LandingCommandHandler.is_valid_command(command, plane):
 				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_LANDING, was: {plane.state}")
 				self.invalid_command_executed = True
 		elif command_type == CommandType.LINE_UP_AND_WAIT:
