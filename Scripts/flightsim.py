@@ -174,12 +174,12 @@ class FlightSimulator:
 		# Update display once with all plane states
 		self.pg_display.update_display(plane_states)
 
-		while self.crashed_planes:
-			self.plane_manager.delete_plane(self.crashed_planes.pop().id)
-
 		reward = self.compute_reward()  # Compute the reward for this tick
 		if abs(reward) > 0.1:
 			print(f"Reward for tick {self.current_tick}: {reward}")
+
+		while self.crashed_planes:
+			self.plane_manager.delete_plane(self.crashed_planes.pop().id)
 
 		# Reset plane flags using list comprehension
 		[setattr(plane, attr, False) for plane in self.plane_manager.planes 
