@@ -277,14 +277,16 @@ class LandingCommandHandler(CommandHandler):
 			self._initialize_landing(plane, target_runway, command) # TODO: STOP ADDING RANDOM ATTRIBUTES TO THE PLANE OBJECT
 
 		target_dist = self._calculate_runway_distance(plane, target_runway)
-		if not self.command_was_valid:
-			self.command_was_valid = self.is_valid_command(command, plane)
-			if not self.command_was_valid:
-				self.__init__()  # Reset state for next landing
-				command.last_update = tick
-				command.command_type = CommandType.GO_AROUND
-				print(f"{plane.callsign} is going around due to invalid landing command at tick {tick}.")
-				return
+
+		# DOES NOT ACTIVATE
+		# if not self.command_was_valid:
+		# 	self.command_was_valid = self.is_valid_command(command, plane)
+		# 	if not self.command_was_valid:
+		# 		self.__init__()  # Reset state for next landing
+		# 		command.last_update = tick
+		# 		command.command_type = CommandType.GO_AROUND
+		# 		print(f"{plane.callsign} is going around due to invalid landing command at tick {tick}.")
+		# 		return
 
 		
 		if not self._is_aligned_to_runway(plane, target_runway):
@@ -410,13 +412,13 @@ class TakeoffCommandHandler(CommandHandler):
 			command.command_type = CommandType.CRUISE
 
 
+
+#TODO: change go around to keep continuing straight and maintaining altitude
 class GoAroundCommandHandler(CommandHandler):
 	"""Handler for go-around commands."""
 
 	def __init__(self):
 		self.init_hdg = None
-		self.target_hdg = None
-		self.has_turned = False
 
 	def can_handle(self, command_type: CommandType) -> bool:
 		return command_type == CommandType.GO_AROUND
@@ -430,8 +432,6 @@ class GoAroundCommandHandler(CommandHandler):
 
 		if self.init_hdg is None:
 			self.init_hdg = plane.hdg
-		if self.target_hdg is None:
-			self.target_hdg = (self.init_hdg + 180) % 360
 		# Go-around procedure: climb and return to pattern
 		if plane.alt < plane.crz_alt:  # Climb to pattern altitude
 			plane.v_z = plane.proportional_change(
@@ -441,24 +441,14 @@ class GoAroundCommandHandler(CommandHandler):
 				max_value=plane.asc_rate,
 				max_change=plane.acc_z_max
 		)
-		elif not self.has_turned:  # Turn away from runway
-			plane.v_z = 0  # Stop vertical movement
-			plane.acc_xy = 0  # Stop horizontal acceleration
-			plane._turn(plane.hdg, self.target_hdg)
-			if math.isclose(plane.hdg, self.target_hdg, abs_tol=1e-2):
-				plane.hdg = self.target_hdg
-				command.last_update = tick + 500  # random delay to simulate go-around time
-				self.has_turned = True
-		elif tick >= command.last_update and self.has_turned and plane.hdg != self.init_hdg:  # Turn back to initial heading
+		elif tick >= command.last_update and plane.hdg != self.init_hdg:  # Turn back to initial heading
 			plane._turn(plane.hdg, self.init_hdg)
 		elif plane.hdg == self.init_hdg and tick >= command.last_update:
 			# If already back to initial heading, just cruise
-			print(f"Plane {plane.callsign} has completed go-around and is returning to pattern.")
+			print(f"Plane {plane.callsign} has gone around and is following missed approach procedure")
 			command.command_type = CommandType.CRUISE
 			plane.acc_xy = 0
-			self.has_turned = False
 			self.init_hdg = None
-			self.target_hdg = None
 
 
 class CommandProcessor:

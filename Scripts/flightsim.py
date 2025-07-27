@@ -6,6 +6,7 @@ from airport import *
 from commands import *
 from plane_manager import PlaneManager
 from command_handlers import LandingCommandHandler
+from typing import Optional
 import time
 import utils
 
@@ -25,6 +26,8 @@ class FlightSimulator:
 
 		# Start at tick 0
 		self.current_tick = 0
+
+		self.processed_planes = 0
 
 		if airport is None:
 			raise TypeError("Missing Airport Layout")
@@ -48,6 +51,7 @@ class FlightSimulator:
 		for plane_state in self.rolling_initial_state:
 			if plane_state['time_added'] == 0:
 				self.add_plane_to_manager(plane_state)
+				self.processed_planes += 1
 				if plane_state['state'] == PlaneState.AIR:
 					self.add_command_by_callsign(
 						plane_state['callsign'], 
@@ -102,7 +106,7 @@ class FlightSimulator:
 		self.command_queue.append(command)
 
 	# Function to support testing by allowing commands by callsign
-	def add_command_by_callsign(self, callsign: str, command_type: CommandType, last_update: int, argument):
+	def add_command_by_callsign(self, callsign: str, command_type: CommandType, last_update: int, argument: Optional[Runway] = None):
 		target_id = self.plane_manager.get_id(callsign)
 		self.add_command(Command(command_type, target_id, last_update, argument))
 
@@ -117,8 +121,11 @@ class FlightSimulator:
 				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_TAKEOFF, was: {plane.state}")
 				self.invalid_command_executed = True
 		elif command_type == CommandType.CLEARED_TO_LAND:
-			if plane.state != PlaneState.WAITING_FOR_LANDING or not LandingCommandHandler.is_valid_command(command, plane):
+			if plane.state != PlaneState.WAITING_FOR_LANDING:
 				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_LANDING, was: {plane.state}")
+				self.invalid_command_executed = True
+			elif  not LandingCommandHandler.is_valid_command(command, plane):
+				print(f"Invalid command: {command.command_type} for {plane.callsign}. Too late to land")
 				self.invalid_command_executed = True
 		elif command_type == CommandType.LINE_UP_AND_WAIT:
 			if plane.state != PlaneState.QUEUED:
@@ -139,7 +146,6 @@ class FlightSimulator:
 		self.valid_command_executed = False  # Reset valid command flag for this tick
 		for command in self.command_queue:  # Process all commands in the queue
 			if self.current_tick == command.last_update:
-				print(f"Command: {command}")
 				self.check_command_validity(command)  # Check if the command is valid
 				if not self.invalid_command_executed:
 					self.command_plane(command)
@@ -172,12 +178,14 @@ class FlightSimulator:
 				# <= 300 meters is considered a near-collision; the DRL is punished as if the planes crashed
 				if check_distance <= 300 and check_distance > 30:
 					plane1.crashed_this_tick = plane2.crashed_this_tick = True
-					print(f"{plane1.callsign} and {plane2.callsign} had a close call at tick {self.current_tick}.")
+					print(f"{plane1.callsign} and {plane2.callsign} had a close call")
+					print(f"tick: {self.current_tick}")
 					
 				# <= 30 meters is considered a collision; the DRL is punished, and the planes get destroyed
 				elif check_distance <= 30:
 					self.crashed_planes.extend([plane1, plane2])
-					print(f"{plane1.callsign} and {plane2.callsign} crashed at tick {self.current_tick}.")
+					print(f"{plane1.callsign} and {plane2.callsign} crashed")
+					print(f"tick: {self.current_tick}")
 			
 			if plane1.state == PlaneState.MARKED_FOR_DELETION:
 				self.plane_manager.delete_plane(plane1.id)
@@ -202,6 +210,7 @@ class FlightSimulator:
 		for plane_state in self.rolling_initial_state:
 			if plane_state['time_added'] == self.current_tick:
 				self.add_plane_to_manager(plane_state)
+				self.processed_planes += 1
 				if plane_state['state'] == PlaneState.AIR:
 					self.add_command_by_callsign(
 						plane_state['callsign'], 
@@ -211,7 +220,7 @@ class FlightSimulator:
 					)
 
 		# Check for end of simulation
-		if self.plane_manager.check_end_state():
+		if self.check_end_state():
 			print(f"Ending simulation at tick {self.current_tick}")
 			self.pg_display.stop_display()
 			self.current_tick = 0
@@ -227,16 +236,17 @@ class FlightSimulator:
 			# Reward for successful landings
 			if plane.landed_this_tick == True:
 				print(f"{plane.callsign} has landed")
+				print(f"tick: {self.current_tick}")
 				reward += 50.0
 
 			# Reward for successful takeoff
 			if plane.tookoff_this_tick == True:
 				print(f"{plane.callsign} has taken off")
+				print(f"tick: {self.current_tick}")
 				reward += 50.0
 
 			# Penalty for crashing
 			if plane.crashed_this_tick == True:
-				print(f"{plane.callsign} just crashed")
 				reward -= 1000.0
 
     	# Penalty for invalid or illegal commands
@@ -252,6 +262,12 @@ class FlightSimulator:
 		reward -= 0.01 * len(self.plane_manager.planes)
 
 		return reward
+
+	def check_end_state(self):
+		"""Check if there are any more planes."""
+		if not self.plane_manager.planes and self.processed_planes == len(self.rolling_initial_state):
+			return True
+		return False
 
 	def print_command(self, command: Command):
 		if command.command_type == CommandType.CLEARED_FOR_TAKEOFF:

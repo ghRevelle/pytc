@@ -76,8 +76,3 @@ class PlaneManager:
         for plane in self.planes:
             print(f"lat: {plane.lat}, lon: {plane.lon}, ID: {plane.id}, Callsign: {plane.callsign}, State: {plane.state}, command: {plane.command.command_type} tick: {tick}")
 
-    def check_end_state(self):
-        """Check if there are any more planes."""
-        if not self.planes:
-            return True
-        return False
