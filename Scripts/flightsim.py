@@ -72,8 +72,6 @@ class FlightSimulator:
 
 	def get_tps(self):
 		"""Get the effective ticks per second, accounting for turbo mode."""
-		if self.no_display:
-			return 999999
 		if hasattr(self.pg_display, 'turbo_mode') and self.pg_display.turbo_mode:
 			return self.base_tps * 20
 		return self.base_tps
@@ -276,8 +274,9 @@ class FlightSimulator:
 			self.current_tick = 0
 			return
 
-		effective_tps = self.get_tps()
-		time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
+		if not self.no_display:
+			effective_tps = self.get_tps()
+			time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
 			
 	def compute_reward(self):
 		reward = 0.0

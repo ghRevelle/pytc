@@ -13,7 +13,7 @@ from rolling_initial_state_20250301 import *
 class AirTrafficControlEnv(gym.Env):
     """Custom Gymnasium environment for tower control using simulator."""
 
-    def __init__(self, max_planes=10, max_ticks=5000):
+    def __init__(self, max_planes=10, max_ticks=2000):
         super().__init__()
         self.max_planes = max_planes
         self.max_ticks = max_ticks
