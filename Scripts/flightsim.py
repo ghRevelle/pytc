@@ -132,6 +132,9 @@ class FlightSimulator:
 			elif  not LandingCommandHandler.is_valid_command(command, plane):
 				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Too late to land")
 				self.invalid_command_executed = True
+			elif not LandingCommandHandler.is_aligned(plane, command):
+				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Not aligned to runway")
+				self.invalid_command_executed = True
 		elif command_type == CommandType.LINE_UP_AND_WAIT:
 			if plane.state != PlaneState.QUEUED:
 				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: QUEUED, was: {plane.state}")
@@ -160,7 +163,7 @@ class FlightSimulator:
 					#self.print_command(command)  # Print the command for debugging
 					self.plane_manager.airport.pop_top_of_queue() if command.command_type == CommandType.CLEARED_FOR_TAKEOFF else None
 					self.command_queue.remove(command)  # Remove command after execution
-					if 1 <= command.command_type.value <= 5:  # Only reward for valid DRL-issued commands (Enums 1 to 5)
+					if 1 <= command.command_type.value <= 4:  # Only reward for valid DRL-issued commands (Enums 1 to 5)
 						self.valid_command_executed = True
 		
 		# Update all plane states using list comprehension
