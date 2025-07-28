@@ -171,7 +171,7 @@ class CruiseCommandHandler(CommandHandler):
 	"""Handler for plane cruise mode."""
 
 	def can_handle(self, command_type: CommandType) -> bool:
-		return command_type == CommandType.CRUISE
+		return command_type == CommandType.CRUISE or command_type == CommandType.GO_AROUND
 	
 	def execute(self, plane, command, tick) -> None:
 
@@ -436,7 +436,7 @@ class GoAroundCommandHandler(CommandHandler):
 		self.init_hdg = None
 
 	def can_handle(self, command_type: CommandType) -> bool:
-		return command_type == CommandType.GO_AROUND
+		return False # command_type == CommandType.GO_AROUND
 
 	def execute(self, plane, command, tick) -> None:
 
