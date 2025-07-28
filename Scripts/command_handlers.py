@@ -171,22 +171,23 @@ class CruiseCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
-		if abs(plane.alt - plane.crz_alt) < 20:
+		if 304.8 <= plane.alt <= 457.2:
 			plane.state = PlaneState.WAITING_FOR_LANDING
 		else:
 			plane.state = PlaneState.AIR
 
+		if plane.alt < 304.8 or plane.alt > 457.2:
 		# Try to achieve a vertrate proportional to the altitudinal error
-		alt_error = plane.crz_alt - plane.alt
-		v_z_target = max(-plane.dsc_rate, min(plane.asc_rate, alt_error * 0.1))
+			alt_error = plane.crz_alt - plane.alt
+			v_z_target = max(-plane.dsc_rate, min(plane.asc_rate, alt_error * 0.1))
 
-		plane.v_z = plane.proportional_change(
-			current=plane.v_z,
-			target=v_z_target,
-			min_value=-plane.dsc_rate,
-			max_value=plane.asc_rate,
-			max_change=plane.acc_z_max
-		)
+			plane.v_z = plane.proportional_change(
+				current=plane.v_z,
+				target=v_z_target,
+				min_value=-plane.dsc_rate,
+				max_value=plane.asc_rate,
+				max_change=plane.acc_z_max
+			)
 
 		# Try to achieve a lateral acceleration proportional to the gspd error
 		gspd_error = plane.crz_speed - plane.gspd

@@ -5,8 +5,6 @@ from airport import Runway, Airport
 from commands import *
 from planestates import PlaneState
 from rolling_initial_state_20250301 import *
-import time
-import copy
 
 # Base coordinates around San Diego area
 base_lat = 32.7329

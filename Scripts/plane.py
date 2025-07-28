@@ -93,7 +93,7 @@ class Plane:
 				self.turn_rate = utils.get_turn_rate(25, self.crz_speed) # degrees/sec
 
 				self.nex_alt = 12131.04 # meters, or 39800 / 3.281
-				self.crz_alt = 457.2 # meters, or 1500 / 3.281"""
+				self.crz_alt = 457.2 # meters, or 1500 / 3.281
 
 				self.asc_rate = 12.7 # m/s
 				self.dsc_rate = 19.05 # m/s, or asc_rate * 1.5
