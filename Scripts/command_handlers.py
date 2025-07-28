@@ -246,8 +246,6 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 		return command_type == CommandType.LINE_UP_AND_WAIT
 	
 	def execute(self, plane, command, tick) -> None:
-		plane.has_taken_off = True
-
 		target_runway = command.argument
 		if not isinstance(target_runway, Runway):
 			raise ValueError("Invalid runway argument: must be a Runway object")
@@ -285,8 +283,6 @@ class LandingCommandHandler(CommandHandler):
 		return True
 
 	def execute(self, plane, command, tick) -> None:
-		plane.has_started_landing = True
-
 		target_runway = command.argument
 		
 		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading

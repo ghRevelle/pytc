@@ -50,7 +50,7 @@ class AirTrafficControlEnv(gym.Env):
 
         # Action = (command_id, plane_id, argument)
         self.action_space = spaces.Dict({
-            "command": spaces.Discrete(5),  # NONE to GO_AROUND (0 to 5)
+            "command": spaces.Discrete(4),  # NONE to GO_AROUND (0 to 4)
             "plane_id": spaces.Discrete(max_planes),
         })
 

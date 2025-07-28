@@ -50,7 +50,7 @@ for i in range(2500):
 			fs.add_command_by_callsign(state['callsign'], CommandType.CLEARED_TO_LAND, last_update = i+90, argument=runway)
 		elif state['time_added'] == i and state['state'] == PlaneState.QUEUED:
 			fs.add_command_by_callsign(state['callsign'], CommandType.LINE_UP_AND_WAIT, last_update = i+1, argument=runway)
-			fs.add_command_by_callsign(state['callsign'], CommandType.CLEARED_FOR_TAKEOFF, last_update = i+2, argument=runway)
+			# fs.add_command_by_callsign(state['callsign'], CommandType.CLEARED_FOR_TAKEOFF, last_update = i+2, argument=runway)
 	# if i >= 1400 and i <= 1800 and i % 100 == 0:
 	# 	target_id = copy.deepcopy(fs.plane_manager.airport.get_top_of_queue())
 	# 	fs.add_command(Command(command_type=CommandType.LINE_UP_AND_WAIT, target_id=target_id, last_update=i+1, argument=runway))
