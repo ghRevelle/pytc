@@ -30,6 +30,11 @@ class AirTrafficControlEnv(gym.Env):
         for i in range(57):
             state = getattr(__import__('rolling_initial_state_20250301'), f'rolling_initial_state_{i:02d}')
             self.all_initial_states.append(state)
+            for j in range(len(state)):
+                if self.all_initial_states[-1][j]['state'] == 'takeoff':
+                    self.all_initial_states[-1][j]['state'] = PlaneState.QUEUED
+                elif self.all_initial_states[-1][j]['state'] == 'landing':
+                    self.all_initial_states[-1][j]['state'] = PlaneState.AIR
 
         # 80/20 train/test split
         split_idx = int(0.8 * len(self.all_initial_states))

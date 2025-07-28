@@ -90,6 +90,9 @@ class RealignCommandHandler(CommandHandler):
 			raise ValueError("Invalid runway argument: must be a Runway object")
 		
 		target_hdg = target_runway.hdg
+
+		plane.v_z = 0  # Ensure vertical speed is zero during realignment
+		plane.acc_xy = 0  # Ensure horizontal acceleration is zero during realignment
 		
 		# If not already parallel to the runway...
 		if not self.parallel:
