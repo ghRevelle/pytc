@@ -257,6 +257,7 @@ class LineUpAndWaitCommandHandler(CommandHandler):
 		plane.lat = target_runway.get_start_point_xy()[1]
 
 		plane.state = PlaneState.WAITING_FOR_TAKEOFF
+		command.command_type = CommandType.CLEARED_FOR_TAKEOFF
 
 class LandingCommandHandler(CommandHandler):
 	"""Handler for landing commands."""
