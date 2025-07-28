@@ -129,7 +129,7 @@ class FlightSimulator:
 			if plane.state != PlaneState.WAITING_FOR_LANDING:
 				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_LANDING, was: {plane.state}")
 				self.invalid_command_executed = True
-			elif  not LandingCommandHandler.is_valid_command(command, plane):
+			elif not LandingCommandHandler.is_valid_command(command, plane):
 				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Too late to land")
 				self.invalid_command_executed = True
 			elif not LandingCommandHandler.is_aligned(plane, command):
@@ -142,6 +142,10 @@ class FlightSimulator:
 			elif plane.id != self.plane_manager.airport.get_top_of_queue():
 				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Not at the front of the queue")
 				self.invalid_command_executed = True
+		elif command_type == CommandType.GO_AROUND:
+			if plane.has_gone_around:
+				self.invalid_command_executed = True
+				print("{plane.callsign} has been issued a redundant go-around command.")
 		return
 
 	def tick(self):

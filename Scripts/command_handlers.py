@@ -172,12 +172,12 @@ class CruiseCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
-		if 304.8 <= plane.alt <= 457.2:
+		if 304.8 <= plane.alt <= 457.2: # 1000-1500 ft
 			plane.state = PlaneState.WAITING_FOR_LANDING
 		else:
 			plane.state = PlaneState.AIR
 
-		if plane.alt < 304.8 or plane.alt > 457.2:
+		if plane.alt < 304.8 or plane.alt > 457.2: # <1000 or >1500 ft
 		# Try to achieve a vertrate proportional to the altitudinal error
 			alt_error = plane.crz_alt - plane.alt
 			v_z_target = max(-plane.dsc_rate, min(plane.asc_rate, alt_error * 0.1))
@@ -410,6 +410,7 @@ class TakeoffCommandHandler(CommandHandler):
 		else:
 			plane.state = PlaneState.TAKINGOFF
 			plane.tookoff_this_tick = True
+			plane.has_gone_around = True
 			command.command_type = CommandType.CRUISE
 
 
@@ -425,6 +426,8 @@ class GoAroundCommandHandler(CommandHandler):
 		return command_type == CommandType.GO_AROUND
 
 	def execute(self, plane, command, tick) -> None:
+
+		plane.has_gone_around = True
 
 		if abs(plane.alt - plane.crz_alt) < 20:
 			plane.state = PlaneState.WAITING_FOR_LANDING

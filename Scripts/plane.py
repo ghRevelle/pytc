@@ -20,6 +20,7 @@ class Plane:
 				'landed_this_tick' (bool): Whether or not the plane landed this tick.
 				'tookoff_this_tick' (bool): Whether or not the plane took off this tick.
 				'crashed_this_tick' (bool): Whether or not the plane crashed this tick.
+				'has_gone_around' (bool): Whether or not the plane has been issued a go-around command.
 
 				'turn_rate' (float): Turn rate of the plane in deg/sec (based on model)
 				'stall_speed' (float): Plane's minimum speed in m/s (based on model)
@@ -58,6 +59,7 @@ class Plane:
 		self.landed_this_tick = False
 		self.tookoff_this_tick = False
 		self.crashed_this_tick = False
+		self.has_gone_around = False
 
 		self.time_waited = 0
 
