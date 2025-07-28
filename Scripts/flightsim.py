@@ -13,16 +13,19 @@ import utils
 class FlightSimulator:
 	"""A simple flight simulator to demonstrate plane movement and display."""
 
+	no_display = False  # Set to True to run without display
 	# Simulation speed. In real life, 1 tick = 1 second
 	base_tps = 20
 
-	def __init__(self, display_size=(640, 480), airport=None, plane_manager=None, rolling_initial_state=None):
+	def __init__(self, display_size=(640, 480), airport=None, plane_manager=None, rolling_initial_state=None, no_display=False):
 		"""Initialize the flight simulator with a display size, optional airport layout.
 		Args:
 			display_size (tuple): Size of the display window (width, height).
 			airport (Airport): Optional airport layout.
 		"""
 		self.display_size = display_size
+
+		self.no_display = no_display
 
 		# Start at tick 0
 		self.current_tick = 0
@@ -38,10 +41,11 @@ class FlightSimulator:
 		self.plane_manager = plane_manager
 		self.plane_manager.set_airport(airport)
 
-		# Initialize the Pygame display
-		self.pg_display = Pygame_Display(*display_size)
-		# Setup the airport on the display
-		self.pg_display.setup_airport(airport)
+		if not self.no_display:
+			# Initialize the Pygame display
+			self.pg_display = Pygame_Display(*display_size)
+			# Setup the airport on the display
+			self.pg_display.setup_airport(airport)
 		# Empty command queue
 		self.command_queue = []
 
@@ -68,6 +72,8 @@ class FlightSimulator:
 
 	def get_tps(self):
 		"""Get the effective ticks per second, accounting for turbo mode."""
+		if self.no_display:
+			return 999999
 		if hasattr(self.pg_display, 'turbo_mode') and self.pg_display.turbo_mode:
 			return self.base_tps * 20
 		return self.base_tps
@@ -167,13 +173,13 @@ class FlightSimulator:
 
 	def tick(self):
 		"""Run a single tick of the simulation."""
-
-		for event in pygame.event.get(): # Check for quit events
-			if event.type == pygame.QUIT:
-				self.pg_display.stop_display()
-				self.current_tick = 0
-				return
-		
+		if not self.no_display:
+			for event in pygame.event.get(): # Check for quit events
+				if event.type == pygame.QUIT:
+					self.pg_display.stop_display()
+					self.current_tick = 0
+					return
+			
 		self.invalid_command_executed = False  # Reset invalid command flag for this tick
 		self.valid_command_executed = False  # Reset valid command flag for this tick
 		for command in self.command_queue:  # Process all commands in the queue
@@ -230,8 +236,9 @@ class FlightSimulator:
 			if plane1.state == PlaneState.MARKED_FOR_DELETION:
 				self.plane_manager.delete_plane(plane1.id)
 
-		# Update display once with all plane states
-		self.pg_display.update_display(plane_states)
+		if not self.no_display:
+			# Update the display with the current plane states
+			self.pg_display.update_display(plane_states)
 
 		# reward = self.compute_reward()  # Compute the reward for this tick
 		# if abs(reward) > 0.1:
@@ -264,7 +271,8 @@ class FlightSimulator:
 		# Check for end of simulation
 		if self.check_end_state():
 			#print(f"Ending simulation at tick {self.current_tick}")
-			self.pg_display.stop_display()
+			if not self.no_display:
+				self.pg_display.stop_display()
 			self.current_tick = 0
 			return
 
