@@ -157,7 +157,7 @@ class FlightSimulator:
 		elif command_type == CommandType.GO_AROUND:
 			if plane.has_gone_around:
 				self.invalid_command_executed = True
-				#print("{plane.callsign} has been issued a redundant go-around command.")
+				print(f"{plane.callsign} has been issued a redundant go-around command.")
 		return
 
 	def tick(self):

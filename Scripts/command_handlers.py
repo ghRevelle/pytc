@@ -440,7 +440,7 @@ class GoAroundCommandHandler(CommandHandler):
 	def execute(self, plane, command, tick) -> None:
 
 		plane.has_gone_around = True
-
+		print(f"{plane.callsign} attribute has_gone_around set to True")
 		if abs(plane.alt - plane.crz_alt) < 20:
 			plane.state = PlaneState.WAITING_FOR_LANDING
 		else:
