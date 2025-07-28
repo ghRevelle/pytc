@@ -42,7 +42,7 @@ class AirTrafficControlEnv(gym.Env):
         self.test_initial_states = self.all_initial_states[split_idx:]
         self.use_test_set = False  # Set True for evaluation
         self.rolling_initial_state = []
-        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state)
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=True)
         self.current_tick = 0
 
         # === Spaces ===
