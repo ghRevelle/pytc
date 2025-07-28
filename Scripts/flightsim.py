@@ -67,7 +67,7 @@ class FlightSimulator:
 	def get_tps(self):
 		"""Get the effective ticks per second, accounting for turbo mode."""
 		if hasattr(self.pg_display, 'turbo_mode') and self.pg_display.turbo_mode:
-			return self.base_tps * 10
+			return self.base_tps * 20
 		return self.base_tps
 
 	# Add a plane to the plane manager
