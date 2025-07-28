@@ -58,7 +58,8 @@ class CommandHandler(ABC):
 			return True  # Alignment complete
 		return False  # Still aligning
 	
-	def _is_aligned_to_runway(self, plane, target_runway):
+	@staticmethod
+	def _is_aligned_to_runway(plane, target_runway):
 		"""Check if the plane is aligned with the target runway."""
 		parallel = math.isclose(plane.hdg, target_runway.hdg, abs_tol=1e-5)
 		online = utils.point_to_line_distance(
@@ -120,7 +121,7 @@ class RealignCommandHandler(CommandHandler):
 				plane._turn(plane.hdg, target_hdg)	
 
 			
-			if self._is_aligned_to_runway(plane, target_runway): # check if already aligned and done
+			if CommandHandler._is_aligned_to_runway(plane, target_runway): # check if already aligned and done
 				# If already aligned, switch to cruise mode
 				command.command_type = CommandType.CRUISE
 				self.__init__()  # Reset state for next realignment
@@ -262,13 +263,16 @@ class LandingCommandHandler(CommandHandler):
 		current_dist = LandingCommandHandler._calculate_runway_distance(plane, command.argument)
 		return current_dist >= tod and current_dist > 0
 	
+	@staticmethod
+	def is_aligned(plane, command):
+		target_runway = command.argument
+		if not CommandHandler._is_aligned_to_runway(plane, target_runway):
+			return False
+		return True
+
 	def execute(self, plane, command, tick) -> None:
 
 		target_runway = command.argument
-
-		
-		if not isinstance(target_runway, Runway):
-			raise ValueError("Invalid runway argument: must be a Runway object")
 		
 		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading
 
@@ -287,10 +291,6 @@ class LandingCommandHandler(CommandHandler):
 		# 		command.command_type = CommandType.GO_AROUND
 		# 		print(f"{plane.callsign} is going around due to invalid landing command at tick {tick}.")
 		# 		return
-
-		
-		if not self._is_aligned_to_runway(plane, target_runway):
-			raise ValueError(f"{plane.callsign} is not aligned to the runway for landing.")
 	
 		if target_dist < self.tod and plane.alt > 0:
 			self._handle_descent_phase(plane, target_dist, target_runway)
