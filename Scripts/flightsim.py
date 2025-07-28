@@ -15,7 +15,7 @@ class FlightSimulator:
 
 	no_display = False  # Set to True to run without display
 	# Simulation speed. In real life, 1 tick = 1 second
-	base_tps = 300
+	base_tps = 20
 
 	def __init__(self, display_size=(640, 480), airport=None, plane_manager=None, rolling_initial_state=None, no_display=False):
 		"""Initialize the flight simulator with a display size, optional airport layout.
@@ -127,10 +127,15 @@ class FlightSimulator:
 				break
 		if plane is None:
 			self.invalid_command_executed = True
+			#print(f"Plane with ID {command.target_id} not found.")
 			return
 		
 		if plane.has_gone_around or plane.state == PlaneState.REALIGNING or plane.state == PlaneState.TAKINGOFF or plane.state == PlaneState.TAXIING:
-			self.invalid_command_executed = True
+			if plane.state == PlaneState.QUEUED or plane.state == PlaneState.TAKINGOFF:
+				pass
+			else:
+				self.invalid_command_executed = True
+				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Plane is already in a go-around or realigning state.")
 
 		command_type = command.command_type
 		if command_type == CommandType.CLEARED_FOR_TAKEOFF:
@@ -163,7 +168,7 @@ class FlightSimulator:
 		elif command_type == CommandType.GO_AROUND:
 			if plane.has_gone_around:
 				self.invalid_command_executed = True
-				print(f"{plane.callsign} has been issued a redundant go-around command.")
+				#print(f"{plane.callsign} has been issued a redundant go-around command.")
 		return
 
 	def tick(self):
@@ -185,7 +190,15 @@ class FlightSimulator:
 					self.print_command(command)  # Print the command for debugging
 					self.plane_manager.airport.pop_top_of_queue() if command.command_type == CommandType.CLEARED_FOR_TAKEOFF else None
 					self.command_queue.remove(command)  # Remove command after execution
-					if 1 <= command.command_type.value <= 3:  # Only reward for valid DRL-issued commands (Enums 1 to 3)
+					if command.command_type == CommandType.CLEARED_FOR_TAKEOFF or command.command_type == CommandType.CLEARED_TO_LAND:
+						for plane in self.plane_manager.planes:
+							if plane.id == command.target_id:
+								if command.command_type == CommandType.CLEARED_FOR_TAKEOFF:
+									plane.has_taken_off = True
+								elif command.command_type == CommandType.CLEARED_TO_LAND:
+									plane.has_started_landing = True
+								break
+					if 1 <= command.command_type.value <= 2:  # Only reward for valid DRL-issued commands (Enums 1 to 2)
 						self.valid_command_executed = True
 		
 		# Update all plane states using list comprehension
@@ -264,7 +277,7 @@ class FlightSimulator:
 			return
 
 		effective_tps = self.get_tps()
-		# time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
+		time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
 			
 	def compute_reward(self):
 		reward = 0.0
