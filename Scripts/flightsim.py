@@ -256,7 +256,7 @@ class FlightSimulator:
 			return
 
 		effective_tps = self.get_tps()
-		time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
+		# time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
 			
 	def compute_reward(self):
 		reward = 0.0
