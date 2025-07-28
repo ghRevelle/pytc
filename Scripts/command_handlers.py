@@ -208,16 +208,13 @@ class CruiseCommandHandler(CommandHandler):
 		gspd_error = plane.crz_speed - plane.gspd
 		gspd_target = max(-plane.acc_xy_max, min(plane.acc_xy_max, gspd_error * 0.1))
 
-		# If the plane is NOT descending...
-		if plane.v_z > -plane.dsc_rate / 2:
-			# Turn on the speed controller
-			plane.acc_xy = plane.proportional_change(
-				current=plane.acc_xy,
-				target=gspd_target,
-				min_value=-plane.acc_xy_max,
-				max_value=plane.acc_xy_max,
-				max_change=plane.acc_xy_max
-			)
+		plane.acc_xy = plane.proportional_change(
+			current=plane.acc_xy,
+			target=gspd_target,
+			min_value=-plane.acc_xy_max,
+			max_value=plane.acc_xy_max,
+			max_change=plane.acc_xy_max
+		)
 
 class TurnCommandHandler(CommandHandler):
 	"""Handler for turn commands."""
