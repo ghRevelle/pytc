@@ -14,7 +14,7 @@ class FlightSimulator:
 	"""A simple flight simulator to demonstrate plane movement and display."""
 
 	# Simulation speed. In real life, 1 tick = 1 second
-	base_tps = 200
+	base_tps = 300
 
 	def __init__(self, display_size=(640, 480), airport=None, plane_manager=None, rolling_initial_state=None):
 		"""Initialize the flight simulator with a display size, optional airport layout.
@@ -128,7 +128,10 @@ class FlightSimulator:
 
 		command_type = command.command_type
 		if command_type == CommandType.CLEARED_FOR_TAKEOFF:
-			if plane.state != PlaneState.WAITING_FOR_TAKEOFF:
+			if plane.has_taken_off:
+				self.invalid_command_executed = True
+				#print(f"{plane.callsign} has already taken off.")
+			elif plane.state != PlaneState.WAITING_FOR_TAKEOFF:
 				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: WAITING_FOR_TAKEOFF, was: {plane.state}")
 				self.invalid_command_executed = True
 		elif command_type == CommandType.CLEARED_TO_LAND:
