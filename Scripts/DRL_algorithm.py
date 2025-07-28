@@ -21,7 +21,7 @@ if device.type == "cpu":
 print(f"Using device: {device}")
 
 class AirTrafficControlDQN(nn.Module):
-    def __init__(self, input_dim=120, n_commands=6, n_planes=10):
+    def __init__(self, input_dim=70, n_commands=5, n_planes=10):
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, 128),
@@ -64,20 +64,27 @@ def compute_dqn_loss(policy_net, target_net, batch, gamma=0.99):
 
 def extract_q_value(command_logits, plane_logits, actions):
     # actions: list/array of tuples (cmd_idx, plane_idx, arg_val)
-    q_vals = []
+    cmd_idx, plane_idx, _ = actions[0]
+    # If logits are 1D (single sample), add batch dimension
+    if command_logits.dim() == 1:
+        command_logits = command_logits.unsqueeze(0)
+    if plane_logits.dim() == 1:
+        plane_logits = plane_logits.unsqueeze(0)
     log_cmd_probs = F.log_softmax(command_logits, dim=1)
     log_plane_probs = F.log_softmax(plane_logits, dim=1)
-
-    for i, (cmd_idx, plane_idx, _) in enumerate(actions):
-        cmd_logit = log_cmd_probs[i, cmd_idx]
-        plane_logit = log_plane_probs[i, plane_idx]
-        q_val = cmd_logit + plane_logit
-        q_vals.append(q_val)
-    return torch.stack(q_vals)
+    cmd_logit = log_cmd_probs[0, cmd_idx]
+    plane_logit = log_plane_probs[0, plane_idx]
+    q_val = cmd_logit + plane_logit
+    return q_val.unsqueeze(0)
 
 
 def compute_max_q_value(command_logits, plane_logits):
     # Max over possible command/plane pairs
+    # Ensure batch dimension exists
+    if command_logits.dim() == 1:
+        command_logits = command_logits.unsqueeze(0)
+    if plane_logits.dim() == 1:
+        plane_logits = plane_logits.unsqueeze(0)
     all_qs = command_logits.unsqueeze(2) + plane_logits.unsqueeze(1)  # (batch, n_commands, n_planes)
     max_q = torch.max(all_qs.view(all_qs.size(0), -1), dim=1).values
     return max_q
@@ -163,3 +170,15 @@ def run_episode(env, policy_net, eval=False):
     return total_reward
 
 print("passed initialization test")
+
+if __name__ == "__main__":
+    env = AirTrafficControlEnv()
+    input_dim = env._state_dim()  # This will be 70 if max_planes=10 and 7 features per plane
+    n_commands = env.action_space['command'].n
+    n_planes = env.action_space['plane_id'].n
+
+    policy_net = AirTrafficControlDQN(input_dim=input_dim, n_commands=n_commands, n_planes=n_planes).to(device)
+    target_net = AirTrafficControlDQN(input_dim=input_dim, n_commands=n_commands, n_planes=n_planes).to(device)
+    target_net.load_state_dict(policy_net.state_dict())
+
+    train_dqn(env, policy_net, target_net, episodes=100, batch_size=32)

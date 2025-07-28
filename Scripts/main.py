@@ -24,7 +24,7 @@ test_airport = Airport(test_runways)
 rolling_initial_state = []
 
 # Convert the rolling initial state states to use PlaneState enums
-for state in rolling_initial_state_01:
+for state in rolling_initial_state_00:
 	rolling_initial_state.append(state.copy())
 	if rolling_initial_state[-1]['state'] == 'takeoff':
 		rolling_initial_state[-1]['state'] = PlaneState.QUEUED
@@ -49,7 +49,7 @@ for i in range(2500):
 	# # Run the simulation for 2500 ticks
 	for state in rolling_initial_state:
 		if state['time_added'] == i and state['state'] == PlaneState.AIR:
-			fs.add_command_by_callsign(state['callsign'], CommandType.CLEARED_TO_LAND, last_update = i+79, argument=runway)
+			fs.add_command_by_callsign(state['callsign'], CommandType.CLEARED_TO_LAND, last_update = i+90, argument=runway)
 		elif state['time_added'] == i and state['state'] == PlaneState.QUEUED:
 			fs.add_command_by_callsign(state['callsign'], CommandType.LINE_UP_AND_WAIT, last_update = i+1, argument=runway)
 			fs.add_command_by_callsign(state['callsign'], CommandType.CLEARED_FOR_TAKEOFF, last_update = i+2, argument=runway)

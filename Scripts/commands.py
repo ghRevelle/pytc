@@ -20,4 +20,4 @@ class Command:
     command_type: CommandType
     target_id: int                    # index of the plane; planes and their callsigns will be mapped to an integer ID
     last_update: int                  # when the command was last updated
-    argument: Optional[Runway] = None # runway object
+    argument: Optional[Runway] = Runway((32.73, -117.175), (32.73713, -117.20433), 27) # runway object
