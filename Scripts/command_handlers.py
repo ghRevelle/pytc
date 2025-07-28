@@ -83,7 +83,7 @@ class RealignCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
-		plane.state = PlaneState.AIR
+		plane.state = PlaneState.REALIGNING
 		
 		target_runway = command.argument
 		if not isinstance(target_runway, Runway):
@@ -126,6 +126,7 @@ class RealignCommandHandler(CommandHandler):
 			
 			if CommandHandler._is_aligned_to_runway(plane, target_runway): # check if already aligned and done
 				# If already aligned, switch to cruise mode
+				plane.state = PlaneState.AIR
 				command.command_type = CommandType.CRUISE
 				self.__init__()  # Reset state for next realignment
 

@@ -122,6 +122,10 @@ class FlightSimulator:
 		if plane is None:
 			self.invalid_command_executed = True
 			return
+		
+		if plane.state == PlaneState.REALIGNING:
+			self.invalid_command_executed = True
+
 		command_type = command.command_type
 		if command_type == CommandType.CLEARED_FOR_TAKEOFF:
 			if plane.state != PlaneState.WAITING_FOR_TAKEOFF:
