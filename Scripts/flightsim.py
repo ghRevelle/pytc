@@ -123,7 +123,7 @@ class FlightSimulator:
 			self.invalid_command_executed = True
 			return
 		
-		if plane.state == PlaneState.REALIGNING:
+		if plane.state == PlaneState.REALIGNING or plane.state == PlaneState.TAKINGOFF:
 			self.invalid_command_executed = True
 
 		command_type = command.command_type
