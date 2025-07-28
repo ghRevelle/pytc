@@ -179,7 +179,7 @@ class FlightSimulator:
 					self.print_command(command)  # Print the command for debugging
 					self.plane_manager.airport.pop_top_of_queue() if command.command_type == CommandType.CLEARED_FOR_TAKEOFF else None
 					self.command_queue.remove(command)  # Remove command after execution
-					if 1 <= command.command_type.value <= 4:  # Only reward for valid DRL-issued commands (Enums 1 to 5)
+					if 1 <= command.command_type.value <= 3:  # Only reward for valid DRL-issued commands (Enums 1 to 3)
 						self.valid_command_executed = True
 		
 		# Update all plane states using list comprehension
