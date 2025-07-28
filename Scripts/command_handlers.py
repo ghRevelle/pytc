@@ -176,6 +176,16 @@ class CruiseCommandHandler(CommandHandler):
 	def execute(self, plane, command, tick) -> None:
 
 		if 304.8 <= plane.alt <= 457.2: # 1000-1500 ft
+			v_z_target = 0.0
+
+			plane.v_z = plane.proportional_change(
+				current=plane.v_z,
+				target=v_z_target,
+				min_value=-plane.dsc_rate,
+				max_value=plane.asc_rate,
+				max_change=plane.acc_z_max
+			)
+
 			plane.state = PlaneState.WAITING_FOR_LANDING
 		else:
 			plane.state = PlaneState.AIR
