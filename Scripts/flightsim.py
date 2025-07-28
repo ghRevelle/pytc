@@ -131,6 +131,9 @@ class FlightSimulator:
 			if plane.state != PlaneState.QUEUED:
 				print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: QUEUED, was: {plane.state}")
 				self.invalid_command_executed = True
+			elif plane.id != self.plane_manager.airport.get_top_of_queue():
+				print(f"Invalid command: {command.command_type} for {plane.callsign}. Not at the front of the queue")
+				self.invalid_command_executed = True
 		return
 
 	def tick(self):

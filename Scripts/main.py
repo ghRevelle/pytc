@@ -24,7 +24,7 @@ test_airport = Airport(test_runways)
 rolling_initial_state = []
 
 # Convert the rolling initial state states to use PlaneState enums
-for state in rolling_initial_state_00:
+for state in rolling_initial_state_01:
 	rolling_initial_state.append(state.copy())
 	if rolling_initial_state[-1]['state'] == 'takeoff':
 		rolling_initial_state[-1]['state'] = PlaneState.QUEUED
