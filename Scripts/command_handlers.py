@@ -172,7 +172,7 @@ class CruiseCommandHandler(CommandHandler):
 	"""Handler for plane cruise mode."""
 
 	def can_handle(self, command_type: CommandType) -> bool:
-		return command_type == CommandType.CRUISE or command_type == CommandType.GO_AROUND
+		return command_type == CommandType.CRUISE
 	
 	def execute(self, plane, command, tick) -> None:
 
@@ -435,37 +435,13 @@ class GoAroundCommandHandler(CommandHandler):
 		self.init_hdg = None
 
 	def can_handle(self, command_type: CommandType) -> bool:
-		return False # command_type == CommandType.GO_AROUND
+		return command_type == CommandType.GO_AROUND
 
 	def execute(self, plane, command, tick) -> None:
 
 		plane.has_gone_around = True
-		print(f"{plane.callsign} attribute has_gone_around set to True")
-		if abs(plane.alt - plane.crz_alt) < 20:
-			plane.state = PlaneState.WAITING_FOR_LANDING
-		else:
-			plane.state = PlaneState.AIR
 
-		if self.init_hdg is None:
-			self.init_hdg = plane.hdg
-		# Go-around procedure: climb and return to pattern
-		if plane.alt < plane.crz_alt:  # Climb to pattern altitude
-			plane.v_z = plane.proportional_change(
-				current=plane.v_z,
-				target=plane.asc_rate,  # Climb at max rate
-				min_value=-plane.dsc_rate,
-				max_value=plane.asc_rate,
-				max_change=plane.acc_z_max
-		)
-		elif tick >= command.last_update and plane.hdg != self.init_hdg:  # Turn back to initial heading
-			plane._turn(plane.hdg, self.init_hdg)
-		elif plane.hdg == self.init_hdg and tick >= command.last_update:
-			# If already back to initial heading, just cruise
-			print(f"Plane {plane.callsign} has gone around and is following missed approach procedure")
-			command.command_type = CommandType.CRUISE
-			plane.acc_xy = 0
-			self.init_hdg = None
-
+		command.command_type = CommandType.CRUISE
 
 class CommandProcessor:
 	"""Main command processor that delegates to appropriate handlers."""
