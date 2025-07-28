@@ -61,6 +61,7 @@ class Plane:
 		self.crashed_this_tick = False
 		self.has_gone_around = False
 		self.has_taken_off = False
+		self.has_started_landing = False
 
 		self.time_waited = 0
 

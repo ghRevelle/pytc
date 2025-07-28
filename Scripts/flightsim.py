@@ -144,6 +144,9 @@ class FlightSimulator:
 			elif not LandingCommandHandler.is_aligned(plane, command):
 				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Not aligned to runway")
 				self.invalid_command_executed = True
+			elif plane.has_started_landing:
+				self.invalid_command_executed = True
+				#print(f"{plane.callsign} has already started landing.")
 		elif command_type == CommandType.LINE_UP_AND_WAIT:
 			if plane.state != PlaneState.QUEUED:
 				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: QUEUED, was: {plane.state}")

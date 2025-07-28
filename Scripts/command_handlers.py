@@ -284,6 +284,7 @@ class LandingCommandHandler(CommandHandler):
 		return True
 
 	def execute(self, plane, command, tick) -> None:
+		plane.has_started_landing = True
 
 		target_runway = command.argument
 		
