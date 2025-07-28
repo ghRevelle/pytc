@@ -13,11 +13,11 @@ import utils
 class FlightSimulator:
 	"""A simple flight simulator to demonstrate plane movement and display."""
 
-	no_display = False  # Set to True to run without display
+
 	# Simulation speed. In real life, 1 tick = 1 second
 	base_tps = 20
 
-	def __init__(self, display_size=(640, 480), airport=None, plane_manager=None, rolling_initial_state=None, no_display=False):
+	def __init__(self, display_size=(640, 480), airport=None, plane_manager=None, rolling_initial_state=None, no_display=True):
 		"""Initialize the flight simulator with a display size, optional airport layout.
 		Args:
 			display_size (tuple): Size of the display window (width, height).

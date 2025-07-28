@@ -65,7 +65,7 @@ class AirTrafficControlEnv(gym.Env):
             self.rolling_initial_state = random.choice(initial_states)
         else:
             self.rolling_initial_state = []
-        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state)
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=True)
 
         # Create starting state
         observation = self._get_obs()
