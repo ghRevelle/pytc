@@ -423,7 +423,6 @@ class TakeoffCommandHandler(CommandHandler):
 		else:
 			plane.state = PlaneState.TAKINGOFF
 			plane.tookoff_this_tick = True
-			plane.has_gone_around = True
 			command.command_type = CommandType.CRUISE
 
 

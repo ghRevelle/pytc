@@ -14,7 +14,7 @@ class FlightSimulator:
 	"""A simple flight simulator to demonstrate plane movement and display."""
 
 	# Simulation speed. In real life, 1 tick = 1 second
-	base_tps = 25
+	base_tps = 200
 
 	def __init__(self, display_size=(640, 480), airport=None, plane_manager=None, rolling_initial_state=None):
 		"""Initialize the flight simulator with a display size, optional airport layout.
@@ -59,6 +59,8 @@ class FlightSimulator:
 						last_update=1, 
 						argument=self.plane_manager.airport.runways[plane_state['runway']]
 					)
+				elif plane_state['state'] == PlaneState.QUEUED:
+					self.plane_manager.planes[-1].has_gone_around = True
 
 		self.invalid_command_executed = False  # Flag for invalid command execution
 		self.valid_command_executed = False  # Flag for valid command execution
@@ -233,6 +235,8 @@ class FlightSimulator:
 						last_update=self.current_tick + 1, 
 						argument=self.plane_manager.airport.runways[plane_state['runway']]
 					)
+				elif plane_state['state'] == PlaneState.QUEUED:
+					self.plane_manager.planes[-1].has_gone_around = True
 
 		# Check for end of simulation
 		if self.check_end_state():
