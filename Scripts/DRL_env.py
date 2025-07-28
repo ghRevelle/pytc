@@ -78,8 +78,11 @@ class AirTrafficControlEnv(gym.Env):
             target_id=action['plane_id'],
             last_update=self.current_tick + 1
         )
-        self.fs.add_command(command)
-
+        if command.command_type == CommandType.NONE:
+            # No command, just advance the simulation
+            pass
+        else:
+            self.fs.add_command(command)
         # Advance simulation by one tick
         self.fs.tick()
         self.current_tick += 1
