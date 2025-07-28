@@ -83,4 +83,7 @@ class Airport:
         return self.queue[0][0]
 
     def pop_top_of_queue(self):
-        return self.queue.pop(0)[0]
+        try:
+            return self.queue.pop(0)[0]
+        except:
+            return None # top notch error handling
