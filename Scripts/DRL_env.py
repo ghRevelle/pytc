@@ -40,9 +40,9 @@ class AirTrafficControlEnv(gym.Env):
         split_idx = int(0.9 * len(self.all_initial_states))
         self.train_initial_states = self.all_initial_states[:split_idx]
         self.test_initial_states = self.all_initial_states[split_idx:]
-        self.use_test_set = False  # Set True for evaluation
+        self.use_test_set = True  # Set True for evaluation
         self.rolling_initial_state = []
-        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=True)
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=False)
         self.current_tick = 0
 
         # === Spaces ===
@@ -65,7 +65,7 @@ class AirTrafficControlEnv(gym.Env):
             self.rolling_initial_state = random.choice(initial_states)
         else:
             self.rolling_initial_state = []
-        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=True)
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=False)
 
         # Create starting state
         observation = self._get_obs()

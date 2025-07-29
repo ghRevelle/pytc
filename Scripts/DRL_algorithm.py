@@ -427,6 +427,123 @@ def run_episode(env, policy_net, eval=False):
 
     return total_reward
 
+
+def test_dqn(model_filepath, episodes=5, display=True):
+    """
+    Test a trained DQN model by running episodes with optional display.
+    
+    Args:
+        model_filepath (str): Path to the saved model checkpoint
+        episodes (int): Number of episodes to run for testing
+        display (bool): Whether to show the pygame display during testing
+    
+    Returns:
+        list: List of rewards for each episode
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Testing on device: {device}")
+    
+    # Initialize environment - same pattern as training functions
+    env = AirTrafficControlEnv()
+    
+    # Set display mode - FlightSimulator handles all display initialization
+    env.fs.no_display = not display
+    
+    # Create the policy network - same as training functions
+    input_dim = env._state_dim()
+    n_commands = env.action_space['command'].n
+    n_planes = env.action_space['plane_id'].n
+    
+    policy_net = AirTrafficControlDQN(
+        input_dim=input_dim, 
+        n_commands=n_commands, 
+        n_planes=n_planes
+    ).to(device)
+    
+    # Load the trained model
+    try:
+        checkpoint = torch.load(model_filepath, map_location=device)
+        policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
+        print(f"Model loaded successfully from {model_filepath}")
+        print(f"Model was trained for {checkpoint['episode']} episodes")
+        print(f"Final epsilon value: {checkpoint['epsilon']:.4f}")
+    except FileNotFoundError:
+        print(f"Error: Model file not found at {model_filepath}")
+        return []
+    except KeyError as e:
+        print(f"Error: Invalid checkpoint format, missing key: {e}")
+        return []
+    
+    policy_net.eval()  # Set to evaluation mode
+    
+    episode_rewards = []
+    
+    print(f"\nRunning {episodes} test episodes...")
+    
+    for episode in range(episodes):
+        state, _ = env.reset()
+        total_reward = 0
+        done = False
+        step_count = 0
+        
+        print(f"\nEpisode {episode + 1}/{episodes}")
+        
+        while not done:
+            # Use the trained policy (no epsilon-greedy exploration)
+            # Same pattern as training functions
+            with torch.no_grad():
+                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+                command_logits, plane_logits = policy_net(state_tensor)
+                command = torch.argmax(command_logits, dim=1).item()
+                plane_id = torch.argmax(plane_logits, dim=1).item()
+                action = {'command': command, 'plane_id': plane_id}
+            
+            # Take the action - same as training functions
+            next_state, reward, done, _, info = env.step(action)
+            total_reward += reward
+            step_count += 1
+            
+            # Handle display events if display is enabled
+            # FlightSimulator handles all display updates automatically during env.step()
+            if display:
+                try:
+                    # Handle pygame events to prevent window from becoming unresponsive
+                    import pygame
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            print("Display window closed, ending test")
+                            return episode_rewards
+                        elif event.type == pygame.KEYDOWN:
+                            if event.key == pygame.K_ESCAPE:
+                                print("ESC pressed, ending test")
+                                return episode_rewards
+                except Exception as e:
+                    print(f"Display error: {e}")
+                    # Don't disable display, let FlightSimulator handle it
+            
+            state = next_state
+            
+            # Print action info every 50 steps for debugging (reduced frequency)
+            if step_count % 50 == 0:
+                print(f"  Step {step_count}: Command={command}, Plane={plane_id}, Reward={reward:.2f}")
+        
+        episode_rewards.append(total_reward)
+        print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {total_reward:.2f}")
+    
+    # Print summary statistics
+    print(f"\n=== Test Results ===")
+    print(f"Episodes: {episodes}")
+    print(f"Average Reward: {np.mean(episode_rewards):.2f}")
+    print(f"Std Deviation: {np.std(episode_rewards):.2f}")
+    print(f"Min Reward: {min(episode_rewards):.2f}")
+    print(f"Max Reward: {max(episode_rewards):.2f}")
+    
+    # FlightSimulator handles display cleanup automatically
+    if display:
+        print("\nDisplay managed by FlightSimulator. Close window manually or press ESC to exit.")
+    
+    return episode_rewards
+
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -440,8 +557,17 @@ if __name__ == "__main__":
     target_net = AirTrafficControlDQN(input_dim=input_dim, n_commands=n_commands, n_planes=n_planes).to(device)
     target_net.load_state_dict(policy_net.state_dict())
 
+    # Uncomment the line below to train the model
     train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
                       batch_size=64,
                       num_workers=1,
                       episodes_per_worker=1,
                       checkpoint_dir="checkpoints")
+    
+    # Example: Test a trained model
+    # Uncomment the lines below to test a trained model with display
+    # model_path = "checkpoints/final_model.pth"  # or any checkpoint file
+    # rewards = test_dqn(model_path, episodes=3, display=True)
+    # print(f"Test completed. Rewards: {rewards}")
+    
+    # print("Script completed. Uncomment the training or testing code above to run.")
