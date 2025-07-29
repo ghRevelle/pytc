@@ -129,11 +129,11 @@ class AirTrafficControlEnv(gym.Env):
 
             # Penalty for crashing
             if plane.crashed_this_tick == True:
-                reward -= 1000.0
+                reward -= 200.0
 
         # Penalty for invalid or illegal commands
         if self.fs.invalid_command_executed:
-            reward -= 10.0
+            reward -= 2.0
 
         # Reward for valid command execution
         # This is to encourage the DRL to issue valid commands
@@ -143,13 +143,13 @@ class AirTrafficControlEnv(gym.Env):
         # Penalty for abusing go-around command
         # This is to discourage the DRL from issuing go-around commands unnecessarily
         if self.fs.go_around_issued:
-            reward -= 5.0
+            reward -= 1.0
 
         if self.fs.no_command_executed:
-            reward += 0.1  # Reward for deliberately not issuing a command
+            reward += 1.0  # Reward for deliberately not issuing a command
 
         # Small time pressure penalty per plane still in air
-        reward -= 0.01 * len(self.fs.plane_manager.planes)
+        reward -= 0.005 * len(self.fs.plane_manager.planes)
 
         return reward
 

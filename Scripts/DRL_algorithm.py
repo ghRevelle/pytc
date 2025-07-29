@@ -162,7 +162,7 @@ def load_model(policy_net, target_net, optimizer, filepath):
         return 0, None
 
 def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
-              epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995, target_update=10,
+              epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
               num_workers=4, steps_per_worker=50, checkpoint_dir="checkpoints"):
 
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -354,6 +354,5 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Use parallel training with checkpointing
-    train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=32, 
-                      num_workers=num_workers, steps_per_worker=50, 
-                      checkpoint_dir="atc_checkpoints")
+    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
+                      epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995)  # Lower from 0.1 to 0.01
