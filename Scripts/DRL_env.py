@@ -27,7 +27,7 @@ class AirTrafficControlEnv(gym.Env):
 
         self.all_initial_states = []
         # Load all initial states from the rolling initial state file
-        for i in range(57):
+        for i in range(542):
             state = getattr(__import__('rolling_initial_state_20250301'), f'rolling_initial_state_{i:02d}')
             self.all_initial_states.append(state)
             for j in range(len(state)):
@@ -36,8 +36,8 @@ class AirTrafficControlEnv(gym.Env):
                 elif self.all_initial_states[-1][j]['state'] == 'landing':
                     self.all_initial_states[-1][j]['state'] = PlaneState.AIR
 
-        # 80/20 train/test split
-        split_idx = int(0.8 * len(self.all_initial_states))
+        # 90/10 train/test split
+        split_idx = int(0.9 * len(self.all_initial_states))
         self.train_initial_states = self.all_initial_states[:split_idx]
         self.test_initial_states = self.all_initial_states[split_idx:]
         self.use_test_set = False  # Set True for evaluation
