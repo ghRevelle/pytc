@@ -83,4 +83,4 @@ class Airport:
         return self.queue[0][0]
 
     def pop_top_of_queue(self):
-        return self.queue.pop(0)[0]
+        return self.queue.pop(0)

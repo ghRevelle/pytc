@@ -124,11 +124,11 @@ class AirTrafficControlEnv(gym.Env):
         for plane in self.fs.plane_manager.planes:
             # Reward for successful landings
             if plane.landed_this_tick == True:
-                reward += 50.0
+                reward += 100.0
 
             # Reward for successful takeoff
             if plane.tookoff_this_tick == True:
-                reward += 50.0
+                reward += 100.0
 
             # Penalty for crashing
             if plane.crashed_this_tick == True:
@@ -136,7 +136,7 @@ class AirTrafficControlEnv(gym.Env):
 
         # Penalty for invalid or illegal commands
         if self.fs.invalid_command_executed:
-            reward -= 10.0
+            reward -= 1.0
 
         # Reward for valid command execution
         # This is to encourage the DRL to issue valid commands

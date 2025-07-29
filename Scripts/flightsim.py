@@ -61,7 +61,7 @@ class FlightSimulator:
 						plane_state['callsign'], 
 						CommandType.REALIGN, 
 						last_update=1, 
-						argument=self.plane_manager.airport.runways[plane_state['runway']]
+						argument=self.plane_manager.airport.runways[27] # HACK: runway 27 is always used for realignment in this example
 					)
 				elif plane_state['state'] == PlaneState.QUEUED:
 					self.plane_manager.planes[-1].has_gone_around = True
@@ -186,12 +186,12 @@ class FlightSimulator:
 				if not self.invalid_command_executed:
 					self.command_plane(command)
 					self.print_command(command)  # Print the command for debugging
-					self.plane_manager.airport.pop_top_of_queue() if command.command_type == CommandType.CLEARED_FOR_TAKEOFF else None
+					self.plane_manager.airport.pop_top_of_queue() if command.command_type == CommandType.LINE_UP_AND_WAIT else None
 					self.command_queue.remove(command)  # Remove command after execution
-					if command.command_type == CommandType.CLEARED_FOR_TAKEOFF or command.command_type == CommandType.CLEARED_TO_LAND:
+					if command.command_type == CommandType.LINE_UP_AND_WAIT or command.command_type == CommandType.CLEARED_TO_LAND:
 						for plane in self.plane_manager.planes:
 							if plane.id == command.target_id:
-								if command.command_type == CommandType.CLEARED_FOR_TAKEOFF:
+								if command.command_type == CommandType.LINE_UP_AND_WAIT:
 									plane.has_taken_off = True
 								elif command.command_type == CommandType.CLEARED_TO_LAND:
 									plane.has_started_landing = True
@@ -261,7 +261,7 @@ class FlightSimulator:
 						plane_state['callsign'], 
 						CommandType.REALIGN, 
 						last_update=self.current_tick + 1, 
-						argument=self.plane_manager.airport.runways[plane_state['runway']]
+						argument=self.plane_manager.airport.runways[27] # HACK: runway 27 is always used for realignment in this example
 					)
 				elif plane_state['state'] == PlaneState.QUEUED:
 					self.plane_manager.planes[-1].has_gone_around = True
@@ -324,9 +324,10 @@ class FlightSimulator:
 		elif command.command_type == CommandType.CLEARED_TO_LAND:
 			print(f"{self.plane_manager.get_callsign(command.target_id)} cleared to land on runway {command.argument.name}")
 		elif command.command_type == CommandType.LINE_UP_AND_WAIT:
-			print(f"{self.plane_manager.get_callsign(command.target_id)} lined up on runway {command.argument.name}")
+			print(f"{self.plane_manager.get_callsign(command.target_id)} lined up on runway {command.argument.name} and taking off")
 		elif command.command_type == CommandType.REALIGN:
-			print(f"{self.plane_manager.get_callsign(command.target_id)} realigning to runway {command.argument.name}")
+			#print(f"{self.plane_manager.get_callsign(command.target_id)} realigning to runway {command.argument.name}")
+			pass
 		elif command.command_type == CommandType.GO_AROUND:
 			print(f"{self.plane_manager.get_callsign(command.target_id)} going around")
 		elif command.command_type == CommandType.ABORT_TAKEOFF:

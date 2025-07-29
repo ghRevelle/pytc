@@ -21,8 +21,9 @@ class PlaneManager:
         self.planes.append(new_plane)
 
         if init_state['state'] == PlaneState.QUEUED and self.airport:
-            self.airport.queue.append((new_plane.id, self.airport.runways[init_state['runway']]))
-            print(f"{new_plane.callsign} added to queue on runway {init_state['runway']} (ID: {new_plane.id})")
+            self.airport.queue.append((new_plane.id, self.airport.runways[27]))  # HACK: always use runway 27 for queued planes in this example
+            print(f"{new_plane.callsign} added to queue on runway 27 (ID: {new_plane.id})")
+            print(self.airport.queue)
         else:
             print(f"{new_plane.callsign} added at ({new_plane.lat}, {new_plane.lon}) (ID: {new_plane.id})")
 

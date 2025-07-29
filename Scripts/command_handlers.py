@@ -130,7 +130,7 @@ class RealignCommandHandler(CommandHandler):
 				command.command_type = CommandType.CRUISE
 				self.__init__()  # Reset state for next realignment
 
-				print(f"{plane.callsign} is now aligned with runway {target_runway.name}")
+				#print(f"{plane.callsign} is now aligned with runway {target_runway.name}")
 
 				return
 			
@@ -365,7 +365,7 @@ class LandingCommandHandler(CommandHandler):
 			plane.lat = target_runway.get_start_point_xy()[1]
 			plane.hdg = target_runway.hdg
 			self.has_snapped = True
-			print(f"{plane.callsign} has snapped to runway {target_runway.name} at ({plane.lat}, {plane.lon})")
+			#print(f"{plane.callsign} has snapped to runway {target_runway.name} at ({plane.lat}, {plane.lon})")
 
 	def _handle_ground_phase(self, plane: Plane) -> None:
 		"""Handle the ground phase after touchdown."""
@@ -391,10 +391,11 @@ class TaxiCommandHandler(CommandHandler):
 	def execute(self, plane, command, tick) -> None:
 		plane.state = PlaneState.TAXIING
 		if plane.time_waited == 0:
-			print(f"{plane.callsign} taxiing off runway")
+			#print(f"{plane.callsign} taxiing off runway")
+			pass
 		if plane.time_waited == 90:
 			plane.state = PlaneState.MARKED_FOR_DELETION
-			print(f"{plane.callsign} exited runway")
+			#print(f"{plane.callsign} exited runway")
 		else:
 			plane.time_waited += 1
 
