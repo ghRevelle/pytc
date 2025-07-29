@@ -130,7 +130,8 @@ class AirTrafficControlEnv(gym.Env):
             # Penalty for crashing
             if plane.crashed_this_tick == True and plane.close_call != True:
                 plane.close_call = True
-                reward -= 200.0
+                reward -= 1000.0
+                #print("Close call punishment")
 
         # Penalty for invalid or illegal commands
         if self.fs.invalid_command_executed:
@@ -147,10 +148,13 @@ class AirTrafficControlEnv(gym.Env):
             reward -= 1.0
 
         if self.fs.no_command_executed:
-            reward += 1.0  # Reward for deliberately not issuing a command
+            reward += 0.1  # Reward for deliberately not issuing a command
 
         # Small time pressure penalty per plane still in air
-        reward -= 0.005 * len(self.fs.plane_manager.planes)
+        reward -= 0.05 * len(self.fs.plane_manager.planes)
+
+        if self._check_done():
+            reward += 0.5 * (self.max_ticks - self.current_tick)  # Reward for finishing early
 
         return reward
 

@@ -441,7 +441,7 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      batch_size=128,
+                      batch_size=64,
                       num_workers=1,
                       episodes_per_worker=1,
                       checkpoint_dir="checkpoints")
