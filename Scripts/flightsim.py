@@ -69,6 +69,7 @@ class FlightSimulator:
 		self.invalid_command_executed = False  # Flag for invalid command execution
 		self.valid_command_executed = False  # Flag for valid command execution
 		self.go_around_issued = False  # Flag to track if a go-around command was issued
+		self.no_command_executed = False  # Flag for deliberate no command execution
 
 
 	def get_tps(self):

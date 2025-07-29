@@ -79,8 +79,7 @@ class AirTrafficControlEnv(gym.Env):
             last_update=self.current_tick + 1
         )
         if command.command_type == CommandType.NONE:
-            # No command, just advance the simulation
-            pass
+            self.fs.no_command_executed = True
         else:
             self.fs.add_command(command)
         # Advance simulation by one tick
@@ -92,6 +91,7 @@ class AirTrafficControlEnv(gym.Env):
         done = self._check_done()
         info = {}
 
+        self.fs.no_command_executed = False  # Reset flag for next step
         return obs, reward, done, False, info
 
     def _get_obs(self):
@@ -138,12 +138,15 @@ class AirTrafficControlEnv(gym.Env):
         # Reward for valid command execution
         # This is to encourage the DRL to issue valid commands
         if self.fs.valid_command_executed:
-            reward += 5.0
+            reward += 10.0
 
         # Penalty for abusing go-around command
         # This is to discourage the DRL from issuing go-around commands unnecessarily
         if self.fs.go_around_issued:
             reward -= 5.0
+
+        if self.fs.no_command_executed:
+            reward += 0.1  # Reward for deliberately not issuing a command
 
         # Small time pressure penalty per plane still in air
         reward -= 0.01 * len(self.fs.plane_manager.planes)
