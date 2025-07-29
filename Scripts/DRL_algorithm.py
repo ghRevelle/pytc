@@ -1,3 +1,4 @@
+from tabnanny import check
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -84,8 +85,10 @@ def compute_max_q_value(command_logits, plane_logits):
     max_q = torch.max(all_qs.view(all_qs.size(0), -1), dim=1).values
     return max_q
 
-def collect_experiences(env_seed, policy_net_state, epsilon, num_steps=100):
-    """Collect experiences from a single environment worker."""
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def collect_experiences(env_seed, policy_net_state, epsilon, num_episodes=1):
+    """Collect experiences from complete episodes."""
     env = AirTrafficControlEnv()
     experiences = []
     
@@ -94,45 +97,52 @@ def collect_experiences(env_seed, policy_net_state, epsilon, num_steps=100):
         input_dim=env._state_dim(),
         n_commands=env.action_space['command'].n,
         n_planes=env.action_space['plane_id'].n
-    )
+    ).to(device)  # ADD THIS!
+    
     policy_net.load_state_dict(policy_net_state)
     policy_net.eval()
     
-    state, _ = env.reset(seed=env_seed)
     total_reward = 0
     
-    for step in range(num_steps):
-        # Epsilon-greedy action
-        if random.random() < epsilon:
-            action = {
-                'command': env.action_space['command'].sample(),
-                'plane_id': env.action_space['plane_id'].sample(),
-            }
-        else:
-            with torch.no_grad():
-                state_tensor = torch.FloatTensor(state).unsqueeze(0)
-                command_logits, plane_logits = policy_net(state_tensor)
-                command = torch.argmax(command_logits, dim=1).item()
-                plane_id = torch.argmax(plane_logits, dim=1).item()
-                action = {'command': command, 'plane_id': plane_id}
+    #print(f"Policy net device: {next(policy_net.parameters()).device}")  # Should show 'cuda:0'
+    
+    for episode in range(num_episodes):
+        state, _ = env.reset(seed=env_seed + episode)
+        done = False
+        episode_reward = 0
+        
+        while not done:
+            if random.random() < epsilon:
+                action = {
+                    'command': env.action_space['command'].sample(),
+                    'plane_id': env.action_space['plane_id'].sample(),
+                }
+            else:
+                with torch.no_grad():
+                    state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)  # ADD .to(device)!
+                    #print(f"Input tensor device: {state_tensor.device}")  # Should show 'cuda:0'
+                    command_logits, plane_logits = policy_net(state_tensor)
+                    #print(f"Output tensor device: {command_logits.device}")  # Should show 'cuda:0'
+                    command = torch.argmax(command_logits, dim=1).item()
+                    plane_id = torch.argmax(plane_logits, dim=1).item()
+                    action = {'command': command, 'plane_id': plane_id}
 
-        next_state, reward, done, _, _ = env.step(action)
-        total_reward += reward
+            next_state, reward, done, _, _ = env.step(action)
+            episode_reward += reward
+            
+            experiences.append({
+                'state': state,
+                'action': (action['command'], action['plane_id'], 0),
+                'reward': reward,
+                'next_state': next_state,
+                'done': done
+            })
+            
+            state = next_state
         
-        experiences.append({
-            'state': state,
-            'action': (action['command'], action['plane_id'], 0),
-            'reward': reward,
-            'next_state': next_state,
-            'done': done
-        })
-        
-        state = next_state
-        if done:
-            state, _ = env.reset()
+        total_reward += episode_reward
     
     return experiences, total_reward
-
 
 def save_model(policy_net, target_net, optimizer, episode, epsilon, filepath):
     """Save model checkpoint."""
@@ -161,14 +171,14 @@ def load_model(policy_net, target_net, optimizer, filepath):
         print(f"No checkpoint found at {filepath}, starting from scratch")
         return 0, None
 
-def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
+def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=128, gamma=0.99,
               epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
-              num_workers=4, steps_per_worker=50, checkpoint_dir="checkpoints"):
+              num_workers=1, episodes_per_worker=1, checkpoint_dir="checkpoints"):  # Changed parameter name
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     
     optimizer = optim.Adam(policy_net.parameters(), lr=1e-4)
-    memory = deque(maxlen=10000)
+    memory = deque(maxlen=20000)  # Reduced from 100,000 to 20,000
     
     # Try to load from checkpoint
     checkpoint_path = os.path.join(checkpoint_dir, "latest_checkpoint.pth")
@@ -178,7 +188,7 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=64
     for episode in range(start_episode, episodes):
         start_time = time.time()
         
-        # Collect experiences in parallel
+        # Collect complete episodes in parallel
         with ProcessPoolExecutor(max_workers=num_workers) as executor:
             futures = []
             for worker_id in range(num_workers):
@@ -187,18 +197,20 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=64
                     env_seed=episode * num_workers + worker_id,
                     policy_net_state=policy_net.state_dict(),
                     epsilon=epsilon,
-                    num_steps=steps_per_worker
+                    num_episodes=episodes_per_worker  # Complete episodes, not steps
                 )
                 futures.append(future)
             
             # Collect results
             total_episode_reward = 0
+            experiences = []  # Collect experiences here for training
             for future in as_completed(futures):
-                experiences, worker_reward = future.result()
+                worker_experiences, worker_reward = future.result()
                 total_episode_reward += worker_reward
+                experiences.extend(worker_experiences)  # Add worker experiences to the main list
                 
                 # Add experiences to memory
-                for exp in experiences:
+                for exp in worker_experiences:
                     memory.append((
                         exp['state'],
                         exp['action'],
@@ -207,9 +219,12 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=64
                         torch.tensor(exp['done'])
                     ))
         
-        # Train the network
+        # Train with reduced frequency for speed
         if len(memory) >= batch_size:
-            for _ in range(num_workers):  # Train multiple times per episode
+            num_new_experiences = len(experiences)
+            training_steps = max(5, num_new_experiences // 15)  # Reduced training frequency
+            
+            for _ in range(training_steps):
                 batch = random.sample(memory, batch_size)
                 batch = [(torch.tensor(s, dtype=torch.float32, device=device),
                           a, torch.tensor(r, dtype=torch.float32, device=device),
@@ -241,6 +256,87 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=64
             episode_time = time.time() - start_time
             print(f"Episode {episode}, Avg Reward: {avg_reward:.2f}, "
                   f"Time: {episode_time:.2f}s, Epsilon: {epsilon:.3f}")
+
+    # Save final model
+    final_path = os.path.join(checkpoint_dir, "final_model.pth")
+    save_model(policy_net, target_net, optimizer, episodes-1, epsilon, final_path)
+
+
+def train_dqn_with_checkpoints(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
+                              epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
+                              checkpoint_dir="checkpoints"):
+
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    
+    optimizer = optim.Adam(policy_net.parameters(), lr=1e-4)
+    memory = deque(maxlen=100000)
+    
+    # Try to load from checkpoint
+    checkpoint_path = os.path.join(checkpoint_dir, "latest_checkpoint.pth")
+    start_episode, loaded_epsilon = load_model(policy_net, target_net, optimizer, checkpoint_path)
+    epsilon = loaded_epsilon if loaded_epsilon is not None else epsilon_start
+
+    for episode in range(start_episode, episodes):
+        start_time = time.time()
+        state, _ = env.reset()
+        total_reward = 0
+        done = False
+        step_count = 0
+
+        while not done:
+            # Epsilon-greedy action
+            if random.random() < epsilon:
+                action = {
+                    'command': env.action_space['command'].sample(),
+                    'plane_id': env.action_space['plane_id'].sample(),
+                }
+            else:
+                with torch.no_grad():
+                    state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+                    command_logits, plane_logits = policy_net(state_tensor)
+                    command = torch.argmax(command_logits, dim=1).item()
+                    plane_id = torch.argmax(plane_logits, dim=1).item()
+                    action = {'command': command, 'plane_id': plane_id}
+
+            next_state, reward, done, _, _ = env.step(action)
+            total_reward += reward
+            step_count += 1
+
+            memory.append((state, (action['command'], action['plane_id'], 0),
+                          reward, next_state, torch.tensor(done)))
+            state = next_state
+
+            # Train every 4 steps for efficiency
+            if len(memory) >= batch_size and step_count % 4 == 0:
+                batch = random.sample(memory, batch_size)
+                batch = [(torch.tensor(s, dtype=torch.float32, device=device),
+                          a, torch.tensor(r, dtype=torch.float32, device=device),
+                          torch.tensor(ns, dtype=torch.float32, device=device),
+                          torch.tensor(d, dtype=torch.bool, device=device)) for s, a, r, ns, d in batch]
+
+                loss = compute_dqn_loss(policy_net, target_net, batch, gamma)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+        # Epsilon decay
+        epsilon = max(epsilon_end, epsilon * epsilon_decay)
+
+        # Sync target network
+        if episode % target_update == 0:
+            target_net.load_state_dict(policy_net.state_dict())
+
+        # Save checkpoint every 50 episodes
+        if episode % 50 == 0 and episode > 0:
+            save_model(policy_net, target_net, optimizer, episode, epsilon, 
+                      os.path.join(checkpoint_dir, f"checkpoint_episode_{episode}.pth"))
+            save_model(policy_net, target_net, optimizer, episode, epsilon, checkpoint_path)
+
+        # Print progress
+        if episode % 10 == 0 or episode < 10:
+            episode_time = time.time() - start_time
+            print(f"Episode {episode}, Total Reward: {total_reward:.2f}, "
+                  f"Steps: {step_count}, Time: {episode_time:.2f}s, Epsilon: {epsilon:.3f}")
 
     # Save final model
     final_path = os.path.join(checkpoint_dir, "final_model.pth")
@@ -332,16 +428,7 @@ def run_episode(env, policy_net, eval=False):
     return total_reward
 
 if __name__ == "__main__":
-    # Determine number of workers (use 50% of available CPU cores)
-    num_workers = max(1, int(mp.cpu_count() * 0.50))
-    print(f"Using {num_workers} parallel workers")
-    # Use this to check if GPU is available
-    print(f"CUDA is available: {torch.cuda.is_available()}")
-    print(f"Number of available GPUs: {torch.cuda.device_count()}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if device.type == "cpu":
-        raise RuntimeWarning("It is strongly advised not to train on CPU.")
-
     print(f"Using device: {device}")
     
     env = AirTrafficControlEnv()
@@ -353,7 +440,8 @@ if __name__ == "__main__":
     target_net = AirTrafficControlDQN(input_dim=input_dim, n_commands=n_commands, n_planes=n_planes).to(device)
     target_net.load_state_dict(policy_net.state_dict())
 
-    # Use parallel training with checkpointing - ADD num_workers parameter
     train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995,
-                      num_workers=num_workers)  # Add this line
+                      batch_size=128,
+                      num_workers=1,
+                      episodes_per_worker=1,
+                      checkpoint_dir="checkpoints")
