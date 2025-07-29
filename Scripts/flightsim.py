@@ -68,6 +68,7 @@ class FlightSimulator:
 
 		self.invalid_command_executed = False  # Flag for invalid command execution
 		self.valid_command_executed = False  # Flag for valid command execution
+		self.go_around_issued = False  # Flag to track if a go-around command was issued
 
 
 	def get_tps(self):
@@ -198,6 +199,8 @@ class FlightSimulator:
 								break
 					if 1 <= command.command_type.value <= 2:  # Only reward for valid DRL-issued commands (Enums 1 to 2)
 						self.valid_command_executed = True
+					if command.command_type == CommandType.GO_AROUND:
+						self.go_around_issued = True
 		
 		# Update all plane states using list comprehension
 		plane_states = [plane.tick(self.current_tick).get_state() for plane in self.plane_manager.planes]
