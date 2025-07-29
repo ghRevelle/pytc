@@ -37,7 +37,7 @@ for state in rolling_initial_state:
 	else:
 		raise ValueError(f"Duplicate callsign found: {state['callsign']}")
 
-fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_manager = PlaneManager(), rolling_initial_state=rolling_initial_state)
+fs = FlightSimulator(display_size=(900, 900), airport = test_airport, plane_manager = PlaneManager(), rolling_initial_state=rolling_initial_state, no_display=False)
 
 runway = test_runways[27]
 

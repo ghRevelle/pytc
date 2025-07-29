@@ -96,17 +96,14 @@ class AirTrafficControlEnv(gym.Env):
 
     def _get_obs(self):
         planes = self.fs.plane_manager.planes
-        obs = []
-        for plane in planes:
-            obs.append(self._encode_plane_state(plane))
-
-        if len(obs) == 0:
-            obs = [np.zeros(7, dtype=np.float32) for _ in range(self.max_planes)]
-        else:
-            while len(obs) < self.max_planes:
-                obs.append(np.zeros_like(obs[0]))  # padding
-
-        return np.concatenate(obs)
+        # Pre-allocate the full observation array
+        obs = np.zeros((self.max_planes, 7), dtype=np.float32)
+        
+        # Fill only the slots for existing planes
+        for i, plane in enumerate(planes[:self.max_planes]):
+            obs[i] = self._encode_plane_state(plane)
+        
+        return obs.flatten()
 
     def _encode_plane_state(self, plane):
         """Convert a plane's state into a flat array (e.g., lat, lon, alt, gspd, hdg, ...)."""

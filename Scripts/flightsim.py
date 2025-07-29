@@ -185,7 +185,7 @@ class FlightSimulator:
 				self.check_command_validity(command)  # Check if the command is valid
 				if not self.invalid_command_executed:
 					self.command_plane(command)
-					self.print_command(command)  # Print the command for debugging
+					#self.print_command(command)  # Print the command for debugging
 					self.plane_manager.airport.pop_top_of_queue() if command.command_type == CommandType.LINE_UP_AND_WAIT else None
 					self.command_queue.remove(command)  # Remove command after execution
 					if command.command_type == CommandType.LINE_UP_AND_WAIT or command.command_type == CommandType.CLEARED_TO_LAND:
