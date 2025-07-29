@@ -128,7 +128,8 @@ class AirTrafficControlEnv(gym.Env):
                 reward += 100.0
 
             # Penalty for crashing
-            if plane.crashed_this_tick == True:
+            if plane.crashed_this_tick == True and plane.close_call != True:
+                plane.close_call = True
                 reward -= 200.0
 
         # Penalty for invalid or illegal commands

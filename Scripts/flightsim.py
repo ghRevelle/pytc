@@ -300,7 +300,6 @@ class FlightSimulator:
 
 			# Penalty for crashing
 			if plane.crashed_this_tick == True and plane.close_call != True:
-				plane.close_call = True
 				reward -= 1000.0
 
     	# Penalty for invalid or illegal commands
