@@ -13,15 +13,7 @@ from DRL_env import AirTrafficControlEnv
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
-
-# Use this to check if GPU is available
-print(f"CUDA is available: {torch.cuda.is_available()}")
-print(f"Number of available GPUs: {torch.cuda.device_count()}")
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if device.type == "cpu":
-    raise RuntimeWarning("It is strongly advised not to train on CPU.")
-
-print(f"Using device: {device}")
+import os
 
 class AirTrafficControlDQN(nn.Module):
     def __init__(self, input_dim=70, n_commands=4, n_planes=10):
@@ -142,15 +134,48 @@ def collect_experiences(env_seed, policy_net_state, epsilon, num_steps=100):
     return experiences, total_reward
 
 
+def save_model(policy_net, target_net, optimizer, episode, epsilon, filepath):
+    """Save model checkpoint."""
+    checkpoint = {
+        'episode': episode,
+        'policy_net_state_dict': policy_net.state_dict(),
+        'target_net_state_dict': target_net.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'epsilon': epsilon
+    }
+    torch.save(checkpoint, filepath)
+    print(f"Model saved at episode {episode} to {filepath}")
+
+def load_model(policy_net, target_net, optimizer, filepath):
+    """Load model checkpoint."""
+    try:
+        checkpoint = torch.load(filepath, map_location=device)
+        policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
+        target_net.load_state_dict(checkpoint['target_net_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_episode = checkpoint['episode']
+        epsilon = checkpoint['epsilon']
+        print(f"Model loaded from {filepath}, resuming from episode {start_episode}")
+        return start_episode, epsilon
+    except FileNotFoundError:
+        print(f"No checkpoint found at {filepath}, starting from scratch")
+        return 0, None
+
 def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
               epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995, target_update=10,
-              num_workers=4, steps_per_worker=50):
+              num_workers=4, steps_per_worker=50, checkpoint_dir="checkpoints"):
 
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    
     optimizer = optim.Adam(policy_net.parameters(), lr=1e-4)
     memory = deque(maxlen=10000)
-    epsilon = epsilon_start
+    
+    # Try to load from checkpoint
+    checkpoint_path = os.path.join(checkpoint_dir, "latest_checkpoint.pth")
+    start_episode, loaded_epsilon = load_model(policy_net, target_net, optimizer, checkpoint_path)
+    epsilon = loaded_epsilon if loaded_epsilon is not None else epsilon_start
 
-    for episode in range(episodes):
+    for episode in range(start_episode, episodes):
         start_time = time.time()
         
         # Collect experiences in parallel
@@ -203,12 +228,23 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=64
         if episode % target_update == 0:
             target_net.load_state_dict(policy_net.state_dict())
 
+        # Save checkpoint every 50 episodes
+        if episode % 50 == 0 and episode > 0:
+            save_model(policy_net, target_net, optimizer, episode, epsilon, 
+                      os.path.join(checkpoint_dir, f"checkpoint_episode_{episode}.pth"))
+            # Also save as latest checkpoint
+            save_model(policy_net, target_net, optimizer, episode, epsilon, checkpoint_path)
+
         # Print progress
         if episode % 10 == 0 or episode < 10:
             avg_reward = total_episode_reward / num_workers
             episode_time = time.time() - start_time
             print(f"Episode {episode}, Avg Reward: {avg_reward:.2f}, "
                   f"Time: {episode_time:.2f}s, Epsilon: {epsilon:.3f}")
+
+    # Save final model
+    final_path = os.path.join(checkpoint_dir, "final_model.pth")
+    save_model(policy_net, target_net, optimizer, episodes-1, epsilon, final_path)
 
 
 def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
@@ -295,12 +331,18 @@ def run_episode(env, policy_net, eval=False):
 
     return total_reward
 
-print("passed initialization test")
-
 if __name__ == "__main__":
-    # Determine number of workers (use 75% of available CPU cores)
-    num_workers = max(1, int(mp.cpu_count() * 0.75))
+    # Determine number of workers (use 50% of available CPU cores)
+    num_workers = max(1, int(mp.cpu_count() * 0.50))
     print(f"Using {num_workers} parallel workers")
+    # Use this to check if GPU is available
+    print(f"CUDA is available: {torch.cuda.is_available()}")
+    print(f"Number of available GPUs: {torch.cuda.device_count()}")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device.type == "cpu":
+        raise RuntimeWarning("It is strongly advised not to train on CPU.")
+
+    print(f"Using device: {device}")
     
     env = AirTrafficControlEnv()
     input_dim = env._state_dim()
@@ -311,6 +353,7 @@ if __name__ == "__main__":
     target_net = AirTrafficControlDQN(input_dim=input_dim, n_commands=n_commands, n_planes=n_planes).to(device)
     target_net.load_state_dict(policy_net.state_dict())
 
-    # Use parallel training
-    train_dqn_parallel(env, policy_net, target_net, episodes=100, batch_size=32, 
-                      num_workers=num_workers, steps_per_worker=50)
+    # Use parallel training with checkpointing
+    train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=32, 
+                      num_workers=num_workers, steps_per_worker=50, 
+                      checkpoint_dir="atc_checkpoints")

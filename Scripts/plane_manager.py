@@ -22,10 +22,11 @@ class PlaneManager:
 
         if init_state['state'] == PlaneState.QUEUED and self.airport:
             self.airport.queue.append((new_plane.id, self.airport.runways[27]))  # HACK: always use runway 27 for queued planes in this example
-            print(f"{new_plane.callsign} added to queue on runway 27 (ID: {new_plane.id})")
-            print(self.airport.queue)
+            #print(f"{new_plane.callsign} added to queue on runway 27 (ID: {new_plane.id})")
+            #print(self.airport.queue)
         else:
-            print(f"{new_plane.callsign} added at ({new_plane.lat}, {new_plane.lon}) (ID: {new_plane.id})")
+            #print(f"{new_plane.callsign} added at ({new_plane.lat}, {new_plane.lon}) (ID: {new_plane.id})")
+            pass
 
     # get a new id for a plane or return a plane's current id
     def get_id(self, callsign: str) -> int:
