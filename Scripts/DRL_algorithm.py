@@ -353,6 +353,7 @@ if __name__ == "__main__":
     target_net = AirTrafficControlDQN(input_dim=input_dim, n_commands=n_commands, n_planes=n_planes).to(device)
     target_net.load_state_dict(policy_net.state_dict())
 
-    # Use parallel training with checkpointing
+    # Use parallel training with checkpointing - ADD num_workers parameter
     train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995)  # Lower from 0.1 to 0.01
+                      epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995,
+                      num_workers=num_workers)  # Add this line
