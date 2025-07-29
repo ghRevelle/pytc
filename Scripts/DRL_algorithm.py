@@ -338,9 +338,9 @@ if __name__ == "__main__":
     # Use this to check if GPU is available
     print(f"CUDA is available: {torch.cuda.is_available()}")
     print(f"Number of available GPUs: {torch.cuda.device_count()}")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() and False else "cpu")
     if device.type == "cpu":
-        raise RuntimeWarning("It is strongly advised not to train on CPU.")
+        print("It is strongly advised not to train on CPU.")
 
     print(f"Using device: {device}")
     
@@ -356,4 +356,4 @@ if __name__ == "__main__":
     # Use parallel training with checkpointing - ADD num_workers parameter
     train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
                       epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995,
-                      num_workers=num_workers)  # Add this line
+                      num_workers=1, steps_per_worker=2000, batch_size=2048)  # Add this line
