@@ -165,7 +165,7 @@ class FlightSimulator:
 				#print(f"Invalid command: {command.command_type} for {plane.callsign}. Not at the front of the queue")
 				self.invalid_command_executed = True
 		elif command_type == CommandType.GO_AROUND:
-			if plane.has_gone_around:
+			if plane.state != PlaneState.WAITING_FOR_LANDING or plane.has_gone_around:
 				self.invalid_command_executed = True
 				#print(f"{plane.callsign} has been issued a redundant go-around command.")
 		return
