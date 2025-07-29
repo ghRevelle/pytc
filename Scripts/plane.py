@@ -19,7 +19,8 @@ class Plane:
 				'state' (Enum): Plane's current state (just AIR by default)
 				'landed_this_tick' (bool): Whether or not the plane landed this tick.
 				'tookoff_this_tick' (bool): Whether or not the plane took off this tick.
-				'crashed_this_tick' (bool): Whether or not the plane crashed this tick.
+				'close_call' (bool): Whether or not the plane has had a close call
+				'crashed_this_tick' (bool): Whether or not the plane crashed in this tick
 				'has_gone_around' (bool): Whether or not the plane has been issued a go-around command.
 
 				'turn_rate' (float): Turn rate of the plane in deg/sec (based on model)
@@ -59,6 +60,7 @@ class Plane:
 		self.landed_this_tick = False
 		self.tookoff_this_tick = False
 		self.crashed_this_tick = False
+		self.close_call = False
 		self.has_gone_around = False
 		self.has_taken_off = False
 		self.has_started_landing = False
