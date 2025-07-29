@@ -21,7 +21,7 @@ if device.type == "cpu":
 print(f"Using device: {device}")
 
 class AirTrafficControlDQN(nn.Module):
-    def __init__(self, input_dim=70, n_commands=5, n_planes=10):
+    def __init__(self, input_dim=70, n_commands=4, n_planes=10):
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, 128),
