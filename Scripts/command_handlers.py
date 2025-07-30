@@ -283,6 +283,9 @@ class LandingCommandHandler(CommandHandler):
 		return True
 
 	def execute(self, plane, command, tick) -> None:
+
+		plane.has_gone_around = True
+
 		target_runway = command.argument
 		
 		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading
@@ -304,7 +307,6 @@ class LandingCommandHandler(CommandHandler):
 		# 		return
 	
 		if target_dist < self.tod and plane.alt > 0:
-			plane.has_started_landing = True
 			self._handle_descent_phase(plane, target_dist, target_runway)
 		elif plane.alt <= 0 and plane.gspd > 0:
 			self._handle_ground_phase(plane)

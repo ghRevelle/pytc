@@ -121,17 +121,11 @@ class AirTrafficControlEnv(gym.Env):
         for plane in self.fs.plane_manager.planes:
             # Reward for successful landings
             if plane.landed_this_tick == True:
-                reward += 100.0
+                reward += 150.0
 
             # Reward for successful takeoff
             if plane.tookoff_this_tick == True:
                 reward += 100.0
-
-            # Punish for missed approach
-            if plane.missed_approach == True:
-                plane.has_started_landing = False
-                plane.missed_approach = False
-                reward -= 50
 
             # Penalty for crashing
             if plane.crashed_this_tick == True and plane.close_call != True:
@@ -146,23 +140,23 @@ class AirTrafficControlEnv(gym.Env):
         # Reward for valid command execution
         # This is to encourage the DRL to issue valid commands
         if self.fs.valid_command_executed:
-            reward += 20.0
+            reward += 25.0
 
         # Penalty for abusing go-around command
         # This is to discourage the DRL from issuing go-around commands unnecessarily
         if self.fs.go_around_issued:
-            reward -= 1.0
+            reward += 2.0
 
         if self.fs.no_command_executed:
-            reward += 0.5  # Reward for deliberately not issuing a command
+            reward += 0.1  # Reward for deliberately not issuing a command
 
-        # Small time pressure penalty per plane still in air
+        # Small time pressure penalty per plane still in queue
         for plane in self.fs.plane_manager.planes:
             if plane.state == PlaneState.QUEUED:
                 reward -= 0.05
 
         if self._check_done():
-            reward += 1.0 * (self.max_ticks - self.current_tick)  # Reward for finishing early
+            reward += 0.1 * (self.max_ticks - self.current_tick)  # Reward for finishing early
 
         return reward
 

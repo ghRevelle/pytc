@@ -155,9 +155,6 @@ class FlightSimulator:
             elif not LandingCommandHandler.is_aligned(plane, command):
                 #print(f"Invalid command: {command.command_type} for {plane.callsign}. Not aligned to runway")
                 self.invalid_command_executed = True
-            elif plane.has_started_landing:
-                self.invalid_command_executed = True
-                #print(f"{plane.callsign} has already started landing.")
         elif command_type == CommandType.LINE_UP_AND_WAIT:
             if plane.state != PlaneState.QUEUED:
                 #print(f"Invalid command: {command.command_type} for {plane.callsign}. Expected state: QUEUED, was: {plane.state}")
@@ -168,8 +165,6 @@ class FlightSimulator:
         elif command_type == CommandType.GO_AROUND:
             if plane.state != PlaneState.WAITING_FOR_LANDING or plane.has_gone_around:
                 self.invalid_command_executed = True
-            elif plane.has_started_landing == True:
-                plane.missed_approach = True
                 #print(f"{plane.callsign} has been issued a redundant go-around command.")
         return
 
@@ -197,8 +192,6 @@ class FlightSimulator:
                             if plane.id == command.target_id:
                                 if command.command_type == CommandType.LINE_UP_AND_WAIT:
                                     plane.has_taken_off = True
-                                elif command.command_type == CommandType.CLEARED_TO_LAND:
-                                    plane.has_started_landing = True
                                 break
                     if 1 <= command.command_type.value <= 2:  # Only reward for valid DRL-issued commands (Enums 1 to 2)
                         self.valid_command_executed = True
@@ -236,9 +229,6 @@ class FlightSimulator:
                     self.crashed_planes.extend([plane1, plane2])
                     #print(f"{plane1.callsign} and {plane2.callsign} crashed")
                     #print(f"tick: {self.current_tick}")
-            
-            if plane1.state == PlaneState.MARKED_FOR_DELETION:
-                self.plane_manager.delete_plane(plane1.id)
 
         if not self.no_display:
             # Update the display with the current plane states
@@ -250,6 +240,10 @@ class FlightSimulator:
 
         while self.crashed_planes:
             self.plane_manager.delete_plane(self.crashed_planes.pop().id)
+
+        for plane in self.plane_manager.planes:
+            if plane.state == PlaneState.MARKED_FOR_DELETION:
+                self.plane_manager.delete_plane(plane.id)
 
         # Reset plane flags using list comprehension
         [setattr(plane, attr, False) for plane in self.plane_manager.planes 
@@ -291,17 +285,11 @@ class FlightSimulator:
         for plane in self.plane_manager.planes:
             # Reward for successful landings
             if plane.landed_this_tick == True:
-                reward += 100.0
+                reward += 150.0
 
             # Reward for successful takeoff
             if plane.tookoff_this_tick == True:
                 reward += 100.0
-
-            # Punish for missed approach
-            if plane.missed_approach == True:
-                plane.has_started_landing = False
-                plane.missed_approach = False
-                reward -= 50
 
             # Penalty for crashing
             if plane.crashed_this_tick == True and plane.close_call != True:
@@ -316,21 +304,21 @@ class FlightSimulator:
         # Reward for valid command execution
         # This is to encourage the DRL to issue valid commands
         if self.valid_command_executed:
-            reward += 10.0
+            reward += 25.0
 
         # Penalty for abusing go-around command
         # This is to discourage the DRL from issuing go-around commands unnecessarily
         if self.go_around_issued:
-            reward -= 1.0
+            reward += 2.0
 
         if self.no_command_executed:
             reward += 0.1  # Reward for deliberately not issuing a command
 
-        # Small time pressure penalty per plane still in air
-        reward -= 0.05 * len(self.plane_manager.planes)
+        # Small time pressure penalty per plane still in queue
+        reward -= 0.05 * len(self.plane_manager.airport.queue)
 
         if self.check_end_state():
-            reward += 0.5 * (2000 - self.current_tick)  # Reward for finishing early
+            reward += 0.1 * (2000 - self.current_tick)  # Reward for finishing early
 
         return reward
 

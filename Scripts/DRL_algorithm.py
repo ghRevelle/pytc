@@ -173,7 +173,7 @@ def load_model(policy_net, target_net, optimizer, filepath):
 
 def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=128, gamma=0.99,
               epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
-              num_workers=1, episodes_per_worker=1, checkpoint_dir="checkpoints"):  # Changed parameter name
+              num_workers=1, episodes_per_worker=1, checkpoint_dir="checkpoints_missed-approaches"):  # Changed parameter name
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     
@@ -181,7 +181,7 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
     memory = deque(maxlen=20000)  # Reduced from 100,000 to 20,000
     
     # Try to load from checkpoint
-    checkpoint_path = os.path.join(checkpoint_dir, "latest_checkpoint.pth")
+    checkpoint_path = os.path.join(checkpoint_dir, "mynah_reward_v3.pth")
     start_episode, loaded_epsilon = load_model(policy_net, target_net, optimizer, checkpoint_path)
     epsilon = loaded_epsilon if loaded_epsilon is not None else epsilon_start
 
@@ -264,7 +264,7 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
 
 def train_dqn_with_checkpoints(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
                               epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
-                              checkpoint_dir="checkpoints"):
+                              checkpoint_dir="checkpoints_missed-approaches"):
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     
@@ -272,7 +272,7 @@ def train_dqn_with_checkpoints(env, policy_net, target_net, episodes=1000, batch
     memory = deque(maxlen=100000)
     
     # Try to load from checkpoint
-    checkpoint_path = os.path.join(checkpoint_dir, "latest_checkpoint.pth")
+    checkpoint_path = os.path.join(checkpoint_dir, "mynah_reward_v3.pth")
     start_episode, loaded_epsilon = load_model(policy_net, target_net, optimizer, checkpoint_path)
     epsilon = loaded_epsilon if loaded_epsilon is not None else epsilon_start
 
@@ -558,16 +558,16 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      batch_size=64,
-                      num_workers=1,
-                      episodes_per_worker=1,
-                      checkpoint_dir="checkpoints")
+    # train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
+    #                   batch_size=256,
+    #                   num_workers=1,
+    #                   episodes_per_worker=1,
+    #                   checkpoint_dir="checkpoints_missed-approaches")
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    # model_path = "checkpoints/final_model.pth"  # or any checkpoint file
-    # rewards = test_dqn(model_path, episodes=3, display=True)
-    # print(f"Test completed. Rewards: {rewards}")
+    model_path = "checkpoints_missed-approaches/mynah_reward_v3.pth"  # or any checkpoint file
+    rewards = test_dqn(model_path, episodes=3, display=True)
+    print(f"Test completed. Rewards: {rewards}")
     
     # print("Script completed. Uncomment the training or testing code above to run.")

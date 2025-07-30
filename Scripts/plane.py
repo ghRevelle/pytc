@@ -65,8 +65,8 @@ class Plane:
 		self.close_call = False
 		self.has_gone_around = False
 		self.has_taken_off = False
-		self.has_started_landing = False
-		self.missed_approach = False
+		#self.has_started_landing = False
+		#self.missed_approach = False
 
 		self.time_waited = 0
 
