@@ -393,7 +393,7 @@ class TaxiCommandHandler(CommandHandler):
 		if plane.time_waited == 0:
 			#print(f"{plane.callsign} taxiing off runway")
 			pass
-		if plane.time_waited == 90:
+		if plane.time_waited == 30:
 			plane.state = PlaneState.MARKED_FOR_DELETION
 			#print(f"{plane.callsign} exited runway")
 		else:
