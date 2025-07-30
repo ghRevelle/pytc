@@ -13,10 +13,11 @@ from rolling_initial_state_20250301 import *
 class AirTrafficControlEnv(gym.Env):
     """Custom Gymnasium environment for tower control using simulator."""
 
-    def __init__(self, max_planes=10, max_ticks=2000):
+    def __init__(self, max_planes=10, max_ticks=2000, test=False):
         super().__init__()
         self.max_planes = max_planes
         self.max_ticks = max_ticks
+        self.test = test
 
         self.test_runways = {
         9: Runway((32.73713, -117.20433), (32.73, -117.175), 9),  # NW-SE runway
@@ -40,9 +41,8 @@ class AirTrafficControlEnv(gym.Env):
         split_idx = int(0.9 * len(self.all_initial_states))
         self.train_initial_states = self.all_initial_states[:split_idx]
         self.test_initial_states = self.all_initial_states[split_idx:]
-        self.use_test_set = True  # Set True for evaluation
         self.rolling_initial_state = []
-        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=False)
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=not self.test)
         self.current_tick = 0
 
         # === Spaces ===
@@ -59,13 +59,13 @@ class AirTrafficControlEnv(gym.Env):
         self.current_tick = 0
 
         # Select initial state from train or test set
-        initial_states = self.test_initial_states if self.use_test_set else self.train_initial_states
+        initial_states = self.test_initial_states if self.test else self.train_initial_states
         if initial_states:
             import random
             self.rolling_initial_state = random.choice(initial_states)
         else:
             self.rolling_initial_state = []
-        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=False)
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=not self.test)
 
         # Create starting state
         observation = self._get_obs()

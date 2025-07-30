@@ -444,7 +444,7 @@ def test_dqn(model_filepath, episodes=5, display=True):
     print(f"Testing on device: {device}")
     
     # Initialize environment - same pattern as training functions
-    env = AirTrafficControlEnv()
+    env = AirTrafficControlEnv(test=True)  # Set test=True for evaluation mode
     
     # Set display mode - FlightSimulator handles all display initialization
     env.fs.no_display = not display
