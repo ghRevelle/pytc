@@ -244,7 +244,8 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
         # Sync target network
         if episode % target_update == 0:
             target_net.load_state_dict(policy_net.state_dict())
-
+        if test:
+            env.fs.pg_display.stop_display()
         # Save checkpoint every 50 episodes
         if episode % 50 == 0 and episode > 0:
             save_model(policy_net, target_net, optimizer, episode, epsilon, 
@@ -335,7 +336,7 @@ def train_dqn_with_checkpoints(env, policy_net, target_net, episodes=1000, batch
             save_model(policy_net, target_net, optimizer, episode, epsilon, checkpoint_path)
 
         # Print progress
-        if episode % 10 == 0 or episode < 10:
+        if episode % 10 == 0 or episode < 10 or test:
             episode_time = time.time() - start_time
             print(f"Episode {episode}, Total Reward: {total_reward:.2f}, "
                   f"Steps: {step_count}, Time: {episode_time:.2f}s, Epsilon: {epsilon:.3f}")
