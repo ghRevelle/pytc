@@ -273,7 +273,7 @@ class FlightSimulator:
         # Check for end of simulation
         if self.check_end_state():
             print(f"Ending simulation at tick {self.current_tick}")
-            print(f"Reward: {self.compute_reward()}")
+            # print(f"Reward: {self.compute_reward()}")
             if not self.no_display:
                 self.pg_display.stop_display()
             self.current_tick = 0
