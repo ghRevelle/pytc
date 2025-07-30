@@ -147,6 +147,10 @@ class AirTrafficControlEnv(gym.Env):
             reward += 50.0
             self.fs.valid_command_executed = False
 
+        if self.fs.landing_issued:
+            reward += 100
+            self.fs.landing_issued = False
+
         if self.fs.go_around_issued:
             reward += 5.0
             self.fs.go_around_issued = False

@@ -69,6 +69,7 @@ class FlightSimulator:
         self.invalid_command_executed = False  # Flag for invalid command execution
         self.valid_command_executed = False  # Flag for valid command execution
         self.go_around_issued = False  # Flag to track if a go-around command was issued
+        self.landing_issued = False # Flag to track if the model has ordered a landing
         self.no_command_executed = False  # Flag for deliberate no command execution
 
 
@@ -196,6 +197,7 @@ class FlightSimulator:
                                 if command.command_type == CommandType.LINE_UP_AND_WAIT:
                                     plane.has_taken_off = True
                                 elif command.command_type == CommandType.CLEARED_TO_LAND:
+                                    self.landing_issued = True
                                     plane.has_started_landing = True
                                 break
                     if 1 <= command.command_type.value <= 2:  # Only reward for valid DRL-issued commands (Enums 1 to 2)
