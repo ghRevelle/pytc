@@ -209,3 +209,9 @@ __marimo__/
 # Large data files
 Data/filtered_data/
 src/
+
+# Machine Learning Model Checkpoints
+# Exclude DQN model checkpoint files to avoid committing large trained models
+checkpoints/latest_checkpoint.pth
+checkpoints/final_model.pth
+checkpoints/checkpoint_episode_*.pth
