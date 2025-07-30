@@ -123,13 +123,11 @@ class AirTrafficControlEnv(gym.Env):
             if plane.landed_this_tick:
                 plane.landed_this_tick = False
                 reward += 200.0
-                print(f"Plane {plane.callsign} landed successfully!")
 
             # Reward for successful takeoff
             if plane.tookoff_this_tick:
                 plane.tookoff_this_tick = False
                 reward += 100.0
-                print(f"Plane {plane.callsign} took off successfully!")
 
             # Penalty for crashing
             if plane.crashed_this_tick and not plane.close_call:
@@ -148,7 +146,6 @@ class AirTrafficControlEnv(gym.Env):
         if self.fs.valid_command_executed:
             reward += 50.0
             self.fs.valid_command_executed = False
-            print(f"Valid command executed at tick {self.current_tick}")
 
         if self.fs.go_around_issued:
             reward += 5.0
