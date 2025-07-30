@@ -168,6 +168,8 @@ class FlightSimulator:
         elif command_type == CommandType.GO_AROUND:
             if plane.state != PlaneState.WAITING_FOR_LANDING or plane.has_gone_around:
                 self.invalid_command_executed = True
+            elif plane.has_started_landing == True:
+                plane.missed_approach = True
                 #print(f"{plane.callsign} has been issued a redundant go-around command.")
         return
 
@@ -294,6 +296,10 @@ class FlightSimulator:
             # Reward for successful takeoff
             if plane.tookoff_this_tick == True:
                 reward += 100.0
+
+            # Punish for missed approach
+            if plane.missed_approach == True:
+                reward -= 50
 
             # Penalty for crashing
             if plane.crashed_this_tick == True and plane.close_call != True:

@@ -127,6 +127,10 @@ class AirTrafficControlEnv(gym.Env):
             if plane.tookoff_this_tick == True:
                 reward += 100.0
 
+            # Punish for missed approach
+            if plane.missed_approach == True:
+                reward -= 50
+
             # Penalty for crashing
             if plane.crashed_this_tick == True and plane.close_call != True:
                 plane.close_call = True
