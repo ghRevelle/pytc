@@ -291,7 +291,7 @@ class FlightSimulator:
         for plane in self.plane_manager.planes:
             # Reward for successful landings
             if plane.landed_this_tick == True:
-                reward += 100.0
+                reward += 200.0
 
             # Reward for successful takeoff
             if plane.tookoff_this_tick == True:
@@ -300,31 +300,31 @@ class FlightSimulator:
             # Penalty for crashing
             if plane.crashed_this_tick == True and plane.close_call != True:
                 plane.close_call = True
-                reward -= 1000.0
+                reward -= 100.0
                 #print("Close call punishment")
 
         # Penalty for invalid or illegal commands
         if self.invalid_command_executed:
-            reward -= 2.0
+            reward -= 3.0
 
         # Reward for valid command execution
         # This is to encourage the DRL to issue valid commands
         if self.valid_command_executed:
-            reward += 10.0
+            reward += 50.0
 
-        # Penalty for abusing go-around command
-        # This is to discourage the DRL from issuing go-around commands unnecessarily
         if self.go_around_issued:
-            reward -= 1.0
+            reward += 5.0
 
         if self.no_command_executed:
-            reward += 0.1  # Reward for deliberately not issuing a command
+            reward += 0.5  # Reward for deliberately not issuing a command
 
-        # Small time pressure penalty per plane still in air
-        reward -= 0.05 * len(self.plane_manager.planes)
+        # Small time pressure penalty per plane still in the queue
+        for plane in self.plane_manager.planes:
+            if plane.state == PlaneState.QUEUED:
+                reward -= 0.5
 
         if self.check_end_state():
-            reward += 0.5 * (2000 - self.current_tick)  # Reward for finishing early
+            reward += 0.1 * (2000 - self.current_tick)  # Reward for finishing early
 
         return reward
 
