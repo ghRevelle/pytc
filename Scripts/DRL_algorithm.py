@@ -16,7 +16,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import os
 
-test = False
+test = True
 
 class AirTrafficControlDQN(nn.Module):
     def __init__(self, input_dim=70, n_commands=4, n_planes=10):
@@ -565,7 +565,8 @@ if __name__ == "__main__":
                       batch_size=64,
                       num_workers=1,
                       episodes_per_worker=1,
-                      checkpoint_dir="checkpoints")
+                      checkpoint_dir="checkpoints",
+                      epsilon_decay=0.98)
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display

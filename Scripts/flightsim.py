@@ -251,9 +251,9 @@ class FlightSimulator:
                 #print(f"{plane.callsign} has been deleted from the simulation")
                 #print(f"tick: {self.current_tick}")
 
-        # Reset plane flags using list comprehension
-        [setattr(plane, attr, False) for plane in self.plane_manager.planes 
-         for attr in ['landed_this_tick', 'tookoff_this_tick', 'crashed_this_tick']]
+        # # Reset plane flags using list comprehension
+        # [setattr(plane, attr, False) for plane in self.plane_manager.planes 
+        #  for attr in ['landed_this_tick', 'tookoff_this_tick', 'crashed_this_tick']]
             
         self.current_tick += 1  # Increment the tick count
 
@@ -285,48 +285,48 @@ class FlightSimulator:
             effective_tps = self.get_tps()
             time.sleep(1 / effective_tps)  # Control the simulation speed with turbo mode
             
-    def compute_reward(self):
-        reward = 0.0
+    # def compute_reward(self):
+    #     reward = 0.0
 
-        for plane in self.plane_manager.planes:
-            # Reward for successful landings
-            if plane.landed_this_tick == True:
-                reward += 200.0
+    #     for plane in self.plane_manager.planes:
+    #         # Reward for successful landings
+    #         if plane.landed_this_tick == True:
+    #             reward += 200.0
 
-            # Reward for successful takeoff
-            if plane.tookoff_this_tick == True:
-                reward += 100.0
+    #         # Reward for successful takeoff
+    #         if plane.tookoff_this_tick == True:
+    #             reward += 100.0
 
-            # Penalty for crashing
-            if plane.crashed_this_tick == True and plane.close_call != True:
-                plane.close_call = True
-                reward -= 100.0
-                #print("Close call punishment")
+    #         # Penalty for crashing
+    #         if plane.crashed_this_tick == True and plane.close_call != True:
+    #             plane.close_call = True
+    #             reward -= 100.0
+    #             #print("Close call punishment")
 
-        # Penalty for invalid or illegal commands
-        if self.invalid_command_executed:
-            reward -= 3.0
+    #     # Penalty for invalid or illegal commands
+    #     if self.invalid_command_executed:
+    #         reward -= 3.0
 
-        # Reward for valid command execution
-        # This is to encourage the DRL to issue valid commands
-        if self.valid_command_executed:
-            reward += 50.0
+    #     # Reward for valid command execution
+    #     # This is to encourage the DRL to issue valid commands
+    #     if self.valid_command_executed:
+    #         reward += 50.0
 
-        if self.go_around_issued:
-            reward += 5.0
+    #     if self.go_around_issued:
+    #         reward += 5.0
 
-        if self.no_command_executed:
-            reward += 0.5  # Reward for deliberately not issuing a command
+    #     if self.no_command_executed:
+    #         reward += 0.5  # Reward for deliberately not issuing a command
 
-        # Small time pressure penalty per plane still in the queue
-        for plane in self.plane_manager.planes:
-            if plane.state == PlaneState.QUEUED:
-                reward -= 0.5
+    #     # Small time pressure penalty per plane still in the queue
+    #     for plane in self.plane_manager.planes:
+    #         if plane.state == PlaneState.QUEUED:
+    #             reward -= 0.5
 
-        if self.check_end_state():
-            reward += 0.1 * (2000 - self.current_tick)  # Reward for finishing early
+    #     if self.check_end_state():
+    #         reward += 0.1 * (2000 - self.current_tick)  # Reward for finishing early
 
-        return reward
+    #     return reward
 
     def check_end_state(self):
         """Check if there are any more planes."""
