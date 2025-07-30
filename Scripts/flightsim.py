@@ -173,12 +173,12 @@ class FlightSimulator:
 
     def tick(self):
         """Run a single tick of the simulation."""
-        # if not self.no_display:
-        #     for event in pygame.event.get(): # Check for quit events
-        #         if event.type == pygame.QUIT:
-        #             self.pg_display.stop_display()
-        #             self.current_tick = 0
-        #             return
+        if not self.no_display:
+            for event in pygame.event.get(): # Check for quit events
+                if event.type == pygame.QUIT:
+                    self.pg_display.stop_display()
+                    self.current_tick = 0
+                    return
             
         self.invalid_command_executed = False  # Reset invalid command flag for this tick
         self.valid_command_executed = False  # Reset valid command flag for this tick

@@ -99,6 +99,7 @@ class RealignCommandHandler(CommandHandler):
 			plane._turn(plane.hdg, target_hdg) # Turn towards the runway heading
 			if np.isclose(plane.hdg, target_hdg, atol=1e-5):
 				self.parallel = True
+				plane.hdg = target_hdg  # Snap to runway heading
 	
 		# If the aircraft is already parallel to the runway...
 		else:
@@ -115,13 +116,13 @@ class RealignCommandHandler(CommandHandler):
 			)
 			self.dir = self.dir or self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
 			# print(f"Plane {plane.callsign} is realigning to runway {target_runway.name} on tick {tick}, direction {self.dir}, current distance {current_dist:.2f} meters, initial distance {self.init_dist:.2f} meters.")
-			if current_dist > self.init_dist / 2 and self.init_dist > 100:
+			if current_dist > self.init_dist / 2 and self.init_dist > 50:
 				if self.dir == "left":
 					plane._turn(plane.hdg, (target_runway.hdg - 90) % 360)
 				elif self.dir == "right":
 					plane._turn(plane.hdg, (target_runway.hdg + 90) % 360)
 			else:
-				plane._turn(plane.hdg, target_hdg)	
+				plane._turn(plane.hdg, target_hdg)
 
 			
 			if CommandHandler._is_aligned_to_runway(plane, target_runway): # check if already aligned and done
@@ -144,15 +145,13 @@ class RealignCommandHandler(CommandHandler):
 		Returns:
 			str: The direction to the target position ("left", "right", or "straight ahead (or behind)").
 		"""
-
 		heading = utils.heading_angle_to_unit_vector(heading)
 		to_target = (target_pos[0] - pos[0], target_pos[1] - pos[1])
-
 		# 2D cross product
 		cross = heading[0] * to_target[1] - heading[1] * to_target[0]
-		if cross > 0:
+		if cross > 0.01:
 			return "left"
-		elif cross < 0:
+		elif cross < -0.01:
 			return "right"
 		else:
 			return "straight ahead"
