@@ -129,6 +129,8 @@ class AirTrafficControlEnv(gym.Env):
 
             # Punish for missed approach
             if plane.missed_approach == True:
+                plane.has_started_landing = False
+                plane.missed_approach = False
                 reward -= 50
 
             # Penalty for crashing
