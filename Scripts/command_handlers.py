@@ -99,11 +99,11 @@ class RealignCommandHandler(CommandHandler):
 			plane._turn(plane.hdg, target_hdg) # Turn towards the runway heading
 			if np.isclose(plane.hdg, target_hdg, atol=1e-5):
 				self.parallel = True
-				plane.hdg = target_hdg  # Snap to runway heading
 	
 		# If the aircraft is already parallel to the runway...
 		else:
 			# Double-turn into the runway
+			# print(f"plane {plane.callsign} heading: {plane.hdg}, target heading: {target_hdg}")
 			self.init_dist = self.init_dist or utils.point_to_line_distance(
 				utils.latlon_to_meters(plane.lat, plane.lon),
 				utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude),
@@ -114,7 +114,8 @@ class RealignCommandHandler(CommandHandler):
 				utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude),
 				utils.latlon_to_meters(target_runway.get_end_point_ll().latitude, target_runway.get_end_point_ll().longitude)
 			)
-			self.dir = self.dir or self._get_direction((plane.lon, plane.lat), plane.hdg, target_runway.get_start_point_xy())
+			# print(f"plane {plane.callsign} distance to runway {target_runway.name}: {current_dist:.2f} meters, initial distance: {self.init_dist:.2f} meters")
+			self.dir = self.dir or self._get_direction(utils.latlon_to_meters(plane.lat, plane.lon), plane.hdg, utils.latlon_to_meters(target_runway.get_start_point_ll().latitude, target_runway.get_start_point_ll().longitude))
 			# print(f"Plane {plane.callsign} is realigning to runway {target_runway.name} on tick {tick}, direction {self.dir}, current distance {current_dist:.2f} meters, initial distance {self.init_dist:.2f} meters.")
 			if current_dist > self.init_dist / 2 and self.init_dist > 50:
 				if self.dir == "left":
@@ -149,9 +150,9 @@ class RealignCommandHandler(CommandHandler):
 		to_target = (target_pos[0] - pos[0], target_pos[1] - pos[1])
 		# 2D cross product
 		cross = heading[0] * to_target[1] - heading[1] * to_target[0]
-		if cross > 0.01:
+		if cross > 0:
 			return "left"
-		elif cross < -0.01:
+		elif cross < 0:
 			return "right"
 		else:
 			return "straight ahead"
@@ -174,7 +175,6 @@ class CruiseCommandHandler(CommandHandler):
 		return command_type == CommandType.CRUISE
 	
 	def execute(self, plane, command, tick) -> None:
-
 		if 304.8 <= plane.alt <= 457.2: # 1000-1500 ft
 			v_z_target = 0.0
 
@@ -194,7 +194,6 @@ class CruiseCommandHandler(CommandHandler):
 		# Try to achieve a vertrate proportional to the altitudinal error
 			alt_error = plane.crz_alt - plane.alt
 			v_z_target = max(-plane.dsc_rate, min(plane.asc_rate, alt_error * 0.1))
-
 			plane.v_z = plane.proportional_change(
 				current=plane.v_z,
 				target=v_z_target,

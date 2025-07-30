@@ -16,6 +16,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import os
 
+test = False
+
 class AirTrafficControlDQN(nn.Module):
     def __init__(self, input_dim=70, n_commands=4, n_planes=10):
         super().__init__()
@@ -89,7 +91,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def collect_experiences(env_seed, policy_net_state, epsilon, num_episodes=1):
     """Collect experiences from complete episodes."""
-    env = AirTrafficControlEnv()
+    env = AirTrafficControlEnv(test=test)
     experiences = []
     
     # Load the policy network state
@@ -444,8 +446,8 @@ def test_dqn(model_filepath, episodes=5, display=True):
     print(f"Testing on device: {device}")
     
     # Initialize environment - same pattern as training functions
-    env = AirTrafficControlEnv(test=True)  # Set test=True for evaluation mode
-    
+    env = AirTrafficControlEnv(test=display)  # Set test=True for evaluation mode
+
     # Set display mode - FlightSimulator handles all display initialization
     env.fs.no_display = not display
     
@@ -548,7 +550,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     
-    env = AirTrafficControlEnv()
+    env = AirTrafficControlEnv(test=test)  # Set test=True for evaluation mode
     input_dim = env._state_dim()
     n_commands = env.action_space['command'].n
     n_planes = env.action_space['plane_id'].n

@@ -167,7 +167,7 @@ def point_to_line_distance(point, line_start, line_end):
 
 def heading_angle_to_unit_vector(angle):
 	angle = math.radians(450 - angle)  # Convert to standard mathematical angle in radians
-	return np.array([np.cos(angle), np.sin(angle)])
+	return np.array([np.cos(angle), np.sin(angle)], dtype=np.float64)
 
 def latlon_to_meters(lat: float, lon: float, origin_lat: float = 32.7329, origin_lon: float = -117.1897) -> tuple:
 	"""
