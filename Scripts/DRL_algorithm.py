@@ -254,7 +254,7 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
             save_model(policy_net, target_net, optimizer, episode, epsilon, checkpoint_path)
 
         # Print progress
-        if episode % 10 == 0 or episode < 10:
+        if episode % 10 == 0 or episode < 10 or test:
             avg_reward = total_episode_reward / num_workers
             episode_time = time.time() - start_time
             print(f"Episode {episode}, Avg Reward: {avg_reward:.2f}, "
@@ -403,7 +403,7 @@ def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0
             target_net.load_state_dict(policy_net.state_dict())
 
         # Print progress less frequently
-        if episode % 10 == 0 or episode < 10:
+        if episode % 10 == 0 or episode < 10 or test:
             print(f"Episode {episode}, Total Reward: {total_reward:.2f}, Steps: {step_count}, Epsilon: {epsilon:.3f}")
 
 
