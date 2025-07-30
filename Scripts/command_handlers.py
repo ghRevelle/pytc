@@ -286,6 +286,8 @@ class LandingCommandHandler(CommandHandler):
 		
 		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading
 
+		plane.has_gone_around = True # Prevent further go-arounds
+
 		# Initialize landing parameters if needed
 		if not hasattr(self, 'tod') or self.tod is None or not hasattr(self, 'rod') or self.rod is None or not hasattr(plane, 'desired_acc_xy') or plane.desired_acc_xy is None:
 			self._initialize_landing(plane, target_runway, command) # TODO: STOP ADDING RANDOM ATTRIBUTES TO THE PLANE OBJECT

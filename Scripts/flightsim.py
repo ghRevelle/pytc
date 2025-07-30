@@ -234,9 +234,6 @@ class FlightSimulator:
                     self.crashed_planes.extend([plane1, plane2])
                     #print(f"{plane1.callsign} and {plane2.callsign} crashed")
                     #print(f"tick: {self.current_tick}")
-            
-            if plane1.state == PlaneState.MARKED_FOR_DELETION:
-                self.plane_manager.delete_plane(plane1.id)
 
         if not self.no_display:
             # Update the display with the current plane states
@@ -248,6 +245,11 @@ class FlightSimulator:
 
         while self.crashed_planes:
             self.plane_manager.delete_plane(self.crashed_planes.pop().id)
+        for plane in self.plane_manager.planes:
+            if plane.state == PlaneState.MARKED_FOR_DELETION:
+                self.plane_manager.delete_plane(plane.id)
+                #print(f"{plane.callsign} has been deleted from the simulation")
+                #print(f"tick: {self.current_tick}")
 
         # Reset plane flags using list comprehension
         [setattr(plane, attr, False) for plane in self.plane_manager.planes 
@@ -272,7 +274,7 @@ class FlightSimulator:
 
         # Check for end of simulation
         if self.check_end_state():
-            print(f"Ending simulation at tick {self.current_tick}")
+            #print(f"Ending simulation at tick {self.current_tick}")
             # print(f"Reward: {self.compute_reward()}")
             if not self.no_display:
                 self.pg_display.stop_display()
