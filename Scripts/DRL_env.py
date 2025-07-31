@@ -167,7 +167,7 @@ class AirTrafficControlEnv(gym.Env):
         # Reward for successful takeoff orders
         if self.fs.takeoff_issued:
             self.fs.takeoff_issued = False
-            reward += 8.0
+            reward += 10.0
             self.episode_stats['planes_taken_off'] += 1
 
         # Reward for successful go-around orders
@@ -192,7 +192,7 @@ class AirTrafficControlEnv(gym.Env):
         # Penalty for invalid or illegal commands
         if self.fs.invalid_command_executed:
             self.fs.invalid_command_executed = False
-            reward -= 0.1
+            reward -= 0.05
 
         if self.fs.no_command_executed:
             reward += 0.05  # Reward for deliberately not issuing a command

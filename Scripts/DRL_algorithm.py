@@ -577,13 +577,15 @@ if __name__ == "__main__":
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    model_path = "checkpoints/latest_checkpoint.pth"  # or any checkpoint file
-    rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
-    print(f"Test completed. Rewards: {rewards}")
+    # model_path = "checkpoints/latest_checkpoint.pth"  # or any checkpoint file
+    # rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
+    # print(f"Test completed. Rewards: {rewards}")
     
     # print("Script completed. Uncomment the training or testing code above to run.")
     train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      batch_size=256,
+                      batch_size=64,
                       num_workers=1,
                       episodes_per_worker=1,
-                      checkpoint_dir="checkpoints")
+                      checkpoint_dir="checkpoints",
+                      epsilon_decay=0.99
+                      )
