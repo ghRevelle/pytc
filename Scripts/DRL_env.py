@@ -101,7 +101,8 @@ class AirTrafficControlEnv(gym.Env):
 
         # Create starting state
         observation = self._get_obs()
-        return observation, {}
+        info = {'action_mask': self._get_action_mask()}
+        return observation, info
 
     def step(self, action):
         # === Decode action ===
@@ -123,6 +124,9 @@ class AirTrafficControlEnv(gym.Env):
         done = self._check_done()
         info = {}
         
+        # Add action mask to info for next step
+        info['action_mask'] = self._get_action_mask()
+        
         # Add episode stats to info when episode ends
         if done:
             self.episode_stats['ending_time'] = self.current_tick
@@ -143,7 +147,7 @@ class AirTrafficControlEnv(gym.Env):
         return obs.flatten()
 
     def _encode_plane_state(self, plane):
-        """Convert a plane's state into a flat array (e.g., lat, lon, alt, gspd, hdg, ...)."""
+        """Convert a plane's state into a flat array with only PlaneState and has_gone_around."""
         return np.array([
             plane.id, plane.lat, plane.lon, plane.alt, plane.state.value,
             plane.command.command_type.value
@@ -174,7 +178,7 @@ class AirTrafficControlEnv(gym.Env):
 
         for plane in self.fs.plane_manager.planes:
             # Recording if the plane landed
-            if plane.landed_this_tick:
+            if plane.landed_this_tick and not plane.close_call:
                 self.episode_stats['planes_landed'] += 1
 
             # Penalty for crashing
@@ -214,4 +218,27 @@ class AirTrafficControlEnv(gym.Env):
         if self.fs.check_end_state():
             return True
         return False
-
+    
+    def _get_action_mask(self):
+        """Return a mask indicating which actions are valid.
+        
+        Returns:
+            dict: Action mask with same structure as action_space
+                 - 'command': always all True (all commands valid)
+                 - 'plane_id': True only for IDs that actually have planes assigned
+        """
+        # All command types are always valid
+        command_mask = np.ones(4, dtype=bool)  # 4 command types: NONE to GO_AROUND
+        
+        # Only IDs with actual planes are valid
+        plane_id_mask = np.zeros(self.max_planes, dtype=bool)
+        
+        # Check which specific IDs have planes assigned by looking at plane_manager's id_to_callsign
+        for plane_id in range(self.max_planes):
+            if self.fs.plane_manager.id_to_callsign[plane_id] != '':  # Empty string means no plane in this slot
+                plane_id_mask[plane_id] = True
+        
+        return {
+            'command': command_mask,
+            'plane_id': plane_id_mask
+        }
