@@ -495,6 +495,8 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     Returns:
         list: List of rewards for each episode
     """
+    import pygame
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Testing on device: {device}")
 
@@ -507,20 +509,17 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     env.fs.no_display = not display
     
     # Create the policy network - same as training functions
-    input_dim = env._state_dim()
-    n_commands = env.action_space['command'].n
-    n_planes = env.action_space['plane_id'].n
     
     policy_net = AirTrafficControlDQN(
-        input_dim=input_dim, 
-        n_commands=n_commands, 
-        n_planes=n_planes
+        input_dim=env._state_dim(), 
+        n_commands=env.action_space['command'].n, 
+        n_planes=env.action_space['plane_id'].n
     ).to(device)
     
     # Load the trained model
     try:
         checkpoint = torch.load(model_filepath, map_location=device)
-        policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
+        policy_net.load_state_dict(policy_net.state_dict())#checkpoint['policy_net_state_dict'])
         print(f"Model loaded successfully from {model_filepath}")
         print(f"Model was trained for {checkpoint['episode']} episodes")
         print(f"Final epsilon value: {checkpoint['epsilon']:.4f}")
@@ -552,7 +551,8 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
             
             # Use the trained policy (no epsilon-greedy exploration) with action masking
             with torch.no_grad():
-                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)  # ADD .to(device)!
+                #print(f"Input tensor device: {state_tensor.device}")  # Should show 'cuda:0'
                 command_logits, plane_logits = policy_net(state_tensor)
                 
                 # Apply action masking to ensure only valid actions are selected
@@ -569,7 +569,7 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
             
             # Take the action - same as training functions
             next_state, reward, done, _, info = env.step(action)
-            total_reward += reward
+            episode_reward += reward
             step_count += 1
             
             # Handle display events if display is enabled
@@ -577,7 +577,6 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
             if display:
                 try:
                     # Handle pygame events to prevent window from becoming unresponsive
-                    import pygame
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
                             print("Display window closed, ending test")
@@ -592,15 +591,14 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
             
             state = next_state
             
-            # Print action info every 50 steps for debugging (reduced frequency)
-            if step_count % 50 == 0:
+            if step_count % 10 == 0:
                 print(f"  Step {step_count}: Command={command}, Plane={plane_id}, Reward={reward:.2f}")
         
         if recordData:
-            write_episode_to_csv(episode, env, total_reward, step_count)
+            write_episode_to_csv(episode, env, episode_reward, step_count)
 
-        episode_rewards.append(total_reward)
-        print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {total_reward:.2f}")
+        episode_rewards.append(episode_reward)
+        print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {episode_reward:.2f}")
     
     # Print summary statistics
     print(f"\n=== Test Results ===")
