@@ -132,7 +132,7 @@ class FlightSimulator:
             #print(f"Plane with ID {command.target_id} not found.")
             return
         
-        if plane.has_gone_around or plane.state == PlaneState.REALIGNING or plane.state == PlaneState.TAKINGOFF or plane.state == PlaneState.TAXIING:
+        if plane.has_gone_around or plane.state == PlaneState.REALIGNING or plane.state == PlaneState.TAKINGOFF or plane.state == PlaneState.LANDING or plane.state == PlaneState.TAXIING:
             if plane.state == PlaneState.QUEUED or plane.state == PlaneState.TAKINGOFF:
                 pass
             else:
@@ -253,7 +253,7 @@ class FlightSimulator:
                 #print(f"{plane.callsign} has been deleted from the simulation")
                 #print(f"tick: {self.current_tick}")
 
-        # # Reset plane flags using list comprehension
+        # Reset plane flags using list comprehension
         # [setattr(plane, attr, False) for plane in self.plane_manager.planes 
         #  for attr in ['landed_this_tick', 'tookoff_this_tick', 'crashed_this_tick']]
             
