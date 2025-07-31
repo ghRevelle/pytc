@@ -97,8 +97,8 @@ class AirTrafficControlEnv(gym.Env):
     def _get_obs(self):
         planes = self.fs.plane_manager.planes
         # Pre-allocate the full observation array
-        obs = np.zeros((self.max_planes, 7), dtype=np.float32)
-        
+        obs = np.zeros((self.max_planes, 6), dtype=np.float32)
+
         # Fill only the slots for existing planes
         for i, plane in enumerate(planes[:self.max_planes]):
             obs[i] = self._encode_plane_state(plane)
@@ -108,24 +108,24 @@ class AirTrafficControlEnv(gym.Env):
     def _encode_plane_state(self, plane):
         """Convert a plane's state into a flat array (e.g., lat, lon, alt, gspd, hdg, ...)."""
         return np.array([
-            plane.id, plane.lat, plane.lon, plane.alt, plane.gspd, plane.hdg,
+            plane.id, plane.lat, plane.lon, plane.alt, plane.state.value,
             plane.command.command_type.value
         ], dtype=np.float32)
 
     def _state_dim(self):
-        return self.max_planes * 7  # 7 features per plane (adjust as needed)
+        return self.max_planes * 6  # 6 features per plane (adjust as needed)
 
     def _compute_reward(self):
         reward = 0.0
 
         for plane in self.fs.plane_manager.planes:
             # Reward for successful landings
-            if plane.landed_this_tick:
+            if plane.landed_this_tick and not plane.close_call:
                 plane.landed_this_tick = False
                 reward += 200.0
 
             # Reward for successful takeoff
-            if plane.tookoff_this_tick:
+            if plane.tookoff_this_tick and not plane.close_call:
                 plane.tookoff_this_tick = False
                 reward += 100.0
 
@@ -133,22 +133,26 @@ class AirTrafficControlEnv(gym.Env):
             if plane.crashed_this_tick and not plane.close_call:
                 plane.close_call = True
                 plane.crashed_this_tick = False
-                reward -= 100.0
+                reward -= 500.0
                 #print("Close call punishment")
 
         # Penalty for invalid or illegal commands
         if self.fs.invalid_command_executed:
-            reward -= 3.0
+            reward -= 0.5
             self.fs.invalid_command_executed = False
 
         # Reward for valid command execution
         # This is to encourage the DRL to issue valid commands
-        if self.fs.valid_command_executed:
-            reward += 50.0
-            self.fs.valid_command_executed = False
+        # if self.fs.valid_command_executed:
+        #     reward += 50.0
+        #     self.fs.valid_command_executed = False
+
+        if self.fs.takeoff_issued:
+            reward += 200.0
+            self.fs.takeoff_issued = False
 
         if self.fs.landing_issued:
-            reward += 100
+            reward += 200.0
             self.fs.landing_issued = False
 
         if self.fs.go_around_issued:
@@ -156,13 +160,13 @@ class AirTrafficControlEnv(gym.Env):
             self.fs.go_around_issued = False
 
         if self.fs.no_command_executed:
-            reward += 0.5  # Reward for deliberately not issuing a command
+            reward += 0.1  # Reward for deliberately not issuing a command
             self.fs.no_command_executed = False
 
         # Small time pressure penalty per plane still in the queue
         for plane in self.fs.plane_manager.planes:
             if plane.state == PlaneState.QUEUED:
-                reward -= 0.5
+                reward -= 0.05
 
         if self._check_done():
             reward += 0.1 * (self.max_ticks - self.current_tick)  # Reward for finishing early
