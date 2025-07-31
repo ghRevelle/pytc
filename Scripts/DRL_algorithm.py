@@ -203,7 +203,7 @@ def load_model(policy_net, target_net, optimizer, filepath):
 
 def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=128, gamma=0.99,
               epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.9995, target_update=10,
-              num_workers=1, episodes_per_worker=1, checkpoint_dir="checkpoints"):  # Changed parameter name
+              num_workers=1, episodes_per_worker=1, checkpoint_dir="checkpoints", checkpoint_file="latest_checkpoint.pth"):  # Changed parameter name
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     
@@ -211,7 +211,7 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
     memory = deque(maxlen=100000)  # Reduced from 100,000 to 20,000
     
     # Try to load from checkpoint
-    checkpoint_path = os.path.join(checkpoint_dir, "latest_checkpoint.pth")
+    checkpoint_path = os.path.join(checkpoint_dir, checkpoint_file)
     start_episode, loaded_epsilon = load_model(policy_net, target_net, optimizer, checkpoint_path)
     epsilon = loaded_epsilon if loaded_epsilon is not None else epsilon_start
 
@@ -495,6 +495,8 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     Returns:
         list: List of rewards for each episode
     """
+    import pygame
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Testing on device: {device}")
 
@@ -507,20 +509,17 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     env.fs.no_display = not display
     
     # Create the policy network - same as training functions
-    input_dim = env._state_dim()
-    n_commands = env.action_space['command'].n
-    n_planes = env.action_space['plane_id'].n
     
     policy_net = AirTrafficControlDQN(
-        input_dim=input_dim, 
-        n_commands=n_commands, 
-        n_planes=n_planes
+        input_dim=env._state_dim(), 
+        n_commands=env.action_space['command'].n, 
+        n_planes=env.action_space['plane_id'].n
     ).to(device)
     
     # Load the trained model
     try:
         checkpoint = torch.load(model_filepath, map_location=device)
-        policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
+        policy_net.load_state_dict(policy_net.state_dict())#checkpoint['policy_net_state_dict'])
         print(f"Model loaded successfully from {model_filepath}")
         print(f"Model was trained for {checkpoint['episode']} episodes")
         print(f"Final epsilon value: {checkpoint['epsilon']:.4f}")
@@ -538,8 +537,8 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     print(f"\nRunning {episodes} test episodes...")
     
     for episode in range(episodes):
-        state, _ = env.reset()
-        total_reward = 0
+        state, info = env.reset(seed=checkpoint['episode'] + episode)  # Use episode number for reproducibility
+        episode_reward = 0
         done = False
         step_count = 0
         
@@ -548,16 +547,30 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
         while not done:
             # Use the trained policy (no epsilon-greedy exploration)
             # Same pattern as training functions
+
+            action_mask = info.get('action_mask', {'command': np.ones(4, dtype=bool), 
+                                                'plane_id': np.ones(10, dtype=bool)})
             with torch.no_grad():
-                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)  # ADD .to(device)!
+                #print(f"Input tensor device: {state_tensor.device}")  # Should show 'cuda:0'
                 command_logits, plane_logits = policy_net(state_tensor)
-                command = torch.argmax(command_logits, dim=1).item()
-                plane_id = torch.argmax(plane_logits, dim=1).item()
+                #print(f"Output tensor device: {command_logits.device}")  # Should show 'cuda:0'
+                
+                # Apply action masking
+                command_logits_masked = command_logits.clone()
+                plane_logits_masked = plane_logits.clone()
+                
+                # Set invalid actions to very negative values
+                command_logits_masked[0, ~action_mask['command']] = -float('inf')
+                plane_logits_masked[0, ~action_mask['plane_id']] = -float('inf')
+                
+                command = torch.argmax(command_logits_masked, dim=1).item()
+                plane_id = torch.argmax(plane_logits_masked, dim=1).item()
                 action = {'command': command, 'plane_id': plane_id}
             
             # Take the action - same as training functions
             next_state, reward, done, _, info = env.step(action)
-            total_reward += reward
+            episode_reward += reward
             step_count += 1
             
             # Handle display events if display is enabled
@@ -565,7 +578,6 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
             if display:
                 try:
                     # Handle pygame events to prevent window from becoming unresponsive
-                    import pygame
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
                             print("Display window closed, ending test")
@@ -580,15 +592,14 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
             
             state = next_state
             
-            # Print action info every 50 steps for debugging (reduced frequency)
-            if step_count % 50 == 0:
+            if step_count % 10 == 0:
                 print(f"  Step {step_count}: Command={command}, Plane={plane_id}, Reward={reward:.2f}")
         
         if recordData:
-            write_episode_to_csv(episode, env, total_reward, step_count)
+            write_episode_to_csv(episode, env, episode_reward, step_count)
 
-        episode_rewards.append(total_reward)
-        print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {total_reward:.2f}")
+        episode_rewards.append(episode_reward)
+        print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {episode_reward:.2f}")
     
     # Print summary statistics
     print(f"\n=== Test Results ===")
@@ -623,6 +634,10 @@ if __name__ == "__main__":
                       num_workers=1,
                       episodes_per_worker=1,
                       checkpoint_dir="checkpoints",
+                      checkpoint_file="checkpoint_episode_650_dashan.pth",
+                      epsilon_start=0.0,
+                      epsilon_end=0.0,
+                    #   epsilon_decay=0
                       )
     
     # Example: Test a trained model
