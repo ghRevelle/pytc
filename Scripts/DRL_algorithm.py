@@ -202,7 +202,7 @@ def load_model(policy_net, target_net, optimizer, filepath):
         return 0, None
 
 def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=128, gamma=0.99,
-              epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.9995, target_update=10,
+              epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
               num_workers=1, episodes_per_worker=1, checkpoint_dir="checkpoints"):  # Changed parameter name
 
     os.makedirs(checkpoint_dir, exist_ok=True)

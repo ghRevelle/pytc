@@ -162,7 +162,7 @@ class AirTrafficControlEnv(gym.Env):
         # Reward for successful landing orders
         if self.fs.landing_issued:
             self.fs.landing_issued = False
-            reward += 10.0
+            reward += 50.0
 
         # Reward for successful takeoff orders
         if self.fs.takeoff_issued:
@@ -192,7 +192,7 @@ class AirTrafficControlEnv(gym.Env):
         # Penalty for invalid or illegal commands
         if self.fs.invalid_command_executed:
             self.fs.invalid_command_executed = False
-            reward -= 0.05
+            reward -= 0.1
 
         if self.fs.no_command_executed:
             reward += 0.05  # Reward for deliberately not issuing a command
