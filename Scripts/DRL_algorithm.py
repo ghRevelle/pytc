@@ -11,7 +11,7 @@ import random
 import torch.optim as optim
 from commands import *
 from DRL_env import AirTrafficControlEnv
-from simple_csv_writer import write_episode_to_csv
+from AnalysisScripts.simple_csv_writer import write_episode_to_csv
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
