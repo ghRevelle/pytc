@@ -98,8 +98,8 @@ def collect_experiences(env_seed, policy_net_state, epsilon, num_episodes=1):
     # Load the policy network state
     policy_net = AirTrafficControlDQN(
         input_dim=env._state_dim(),
-        n_commands=4,  # NONE, TAKEOFF, LANDING, GO_AROUND
-        n_planes=10    # max_planes from environment
+        n_commands=env.action_space['command'].n,
+        n_planes=env.action_space['plane_id'].n
     ).to(device)  # ADD THIS!
     
     policy_net.load_state_dict(policy_net_state)
@@ -110,50 +110,27 @@ def collect_experiences(env_seed, policy_net_state, epsilon, num_episodes=1):
     #print(f"Policy net device: {next(policy_net.parameters()).device}")  # Should show 'cuda:0'
     
     for episode in range(num_episodes):
-        state, info = env.reset(seed=env_seed + episode)
+        state, _ = env.reset(seed=env_seed + episode)
         done = False
         episode_reward = 0
         
         while not done:
-            # Get action mask from environment
-            action_mask = info.get('action_mask', None)
-            
             if random.random() < epsilon:
-                # Use action masking for random exploration
-                if action_mask is not None:
-                    command = np.random.randint(0, 4)  # 4 command types
-                    # Sample only from valid plane IDs
-                    valid_plane_ids = [i for i, valid in enumerate(action_mask['plane_id']) if valid]
-                    if valid_plane_ids:
-                        plane_id = np.random.choice(valid_plane_ids)
-                    else:
-                        plane_id = 0  # Fallback
-                    action = {'command': command, 'plane_id': plane_id}
-                else:
-                    action = {
-                        'command': np.random.randint(0, 4),
-                        'plane_id': np.random.randint(0, 10),
-                    }
+                action = {
+                    'command': env.action_space['command'].sample(),
+                    'plane_id': env.action_space['plane_id'].sample(),
+                }
             else:
                 with torch.no_grad():
                     state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)  # ADD .to(device)!
                     #print(f"Input tensor device: {state_tensor.device}")  # Should show 'cuda:0'
                     command_logits, plane_logits = policy_net(state_tensor)
                     #print(f"Output tensor device: {command_logits.device}")  # Should show 'cuda:0'
-                    
-                    # Apply action masking to network output
-                    if action_mask is not None:
-                        plane_mask = torch.tensor(action_mask['plane_id'], dtype=torch.bool)
-                        masked_plane_logits = plane_logits.clone()
-                        masked_plane_logits[0, ~plane_mask] = float('-inf')
-                        command = torch.argmax(command_logits, dim=1).item()
-                        plane_id = torch.argmax(masked_plane_logits, dim=1).item()
-                    else:
-                        command = torch.argmax(command_logits, dim=1).item()
-                        plane_id = torch.argmax(plane_logits, dim=1).item()
+                    command = torch.argmax(command_logits, dim=1).item()
+                    plane_id = torch.argmax(plane_logits, dim=1).item()
                     action = {'command': command, 'plane_id': plane_id}
 
-            next_state, reward, done, _, info = env.step(action)
+            next_state, reward, done, _, _ = env.step(action)
             episode_reward += reward
             
             experiences.append({
@@ -305,50 +282,27 @@ def train_dqn_with_checkpoints(env, policy_net, target_net, episodes=1000, batch
 
     for episode in range(start_episode, episodes):
         start_time = time.time()
-        state, info = env.reset()
+        state, _ = env.reset()
         total_reward = 0
         done = False
         step_count = 0
 
         while not done:
-            # Get action mask from environment
-            action_mask = info.get('action_mask', None)
-            
             # Epsilon-greedy action
             if random.random() < epsilon:
-                # Use action masking for random exploration
-                if action_mask is not None:
-                    command = np.random.randint(0, 4)  # 4 command types
-                    # Sample only from valid plane IDs
-                    valid_plane_ids = [i for i, valid in enumerate(action_mask['plane_id']) if valid]
-                    if valid_plane_ids:
-                        plane_id = np.random.choice(valid_plane_ids)
-                    else:
-                        plane_id = 0  # Fallback
-                    action = {'command': command, 'plane_id': plane_id}
-                else:
-                    action = {
-                        'command': env.action_space['command'].sample(),
-                        'plane_id': env.action_space['plane_id'].sample(),
-                    }
+                action = {
+                    'command': env.action_space['command'].sample(),
+                    'plane_id': env.action_space['plane_id'].sample(),
+                }
             else:
                 with torch.no_grad():
                     state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
                     command_logits, plane_logits = policy_net(state_tensor)
-                    
-                    # Apply action masking to network output
-                    if action_mask is not None:
-                        plane_mask = torch.tensor(action_mask['plane_id'], dtype=torch.bool)
-                        masked_plane_logits = plane_logits.clone()
-                        masked_plane_logits[0, ~plane_mask] = float('-inf')
-                        command = torch.argmax(command_logits, dim=1).item()
-                        plane_id = torch.argmax(masked_plane_logits, dim=1).item()
-                    else:
-                        command = torch.argmax(command_logits, dim=1).item()
-                        plane_id = torch.argmax(plane_logits, dim=1).item()
+                    command = torch.argmax(command_logits, dim=1).item()
+                    plane_id = torch.argmax(plane_logits, dim=1).item()
                     action = {'command': command, 'plane_id': plane_id}
 
-            next_state, reward, done, _, info = env.step(action)
+            next_state, reward, done, _, _ = env.step(action)
             total_reward += reward
             step_count += 1
 
@@ -401,50 +355,27 @@ def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0
     epsilon = epsilon_start
 
     for episode in range(episodes):
-        state, info = env.reset()
+        state, _ = env.reset()
         total_reward = 0
         done = False
         step_count = 0
 
         while not done:
-            # Get action mask from environment
-            action_mask = info.get('action_mask', None)
-            
             # Epsilon-greedy action
             if random.random() < epsilon:
-                # Use action masking for random exploration
-                if action_mask is not None:
-                    command = np.random.randint(0, 4)  # 4 command types
-                    # Sample only from valid plane IDs
-                    valid_plane_ids = [i for i, valid in enumerate(action_mask['plane_id']) if valid]
-                    if valid_plane_ids:
-                        plane_id = np.random.choice(valid_plane_ids)
-                    else:
-                        plane_id = 0  # Fallback
-                    action = {'command': command, 'plane_id': plane_id}
-                else:
-                    action = {
-                        'command': env.action_space['command'].sample(),
-                        'plane_id': env.action_space['plane_id'].sample(),
-                    }
+                action = {
+                    'command': env.action_space['command'].sample(),
+                    'plane_id': env.action_space['plane_id'].sample(),
+                }
             else:
                 with torch.no_grad():
                     state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
                     command_logits, plane_logits = policy_net(state_tensor)
-                    
-                    # Apply action masking to network output
-                    if action_mask is not None:
-                        plane_mask = torch.tensor(action_mask['plane_id'], dtype=torch.bool)
-                        masked_plane_logits = plane_logits.clone()
-                        masked_plane_logits[0, ~plane_mask] = float('-inf')
-                        command = torch.argmax(command_logits, dim=1).item()
-                        plane_id = torch.argmax(masked_plane_logits, dim=1).item()
-                    else:
-                        command = torch.argmax(command_logits, dim=1).item()
-                        plane_id = torch.argmax(plane_logits, dim=1).item()
+                    command = torch.argmax(command_logits, dim=1).item()
+                    plane_id = torch.argmax(plane_logits, dim=1).item()
                     action = {'command': command, 'plane_id': plane_id}
 
-            next_state, reward, done, _, info = env.step(action)
+            next_state, reward, done, _, _ = env.step(action)
             total_reward += reward
             step_count += 1
 
@@ -478,49 +409,23 @@ def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0
 
 
 def run_episode(env, policy_net, eval=False):
-    state, info = env.reset()
+    state, _ = env.reset()
     total_reward = 0
     done = False
 
     while not done:
-        # Get action mask from environment
-        action_mask = info.get('action_mask', None)
-        
         if eval:
             with torch.no_grad():
                 state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
                 command_logits, plane_logits = policy_net(state_tensor)
-                
-                # Apply action mask if available
-                if action_mask is not None:
-                    # Mask invalid plane IDs by setting their logits to -inf
-                    plane_mask = torch.tensor(action_mask['plane_id'], dtype=torch.bool)
-                    masked_plane_logits = plane_logits.clone()
-                    masked_plane_logits[0, ~plane_mask] = float('-inf')
-                    
-                    command = torch.argmax(command_logits, dim=1).item()
-                    plane_id = torch.argmax(masked_plane_logits, dim=1).item()
-                else:
-                    command = torch.argmax(command_logits, dim=1).item()
-                    plane_id = torch.argmax(plane_logits, dim=1).item()
+                command = torch.argmax(command_logits, dim=1).item()
+                plane_id = torch.argmax(plane_logits, dim=1).item()
         else:
-            # For random exploration, sample only from valid actions
-            if action_mask is not None:
-                # Sample command normally (all commands are valid)
-                command = env.action_space['command'].sample()
-                
-                # Sample only from valid plane IDs
-                valid_plane_ids = [i for i, valid in enumerate(action_mask['plane_id']) if valid]
-                if valid_plane_ids:
-                    plane_id = np.random.choice(valid_plane_ids)
-                else:
-                    plane_id = 0  # Fallback to plane 0 if no valid planes
-            else:
-                command = env.action_space['command'].sample()
-                plane_id = env.action_space['plane_id'].sample()
+            command = env.action_space['command'].sample()
+            plane_id = env.action_space['plane_id'].sample()
 
         action = {'command': command, 'plane_id': plane_id}
-        next_state, reward, done, _, info = env.step(action)
+        next_state, reward, done, _, _ = env.step(action)
         total_reward += reward
         state = next_state
 
@@ -552,8 +457,8 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     
     # Create the policy network - same as training functions
     input_dim = env._state_dim()
-    n_commands = 4  # NONE, TAKEOFF, LANDING, GO_AROUND
-    n_planes = 10   # max_planes from environment
+    n_commands = env.action_space['command'].n
+    n_planes = env.action_space['plane_id'].n
     
     policy_net = AirTrafficControlDQN(
         input_dim=input_dim, 
@@ -582,7 +487,7 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     print(f"\nRunning {episodes} test episodes...")
     
     for episode in range(episodes):
-        state, info = env.reset()
+        state, _ = env.reset()
         total_reward = 0
         done = False
         step_count = 0
@@ -590,25 +495,13 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
         print(f"\nEpisode {episode + 1}/{episodes}")
         
         while not done:
-            # Get action mask from environment
-            action_mask = info.get('action_mask', None)
-            
             # Use the trained policy (no epsilon-greedy exploration)
             # Same pattern as training functions
             with torch.no_grad():
                 state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
                 command_logits, plane_logits = policy_net(state_tensor)
-                
-                # Apply action masking to network output
-                if action_mask is not None:
-                    plane_mask = torch.tensor(action_mask['plane_id'], dtype=torch.bool)
-                    masked_plane_logits = plane_logits.clone()
-                    masked_plane_logits[0, ~plane_mask] = float('-inf')
-                    command = torch.argmax(command_logits, dim=1).item()
-                    plane_id = torch.argmax(masked_plane_logits, dim=1).item()
-                else:
-                    command = torch.argmax(command_logits, dim=1).item()
-                    plane_id = torch.argmax(plane_logits, dim=1).item()
+                command = torch.argmax(command_logits, dim=1).item()
+                plane_id = torch.argmax(plane_logits, dim=1).item()
                 action = {'command': command, 'plane_id': plane_id}
             
             # Take the action - same as training functions
@@ -666,25 +559,25 @@ if __name__ == "__main__":
     
     env = AirTrafficControlEnv(test=test)  # Set test=True for evaluation mode
     input_dim = env._state_dim()
-    n_commands = 4  # NONE, TAKEOFF, LANDING, GO_AROUND
-    n_planes = 10   # max_planes from environment
+    n_commands = env.action_space['command'].n
+    n_planes = env.action_space['plane_id'].n
 
     policy_net = AirTrafficControlDQN(input_dim=input_dim, n_commands=n_commands, n_planes=n_planes).to(device)
     target_net = AirTrafficControlDQN(input_dim=input_dim, n_commands=n_commands, n_planes=n_planes).to(device)
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      batch_size=256,
-                      num_workers=1,
-                      episodes_per_worker=1,
-                      checkpoint_dir="checkpoints",
-                      )
+    # train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
+    #                   batch_size=256,
+    #                   num_workers=1,
+    #                   episodes_per_worker=1,
+    #                   checkpoint_dir="checkpoints",
+    #                   )
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    # model_path = "checkpoints/latest_checkpoint.pth"  # or any checkpoint file
-    # rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
-    # print(f"Test completed. Rewards: {rewards}")
+    model_path = "checkpoints/latest_checkpoint.pth"  # or any checkpoint file
+    rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
+    print(f"Test completed. Rewards: {rewards}")
     
     # print("Script completed. Uncomment the training or testing code above to run.")

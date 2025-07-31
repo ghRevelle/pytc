@@ -101,11 +101,9 @@ class AirTrafficControlEnv(gym.Env):
 
         # Create starting state
         observation = self._get_obs()
-        info = {'action_mask': self._get_action_mask()}
-        return observation, info
+        return observation, {}
 
     def step(self, action):
-
         # === Decode action ===
         command = Command(
             command_type=CommandType(action['command']),
@@ -124,9 +122,6 @@ class AirTrafficControlEnv(gym.Env):
         reward = self._compute_reward()
         done = self._check_done()
         info = {}
-        
-        # Add action mask to info for next step
-        info['action_mask'] = self._get_action_mask()
         
         # Add episode stats to info when episode ends
         if done:
@@ -219,26 +214,4 @@ class AirTrafficControlEnv(gym.Env):
         if self.fs.check_end_state():
             return True
         return False
-    
-    def _get_action_mask(self):
-        """Return a mask indicating which actions are valid.
-        
-        Returns:
-            dict: Action mask with same structure as action_space
-                 - 'command': always all True (all commands valid)
-                 - 'plane_id': True only for existing plane IDs
-        """
-        # All command types are always valid
-        command_mask = np.ones(4, dtype=bool)  # 4 command types: NONE to GO_AROUND
-        
-        # Only existing plane IDs are valid
-        plane_id_mask = np.zeros(self.max_planes, dtype=bool)
-        num_planes = len(self.fs.plane_manager.planes)
-        if num_planes > 0:
-            plane_id_mask[:num_planes] = True
-        
-        return {
-            'command': command_mask,
-            'plane_id': plane_id_mask
-        }
 
