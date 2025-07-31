@@ -69,11 +69,12 @@ def extract_q_value(command_logits, plane_logits, actions):
         command_logits = command_logits.unsqueeze(0)
     if plane_logits.dim() == 1:
         plane_logits = plane_logits.unsqueeze(0)
-    log_cmd_probs = F.log_softmax(command_logits, dim=1)
-    log_plane_probs = F.log_softmax(plane_logits, dim=1)
-    cmd_logit = log_cmd_probs[0, cmd_idx]
-    plane_logit = log_plane_probs[0, plane_idx]
-    q_val = cmd_logit + plane_logit
+    
+    # For multi-discrete actions, treat the combination as a single Q-value
+    # Use the raw logits, not log probabilities
+    cmd_q = command_logits[0, cmd_idx]
+    plane_q = plane_logits[0, plane_idx]
+    q_val = cmd_q + plane_q  # Simple additive combination
     return q_val.unsqueeze(0)
 
 
@@ -84,6 +85,8 @@ def compute_max_q_value(command_logits, plane_logits):
         command_logits = command_logits.unsqueeze(0)
     if plane_logits.dim() == 1:
         plane_logits = plane_logits.unsqueeze(0)
+    
+    # Compute all possible Q-values for command-plane combinations
     all_qs = command_logits.unsqueeze(2) + plane_logits.unsqueeze(1)  # (batch, n_commands, n_planes)
     max_q = torch.max(all_qs.view(all_qs.size(0), -1), dim=1).values
     return max_q
@@ -110,27 +113,51 @@ def collect_experiences(env_seed, policy_net_state, epsilon, num_episodes=1):
     #print(f"Policy net device: {next(policy_net.parameters()).device}")  # Should show 'cuda:0'
     
     for episode in range(num_episodes):
-        state, _ = env.reset(seed=env_seed + episode)
+        state, info = env.reset(seed=env_seed + episode)
         done = False
         episode_reward = 0
         
         while not done:
+            # Get action mask
+            action_mask = info.get('action_mask', {'command': np.ones(4, dtype=bool), 
+                                                 'plane_id': np.ones(10, dtype=bool)})
+            
             if random.random() < epsilon:
-                action = {
-                    'command': env.action_space['command'].sample(),
-                    'plane_id': env.action_space['plane_id'].sample(),
-                }
+                # Masked random action - only sample from valid actions
+                valid_commands = np.where(action_mask['command'])[0]
+                valid_planes = np.where(action_mask['plane_id'])[0]
+                
+                if len(valid_commands) == 0:
+                    command = 0  # Default to NONE command
+                else:
+                    command = np.random.choice(valid_commands)
+                    
+                if len(valid_planes) == 0:
+                    plane_id = 0  # Default to plane 0 (though this shouldn't happen)
+                else:
+                    plane_id = np.random.choice(valid_planes)
+                    
+                action = {'command': command, 'plane_id': plane_id}
             else:
                 with torch.no_grad():
                     state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)  # ADD .to(device)!
                     #print(f"Input tensor device: {state_tensor.device}")  # Should show 'cuda:0'
                     command_logits, plane_logits = policy_net(state_tensor)
                     #print(f"Output tensor device: {command_logits.device}")  # Should show 'cuda:0'
-                    command = torch.argmax(command_logits, dim=1).item()
-                    plane_id = torch.argmax(plane_logits, dim=1).item()
+                    
+                    # Apply action masking
+                    command_logits_masked = command_logits.clone()
+                    plane_logits_masked = plane_logits.clone()
+                    
+                    # Set invalid actions to very negative values
+                    command_logits_masked[0, ~action_mask['command']] = -float('inf')
+                    plane_logits_masked[0, ~action_mask['plane_id']] = -float('inf')
+                    
+                    command = torch.argmax(command_logits_masked, dim=1).item()
+                    plane_id = torch.argmax(plane_logits_masked, dim=1).item()
                     action = {'command': command, 'plane_id': plane_id}
 
-            next_state, reward, done, _, _ = env.step(action)
+            next_state, reward, done, _, info = env.step(action)
             episode_reward += reward
             
             experiences.append({
@@ -175,12 +202,12 @@ def load_model(policy_net, target_net, optimizer, filepath):
         return 0, None
 
 def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=128, gamma=0.99,
-              epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
+              epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.9995, target_update=10,
               num_workers=1, episodes_per_worker=1, checkpoint_dir="checkpoints"):  # Changed parameter name
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     
-    optimizer = optim.Adam(policy_net.parameters(), lr=1e-4)
+    optimizer = optim.Adam(policy_net.parameters(), lr=5e-5)  # Reduced learning rate
     memory = deque(maxlen=100000)  # Reduced from 100,000 to 20,000
     
     # Try to load from checkpoint
@@ -267,12 +294,12 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
 
 
 def train_dqn_with_checkpoints(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
-                              epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
+                              epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.9995, target_update=10,
                               checkpoint_dir="checkpoints"):
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     
-    optimizer = optim.Adam(policy_net.parameters(), lr=1e-4)
+    optimizer = optim.Adam(policy_net.parameters(), lr=5e-5)  # Reduced learning rate
     memory = deque(maxlen=100000)
     
     # Try to load from checkpoint
@@ -282,27 +309,51 @@ def train_dqn_with_checkpoints(env, policy_net, target_net, episodes=1000, batch
 
     for episode in range(start_episode, episodes):
         start_time = time.time()
-        state, _ = env.reset()
+        state, info = env.reset()
         total_reward = 0
         done = False
         step_count = 0
 
         while not done:
-            # Epsilon-greedy action
+            # Get action mask
+            action_mask = info.get('action_mask', {'command': np.ones(4, dtype=bool), 
+                                                 'plane_id': np.ones(10, dtype=bool)})
+            
+            # Epsilon-greedy action with masking
             if random.random() < epsilon:
-                action = {
-                    'command': env.action_space['command'].sample(),
-                    'plane_id': env.action_space['plane_id'].sample(),
-                }
+                # Masked random action - only sample from valid actions
+                valid_commands = np.where(action_mask['command'])[0]
+                valid_planes = np.where(action_mask['plane_id'])[0]
+                
+                if len(valid_commands) == 0:
+                    command = 0  # Default to NONE command
+                else:
+                    command = np.random.choice(valid_commands)
+                    
+                if len(valid_planes) == 0:
+                    plane_id = 0  # Default to plane 0 (though this shouldn't happen)
+                else:
+                    plane_id = np.random.choice(valid_planes)
+                    
+                action = {'command': command, 'plane_id': plane_id}
             else:
                 with torch.no_grad():
                     state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
                     command_logits, plane_logits = policy_net(state_tensor)
-                    command = torch.argmax(command_logits, dim=1).item()
-                    plane_id = torch.argmax(plane_logits, dim=1).item()
+                    
+                    # Apply action masking
+                    command_logits_masked = command_logits.clone()
+                    plane_logits_masked = plane_logits.clone()
+                    
+                    # Set invalid actions to very negative values
+                    command_logits_masked[0, ~action_mask['command']] = -float('inf')
+                    plane_logits_masked[0, ~action_mask['plane_id']] = -float('inf')
+                    
+                    command = torch.argmax(command_logits_masked, dim=1).item()
+                    plane_id = torch.argmax(plane_logits_masked, dim=1).item()
                     action = {'command': command, 'plane_id': plane_id}
 
-            next_state, reward, done, _, _ = env.step(action)
+            next_state, reward, done, _, info = env.step(action)
             total_reward += reward
             step_count += 1
 
@@ -567,25 +618,15 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    # train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-    #                   batch_size=64,
-    #                   num_workers=1,
-    #                   episodes_per_worker=1,
-    #                   checkpoint_dir="checkpoints",
-    #                   epsilon_decay=0.99
-    #                   )
+    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
+                      batch_size=64,
+                      num_workers=1,
+                      episodes_per_worker=1,
+                      checkpoint_dir="checkpoints",
+                      )
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
     # model_path = "checkpoints/latest_checkpoint.pth"  # or any checkpoint file
     # rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
     # print(f"Test completed. Rewards: {rewards}")
-    
-    # print("Script completed. Uncomment the training or testing code above to run.")
-    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      batch_size=64,
-                      num_workers=1,
-                      episodes_per_worker=1,
-                      checkpoint_dir="checkpoints",
-                      epsilon_decay=0.99
-                      )
