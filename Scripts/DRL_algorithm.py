@@ -11,6 +11,7 @@ import random
 import torch.optim as optim
 from commands import *
 from DRL_env import AirTrafficControlEnv
+from simple_csv_writer import write_episode_to_csv
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
@@ -431,7 +432,7 @@ def run_episode(env, policy_net, eval=False):
     return total_reward
 
 
-def test_dqn(model_filepath, episodes=5, display=True):
+def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     """
     Test a trained DQN model by running episodes with optional display.
     
@@ -445,9 +446,11 @@ def test_dqn(model_filepath, episodes=5, display=True):
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Testing on device: {device}")
+
+    record_data = recordData
     
     # Initialize environment - same pattern as training functions
-    env = AirTrafficControlEnv(test=display)  # Set test=True for evaluation mode
+    env = AirTrafficControlEnv(test=display, record_data=record_data)  # Set test=True for evaluation mode
 
     # Set display mode - FlightSimulator handles all display initialization
     env.fs.no_display = not display
@@ -530,6 +533,9 @@ def test_dqn(model_filepath, episodes=5, display=True):
             if step_count % 50 == 0:
                 print(f"  Step {step_count}: Command={command}, Plane={plane_id}, Reward={reward:.2f}")
         
+        if recordData:
+            write_episode_to_csv(episode, env, total_reward, step_count)
+
         episode_rewards.append(total_reward)
         print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {total_reward:.2f}")
     
@@ -561,17 +567,17 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      batch_size=256,
-                      num_workers=1,
-                      episodes_per_worker=1,
-                      checkpoint_dir="checkpoints",
-                      )
+    # train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
+    #                   batch_size=256,
+    #                   num_workers=1,
+    #                   episodes_per_worker=1,
+    #                   checkpoint_dir="checkpoints",
+    #                   )
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    # model_path = "checkpoints/final_model.pth"  # or any checkpoint file
-    # rewards = test_dqn(model_path, episodes=3, display=True)
-    # print(f"Test completed. Rewards: {rewards}")
+    model_path = "checkpoints/latest_checkpoint.pth"  # or any checkpoint file
+    rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
+    print(f"Test completed. Rewards: {rewards}")
     
     # print("Script completed. Uncomment the training or testing code above to run.")
