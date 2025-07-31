@@ -19,20 +19,6 @@ class AirTrafficControlEnv(gym.Env):
         self.max_ticks = max_ticks
         self.test = test
         self.record_data = record_data
-        
-        # Episode tracking for debugging and data recording
-        self.episode_stats = {
-            'total_reward': 0.0,
-            'max_reward': 175.0,  # Set to your target maximum
-            'ending_time': 0,
-            'planes_taken_off': 0,
-            'planes_landed': 0,
-            'planes_encountered': 10,
-            'go_arounds': 0,
-            'crashes': 0,
-            'processed_planes': 0,
-            'reward_efficiency': 0
-        }
 
         self.test_runways = {
         9: Runway((32.73713, -117.20433), (32.73, -117.175), 9),  # NW-SE runway
@@ -60,6 +46,20 @@ class AirTrafficControlEnv(gym.Env):
         self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=not self.test)
         self.current_tick = 0
 
+        # Episode tracking for debugging and data recording
+        self.episode_stats = {
+            'total_reward': 0.0,
+            'max_reward': self.compute_max_reward(self.fs),  # Set to your target maximum
+            'ending_time': 0,
+            'planes_taken_off': 0,
+            'planes_landed': 0,
+            'planes_encountered': 10,
+            'go_arounds': 0,
+            'crashes': 0,
+            'processed_planes': 0,
+            'reward_efficiency': 0
+        }
+
         # === Spaces ===
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self._state_dim(),), dtype=np.float32)
 
@@ -76,7 +76,7 @@ class AirTrafficControlEnv(gym.Env):
         # Reset episode stats
         self.episode_stats = {
             'total_reward': 0.0,
-            'max_reward': 0,
+            'max_reward': self.compute_max_reward(self.fs),
             'ending_time': 0,
             'planes_taken_off': 0,
             'planes_landed': 0,
@@ -163,13 +163,12 @@ class AirTrafficControlEnv(gym.Env):
         # Reward for successful landing orders
         if self.fs.landing_issued:
             self.fs.landing_issued = False
-            reward += 10.0
+            reward += 50.0
 
         # Reward for successful takeoff orders
         if self.fs.takeoff_issued:
             self.fs.takeoff_issued = False
             reward += 8.0
-            self.episode_stats['planes_taken_off'] += 1
 
         # Reward for successful go-around orders
         if self.fs.go_around_issued:
@@ -178,8 +177,14 @@ class AirTrafficControlEnv(gym.Env):
             self.episode_stats['go_arounds'] += 1
 
         for plane in self.fs.plane_manager.planes:
-            # Recording if the plane landed
+            # Count actual takeoffs
+            if plane.tookoff_this_tick and not plane.close_call:
+                plane.tookoff_this_tick = False
+                self.episode_stats['planes_taken_off'] += 1
+
+            # Count actual landings
             if plane.landed_this_tick and not plane.close_call:
+                plane.landed_this_tick = False
                 self.episode_stats['planes_landed'] += 1
 
             # Penalty for crashing
@@ -208,8 +213,8 @@ class AirTrafficControlEnv(gym.Env):
 
         self.episode_stats['total_reward'] += reward
 
-        # if self._check_done():
-        #     reward += 0.1 * (self.max_ticks - self.current_tick)  # Reward for finishing early
+        self.episode_stats['processed_planes'] = (self.episode_stats['planes_taken_off'] + self.episode_stats['planes_landed']) / self.episode_stats['planes_encountered']
+        self.episode_stats['reward_efficiency'] = self.episode_stats['total_reward'] / self.episode_stats['max_reward']
 
         return reward
 
@@ -243,3 +248,15 @@ class AirTrafficControlEnv(gym.Env):
             'command': command_mask,
             'plane_id': plane_id_mask
         }
+
+    def compute_max_reward(self, fs : FlightSimulator):
+        """Return the maximum possible reward in this case.
+        """
+
+        # assumes that there are 3 queued, 7 flying
+        #return len(self.fs.plane_manager.airport.queue) * 8 + (len(self.fs.plane_manager.planes) - len(self.fs.plane_manager.airport.queue)) * 50 + 75
+
+        takeoff_rewards = 8 * fs.planes_taking_off
+        landing_rewards = 50 * fs.landing_planes
+
+        return takeoff_rewards + landing_rewards + 75

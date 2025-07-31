@@ -13,7 +13,6 @@ import utils
 class FlightSimulator:
     """A simple flight simulator to demonstrate plane movement and display."""
 
-
     # Simulation speed. In real life, 1 tick = 1 second
     base_tps = 20
 
@@ -30,6 +29,8 @@ class FlightSimulator:
         # Start at tick 0
         self.current_tick = 0
 
+        self.landing_planes = 0
+        self.planes_taking_off = 0
         self.processed_planes = 0
 
         if airport is None:
@@ -57,6 +58,8 @@ class FlightSimulator:
                 self.add_plane_to_manager(plane_state)
                 self.processed_planes += 1
                 if plane_state['state'] == PlaneState.AIR:
+                    self.landing_planes += 1
+
                     self.add_command_by_callsign(
                         plane_state['callsign'], 
                         CommandType.REALIGN, 
@@ -64,8 +67,10 @@ class FlightSimulator:
                         argument=self.plane_manager.airport.runways[27] # HACK: runway 27 is always used for realignment in this example
                     )
                 elif plane_state['state'] == PlaneState.QUEUED:
-                    self.plane_manager.planes[-1].has_gone_around = True
+                    self.planes_taking_off += 1
 
+                    self.plane_manager.planes[-1].has_gone_around = True
+            
         self.invalid_command_executed = False  # Flag for invalid command execution
         self.go_around_issued = False  # Flag to track if the model has ordered a go-around
         self.takeoff_issued = False  # Flag to track if the model has ordered a takeoff
