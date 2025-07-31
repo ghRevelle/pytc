@@ -202,7 +202,7 @@ def load_model(policy_net, target_net, optimizer, filepath):
         return 0, None
 
 def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=128, gamma=0.99,
-              epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.9995, target_update=10,
+              epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
               num_workers=1, episodes_per_worker=1, checkpoint_dir="checkpoints"):  # Changed parameter name
 
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -211,7 +211,7 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
     memory = deque(maxlen=100000)  # Reduced from 100,000 to 20,000
     
     # Try to load from checkpoint
-    checkpoint_path = os.path.join(checkpoint_dir, "latest_checkpoint.pth")
+    checkpoint_path = os.path.join(checkpoint_dir, "mynah_m7_1250.pth")
     start_episode, loaded_epsilon = load_model(policy_net, target_net, optimizer, checkpoint_path)
     epsilon = loaded_epsilon if loaded_epsilon is not None else epsilon_start
 
@@ -294,7 +294,7 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
 
 
 def train_dqn_with_checkpoints(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
-                              epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.9995, target_update=10,
+                              epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
                               checkpoint_dir="checkpoints"):
 
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -399,7 +399,7 @@ def train_dqn_with_checkpoints(env, policy_net, target_net, episodes=1000, batch
 
 
 def train_dqn(env, policy_net, target_net, episodes=1000, batch_size=64, gamma=0.99,
-              epsilon_start=1.0, epsilon_end=0.1, epsilon_decay=0.995, target_update=10):
+              epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10):
 
     optimizer = optim.Adam(policy_net.parameters(), lr=1e-4)
     memory = deque(maxlen=10000)
@@ -538,7 +538,7 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     print(f"\nRunning {episodes} test episodes...")
     
     for episode in range(episodes):
-        state, _ = env.reset()
+        state, info = env.reset()
         total_reward = 0
         done = False
         step_count = 0
@@ -546,13 +546,25 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
         print(f"\nEpisode {episode + 1}/{episodes}")
         
         while not done:
-            # Use the trained policy (no epsilon-greedy exploration)
-            # Same pattern as training functions
+            # Get action mask for valid actions
+            action_mask = info.get('action_mask', {'command': np.ones(4, dtype=bool), 
+                                                 'plane_id': np.ones(10, dtype=bool)})
+            
+            # Use the trained policy (no epsilon-greedy exploration) with action masking
             with torch.no_grad():
                 state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
                 command_logits, plane_logits = policy_net(state_tensor)
-                command = torch.argmax(command_logits, dim=1).item()
-                plane_id = torch.argmax(plane_logits, dim=1).item()
+                
+                # Apply action masking to ensure only valid actions are selected
+                command_logits_masked = command_logits.clone()
+                plane_logits_masked = plane_logits.clone()
+                
+                # Set invalid actions to very negative values
+                command_logits_masked[0, ~action_mask['command']] = -float('inf')
+                plane_logits_masked[0, ~action_mask['plane_id']] = -float('inf')
+                
+                command = torch.argmax(command_logits_masked, dim=1).item()
+                plane_id = torch.argmax(plane_logits_masked, dim=1).item()
                 action = {'command': command, 'plane_id': plane_id}
             
             # Take the action - same as training functions
@@ -618,15 +630,15 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      batch_size=256,
-                      num_workers=1,
-                      episodes_per_worker=1,
-                      checkpoint_dir="checkpoints",
-                      )
+    # train_dqn_parallel(env, policy_net, target_net, episodes=1500, 
+    #                   batch_size=256,
+    #                   num_workers=1,
+    #                   episodes_per_worker=1,
+    #                   checkpoint_dir="checkpoints",
+    #                   )
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    # model_path = "checkpoints/latest_checkpoint.pth"  # or any checkpoint file
-    # rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
-    # print(f"Test completed. Rewards: {rewards}")
+    model_path = "checkpoints/mynah_m7_final.pth"  # or any checkpoint file
+    rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
+    print(f"Test completed. Rewards: {rewards}")
