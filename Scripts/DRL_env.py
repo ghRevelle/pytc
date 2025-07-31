@@ -13,11 +13,26 @@ from rolling_initial_state_20250301 import *
 class AirTrafficControlEnv(gym.Env):
     """Custom Gymnasium environment for tower control using simulator."""
 
-    def __init__(self, max_planes=10, max_ticks=2000, test=False):
+    def __init__(self, max_planes=10, max_ticks=2000, test=False, record_data=False):
         super().__init__()
         self.max_planes = max_planes
         self.max_ticks = max_ticks
         self.test = test
+        self.record_data = record_data
+        
+        # Episode tracking for debugging and data recording
+        self.episode_stats = {
+            'total_reward': 0.0,
+            'max_reward': 175.0,  # Set to your target maximum
+            'ending_time': 0,
+            'planes_taken_off': 0,
+            'planes_landed': 0,
+            'planes_encountered': 10,
+            'go_arounds': 0,
+            'crashes': 0,
+            'processed_planes': 0,
+            'reward_efficiency': 0
+        }
 
         self.test_runways = {
         9: Runway((32.73713, -117.20433), (32.73, -117.175), 9),  # NW-SE runway
@@ -57,6 +72,20 @@ class AirTrafficControlEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.current_tick = 0
+        
+        # Reset episode stats
+        self.episode_stats = {
+            'total_reward': 0.0,
+            'max_reward': 0,
+            'ending_time': 0,
+            'planes_taken_off': 0,
+            'planes_landed': 0,
+            'planes_encountered': 0,
+            'go_arounds': 0,
+            'crashes': 0,
+            'processed_planes': 0,
+            'reward_efficiency': 0
+        }
 
         # Select initial state from train or test set
         initial_states = self.test_initial_states if self.test else self.train_initial_states
@@ -66,6 +95,9 @@ class AirTrafficControlEnv(gym.Env):
         else:
             self.rolling_initial_state = []
         self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=not self.test)
+
+        # Set total planes encountered in this episode
+        self.episode_stats['planes_encountered'] = 10
 
         # Create starting state
         observation = self._get_obs()
@@ -90,6 +122,11 @@ class AirTrafficControlEnv(gym.Env):
         reward = self._compute_reward()
         done = self._check_done()
         info = {}
+        
+        # Add episode stats to info when episode ends
+        if done:
+            self.episode_stats['ending_time'] = self.current_tick
+            info['episode_stats'] = self.episode_stats.copy()
 
         self.fs.no_command_executed = False  # Reset flag for next step
         return obs, reward, done, False, info
@@ -118,58 +155,56 @@ class AirTrafficControlEnv(gym.Env):
     def _compute_reward(self):
         reward = 0.0
 
-        for plane in self.fs.plane_manager.planes:
-            # Reward for successful landings
-            if plane.landed_this_tick and not plane.close_call:
-                plane.landed_this_tick = False
-                reward += 200.0
+        # Reward for successful landing orders
+        if self.fs.landing_issued:
+            self.fs.landing_issued = False
+            reward += 10.0
 
-            # Reward for successful takeoff
-            if plane.tookoff_this_tick and not plane.close_call:
-                plane.tookoff_this_tick = False
-                reward += 100.0
+        # Reward for successful takeoff orders
+        if self.fs.takeoff_issued:
+            self.fs.takeoff_issued = False
+            reward += 8.0
+            self.episode_stats['planes_taken_off'] += 1
+
+        # Reward for successful go-around orders
+        if self.fs.go_around_issued:
+            self.fs.go_around_issued = False
+            reward += 1.0
+            self.episode_stats['go_arounds'] += 1
+
+        for plane in self.fs.plane_manager.planes:
+            # Recording if the plane landed
+            if plane.landed_this_tick:
+                self.episode_stats['planes_landed'] += 1
 
             # Penalty for crashing
             if plane.crashed_this_tick and not plane.close_call:
                 plane.close_call = True
                 plane.crashed_this_tick = False
-                reward -= 500.0
+                reward -= 25.0
+                self.episode_stats['crashes'] += 1
                 #print("Close call punishment")
 
         # Penalty for invalid or illegal commands
         if self.fs.invalid_command_executed:
-            reward -= 0.5
             self.fs.invalid_command_executed = False
-
-        # Reward for valid command execution
-        # This is to encourage the DRL to issue valid commands
-        # if self.fs.valid_command_executed:
-        #     reward += 50.0
-        #     self.fs.valid_command_executed = False
-
-        if self.fs.takeoff_issued:
-            reward += 200.0
-            self.fs.takeoff_issued = False
-
-        if self.fs.landing_issued:
-            reward += 200.0
-            self.fs.landing_issued = False
-
-        if self.fs.go_around_issued:
-            reward += 5.0
-            self.fs.go_around_issued = False
+            reward -= 0.1
 
         if self.fs.no_command_executed:
-            reward += 0.1  # Reward for deliberately not issuing a command
+            reward += 0.05  # Reward for deliberately not issuing a command
             self.fs.no_command_executed = False
 
         # Small time pressure penalty per plane still in the queue
+        queued_planes = 0
         for plane in self.fs.plane_manager.planes:
             if plane.state == PlaneState.QUEUED:
-                reward -= 0.05
+                reward -= 0.01
+                queued_planes += 1
 
-        if self._check_done():
-            reward += 0.1 * (self.max_ticks - self.current_tick)  # Reward for finishing early
+        self.episode_stats['total_reward'] += reward
+
+        # if self._check_done():
+        #     reward += 0.1 * (self.max_ticks - self.current_tick)  # Reward for finishing early
 
         return reward
 

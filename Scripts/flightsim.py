@@ -67,8 +67,8 @@ class FlightSimulator:
                     self.plane_manager.planes[-1].has_gone_around = True
 
         self.invalid_command_executed = False  # Flag for invalid command execution
-        #self.valid_command_executed = False  # Flag for valid command execution
-        self.go_around_issued = False  # Flag to track if a go-around command was issued
+        self.go_around_issued = False  # Flag to track if the model has ordered a go-around
+        self.takeoff_issued = False  # Flag to track if the model has ordered a takeoff
         self.landing_issued = False # Flag to track if the model has ordered a landing
         self.takeoff_issued = False  # Flag to track if the model has ordered a takeoff
         self.no_command_executed = False  # Flag for deliberate no command execution
@@ -183,7 +183,6 @@ class FlightSimulator:
                     return
             
         self.invalid_command_executed = False  # Reset invalid command flag for this tick
-        #self.valid_command_executed = False  # Reset valid command flag for this tick
         for command in self.command_queue:  # Process all commands in the queue
             if self.current_tick == command.last_update:
                 self.check_command_validity(command)  # Check if the command is valid
@@ -196,14 +195,13 @@ class FlightSimulator:
                         for plane in self.plane_manager.planes:
                             if plane.id == command.target_id:
                                 if command.command_type == CommandType.LINE_UP_AND_WAIT:
+                                    self.takeoff_issued = True
                                     plane.has_taken_off = True
                                     self.takeoff_issued = True
                                 elif command.command_type == CommandType.CLEARED_TO_LAND:
                                     self.landing_issued = True
                                     plane.has_started_landing = True
                                 break
-                    # if 1 <= command.command_type.value <= 2:  # Only reward for valid DRL-issued commands (Enums 1 to 2)
-                    #     self.valid_command_executed = True
                     if command.command_type == CommandType.GO_AROUND:
                         self.go_around_issued = True
         
