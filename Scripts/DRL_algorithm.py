@@ -20,7 +20,7 @@ import os
 test = False
 
 class AirTrafficControlDQN(nn.Module):
-    def __init__(self, input_dim=70, n_commands=4, n_planes=10):
+    def __init__(self, input_dim=30, n_commands=4, n_planes=10):  # Changed from 70 to 20
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, 128),
@@ -581,3 +581,8 @@ if __name__ == "__main__":
     print(f"Test completed. Rewards: {rewards}")
     
     # print("Script completed. Uncomment the training or testing code above to run.")
+    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
+                      batch_size=256,
+                      num_workers=1,
+                      episodes_per_worker=1,
+                      checkpoint_dir="checkpoints")
