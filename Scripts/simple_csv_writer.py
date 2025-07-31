@@ -44,7 +44,7 @@ def write_episode_to_csv(episode_num, env, total_reward, ending_time, filename="
         'planes_landed': stats.get('planes_landed', 0),
         'planes_encountered': stats.get('planes_encountered', 10),
         'go_arounds': stats.get('go_arounds', 0),
-        'close_calls': stats.get('close_calls', 0),
+        'crashes': stats.get('crashes', 0),
         'processed_planes': stats.get('processed_planes', 0),
         'reward_efficiency': stats.get('reward_efficiency', 0)
     }
