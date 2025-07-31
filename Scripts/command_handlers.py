@@ -285,6 +285,7 @@ class LandingCommandHandler(CommandHandler):
 		
 		plane.hdg = target_runway.hdg # Ensure the plane is aligned to the runway heading
 
+		plane.state = PlaneState.LANDING
 		plane.has_gone_around = True # Prevent further go-arounds
 
 		# Initialize landing parameters if needed
@@ -375,7 +376,6 @@ class LandingCommandHandler(CommandHandler):
 	def _handle_landing_complete(self, plane: Plane, command: Command, tick: int) -> None:
 		"""Handle landing completion."""
 
-		plane.state = PlaneState.LANDING
 		plane.landed_this_tick = True
 
 		plane.acc_xy = 0
