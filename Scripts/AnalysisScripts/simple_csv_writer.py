@@ -7,7 +7,7 @@ import pandas as pd
 import os
 from datetime import datetime
 
-def write_episode_to_csv(episode_num, env, total_reward, ending_time, filename="testing_data.csv"):
+def write_episode_to_csv(episode_num, env, total_reward, ending_time, filename="../Data/testing_data.csv"):
     """
     Write episode statistics directly to CSV file.
     
@@ -37,16 +37,16 @@ def write_episode_to_csv(episode_num, env, total_reward, ending_time, filename="
     # Collect the data you requested
     data = {
         'episode': episode_num,
-        'total_reward': total_reward,
-        'max_reward': 175,  # Your target
+        'total_reward': stats['total_reward'],
+        'max_reward': stats['max_reward'],  # Your target
         'ending_time': ending_time,
-        'planes_taken_off': stats.get('planes_taken_off', 0),
-        'planes_landed': stats.get('planes_landed', 0),
-        'planes_encountered': stats.get('planes_encountered', 10),
-        'go_arounds': stats.get('go_arounds', 0),
-        'crashes': stats.get('crashes', 0),
-        'processed_planes': stats.get('processed_planes', 0),
-        'reward_efficiency': stats.get('reward_efficiency', 0)
+        'planes_taken_off': stats['planes_taken_off'],
+        'planes_landed': stats['planes_landed'],
+        'planes_encountered': stats['planes_encountered'],
+        'go_arounds': stats['go_arounds'],
+        'crashes': stats['crashes'],
+        'processed_planes': stats['processed_planes'],
+        'reward_efficiency': stats['reward_efficiency']
     }
     df = pd.DataFrame(data)
     

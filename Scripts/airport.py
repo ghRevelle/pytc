@@ -80,7 +80,10 @@ class Airport:
         self.queue = [item for item in self.queue if item[0] != plane_id]
 
     def get_top_of_queue(self):
-        return self.queue[0][0]
+        if len(self.queue) > 0:
+            return self.queue[0][0]
+        else:
+            return None  # Return None when queue is empty
 
     def pop_top_of_queue(self):
         return self.queue.pop(0)
