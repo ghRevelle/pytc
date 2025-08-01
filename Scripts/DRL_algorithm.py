@@ -694,7 +694,7 @@ if __name__ == "__main__":
                       checkpoint_file="latest_checkpoint.pth",
                       epsilon_start=1.0,
                       epsilon_end=0.01,
-                       epsilon_decay=0.9995
+                       epsilon_decay=0.995
                       )
     
     # Example: Test a trained model

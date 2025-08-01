@@ -277,16 +277,10 @@ class AirTrafficControlEnv(gym.Env):
                         top_of_queue is not None and 
                         plane.id == top_of_queue):
                         command_plane_mask[1, plane_id] = True
-                    
-                    # CLEARED_TO_LAND command (2) - only for WAITING_FOR_LANDING planes ready to land
-                    if (plane.state == PlaneState.WAITING_FOR_LANDING and 
-                        not plane.has_started_landing):
-                        command_plane_mask[2, plane_id] = True
-                    
-                    # GO_AROUND command (3) - only for WAITING_FOR_LANDING planes that haven't gone around
-                    if (plane.state == PlaneState.WAITING_FOR_LANDING and 
-                        not plane.has_gone_around):
-                        command_plane_mask[3, plane_id] = True
+
+            # lets the model access cleared_for_landing and go_around so that it can learn
+            command_plane_mask[2, plane_id] = True
+            command_plane_mask[3, plane_id] = True
         
         # Ensure at least one plane can be targeted for NONE command
         if not np.any(plane_id_mask):
