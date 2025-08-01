@@ -70,6 +70,21 @@ class PlaneManager:
     def get_callsign(self, slot_id: int) -> str:
         return self.id_to_callsign[slot_id]
     
+    # get a plane object by its id
+    def get_plane_by_id(self, plane_id: int):
+        """Get a plane object by its ID.
+        
+        Args:
+            plane_id (int): The ID of the plane to retrieve
+            
+        Returns:
+            Plane: The plane object with the given ID, or None if not found
+        """
+        for plane in self.planes:
+            if plane.id == plane_id:
+                return plane
+        return None
+    
     # show list of ids
     def show_ids(self):
         return self.id_to_callsign

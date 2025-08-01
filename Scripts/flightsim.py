@@ -31,6 +31,8 @@ class FlightSimulator:
         self.current_tick = 0
 
         self.processed_planes = 0
+        self.landing_planes = 0
+        self.planes_taking_off = 0
 
         if airport is None:
             raise TypeError("Missing Airport Layout")
@@ -63,8 +65,6 @@ class FlightSimulator:
                         last_update=1, 
                         argument=self.plane_manager.airport.runways[27] # HACK: runway 27 is always used for realignment in this example
                     )
-                elif plane_state['state'] == PlaneState.QUEUED:
-                    self.plane_manager.planes[-1].has_gone_around = True
 
         self.invalid_command_executed = False  # Flag for invalid command execution
         self.go_around_issued = False  # Flag to track if the model has ordered a go-around
@@ -265,14 +265,17 @@ class FlightSimulator:
                 self.add_plane_to_manager(plane_state)
                 self.processed_planes += 1
                 if plane_state['state'] == PlaneState.AIR:
+                    self.planes_taking_off += 1
+
                     self.add_command_by_callsign(
                         plane_state['callsign'], 
                         CommandType.REALIGN, 
                         last_update=self.current_tick + 1, 
                         argument=self.plane_manager.airport.runways[27] # HACK: runway 27 is always used for realignment in this example
                     )
+                
                 elif plane_state['state'] == PlaneState.QUEUED:
-                    self.plane_manager.planes[-1].has_gone_around = True
+                    self.landing_planes += 1
 
         # Check for end of simulation
         if self.check_end_state():

@@ -1,4 +1,0 @@
-episode,total_reward,max_reward,ending_time,planes_taken_off,planes_landed,planes_encountered,go_arounds,close_calls,processed_planes,reward_efficiency
-0,-156.11999999999702,175,2000,1,0,10,1,0,0,0
-1,-219.09000000000404,175,2000,0,0,10,0,0,0,0
-2,-139.77000000000234,175,2000,0,0,10,2,0,0,0
