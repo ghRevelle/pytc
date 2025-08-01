@@ -215,3 +215,6 @@ src/
 checkpoints/latest_checkpoint.pth
 checkpoints/final_model.pth
 checkpoints/checkpoint_episode_*.pth
+
+# I HATE MACOS
+.DS_Store
