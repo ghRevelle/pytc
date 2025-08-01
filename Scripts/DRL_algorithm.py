@@ -642,6 +642,6 @@ if __name__ == "__main__":
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    # model_path = "checkpoints/latest_checkpoint.pth"  # or any checkpoint file
-    # rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
-    # print(f"Test completed. Rewards: {rewards}")
+    model_path = "/Users/salar/Documents/RISE Python/pytc/checkpoints/mynah_m10_final.pth"  # Use absolute path
+    rewards = test_dqn(model_path, episodes=10, display=True, recordData=True)
+    print(f"Test completed. Rewards: {rewards}")

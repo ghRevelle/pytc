@@ -130,6 +130,8 @@ class AirTrafficControlEnv(gym.Env):
         # Add episode stats to info when episode ends
         if done:
             self.episode_stats['ending_time'] = self.current_tick
+            self.episode_stats['total_reward'] = self.compute_external_reward(self.episode_stats)
+            self.episode_stats['reward_efficiency'] = self.episode_stats['total_reward'] / self.episode_stats['max_reward']
             info['episode_stats'] = self.episode_stats.copy()
 
         self.fs.no_command_executed = False  # Reset flag for next step
@@ -205,10 +207,8 @@ class AirTrafficControlEnv(gym.Env):
                 reward -= 0.01
                 queued_planes += 1
 
-        self.episode_stats['total_reward'] += reward
-
-        # if self._check_done():
-        #     reward += 0.1 * (self.max_ticks - self.current_tick)  # Reward for finishing early
+        self.episode_stats['max_reward'] = self.compute_max_reward(self.fs)
+        self.episode_stats['processed_planes'] = (self.episode_stats['planes_landed'] + self.episode_stats['planes_taken_off']) / self.episode_stats['planes_encountered']
 
         return reward
 
@@ -240,5 +240,29 @@ class AirTrafficControlEnv(gym.Env):
         
         return {
             'command': command_mask,
-            'plane_id': plane_id_mask
+            'plane_id': plane_id_mask,
+            'command_plane_combinations': command_plane_mask
         }
+    
+    def compute_external_reward(self, episode_stats):
+        """Return the external reward in this case.
+        """
+
+        takeoff_rewards = 25 * episode_stats['planes_taken_off']
+        landing_rewards = 50 * episode_stats['planes_landed']
+        time_rewards = 0.05 * (1500 - episode_stats['ending_time'])
+        crash_punishments = -30 * episode_stats['crashes']
+
+        return takeoff_rewards + landing_rewards + time_rewards - crash_punishments
+
+    def compute_max_reward(self, fs : FlightSimulator):
+        """Return the maximum possible reward in this case.
+        """
+
+        # assumes that there are 3 queued, 7 flying
+        #return len(self.fs.plane_manager.airport.queue) * 8 + (len(self.fs.plane_manager.planes) - len(self.fs.plane_manager.airport.queue)) * 50 + 75
+
+        takeoff_rewards = 25 * fs.planes_taking_off
+        landing_rewards = 50 * fs.landing_planes
+
+        return takeoff_rewards + landing_rewards + 75
