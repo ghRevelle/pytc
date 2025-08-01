@@ -302,8 +302,8 @@ class AirTrafficControlEnv(gym.Env):
 
         takeoff_rewards = 25 * episode_stats['planes_taken_off']
         landing_rewards = 50 * episode_stats['planes_landed']
-        time_rewards = 0.05 * (1500 - episode_stats['ending_time'])
-        crash_punishments = -30 * episode_stats['crashes']
+        time_rewards = 0.05 * (2000 - episode_stats['ending_time'])
+        crash_punishments = 30 * episode_stats['crashes']
 
         return takeoff_rewards + landing_rewards + time_rewards - crash_punishments
 
