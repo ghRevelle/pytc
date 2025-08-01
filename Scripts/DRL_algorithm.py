@@ -17,10 +17,10 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import os
 
-test = False
+test = True
 
 class AirTrafficControlDQN(nn.Module):
-    def __init__(self, input_dim=60, n_commands=4, n_planes=10):
+    def __init__(self, input_dim=31, n_commands=4, n_planes=10):  # Updated to 31: 30 plane features + 1 tick
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, 128),
@@ -101,8 +101,8 @@ def collect_experiences(env_seed, policy_net_state, epsilon, num_episodes=1):
     # Load the policy network state
     policy_net = AirTrafficControlDQN(
         input_dim=env._state_dim(),
-        n_commands=env.action_space['command'].n,
-        n_planes=env.action_space['plane_id'].n
+        n_commands=4,  # Fixed: Use direct value instead of action_space access
+        n_planes=10   # Fixed: Use direct value instead of action_space access
     ).to(device)  # ADD THIS!
     
     policy_net.load_state_dict(policy_net_state)
@@ -123,19 +123,28 @@ def collect_experiences(env_seed, policy_net_state, epsilon, num_episodes=1):
                                                  'plane_id': np.ones(10, dtype=bool)})
             
             if random.random() < epsilon:
-                # Masked random action - only sample from valid actions
-                valid_commands = np.where(action_mask['command'])[0]
-                valid_planes = np.where(action_mask['plane_id'])[0]
+                # Masked random action - use command-plane combination masking for better exploration
+                combo_mask = action_mask.get('command_plane_combinations', np.ones((4, 10), dtype=bool))
                 
-                if len(valid_commands) == 0:
-                    command = 0  # Default to NONE command
-                else:
-                    command = np.random.choice(valid_commands)
+                # Find all valid command-plane combinations
+                valid_combinations = []
+                for cmd in range(4):
+                    if action_mask['command'][cmd]:
+                        valid_planes_for_cmd = np.where(combo_mask[cmd, :])[0]
+                        for plane in valid_planes_for_cmd:
+                            if action_mask['plane_id'][plane]:
+                                valid_combinations.append((cmd, plane))
+                
+                # If no valid combinations, fall back to basic masking
+                if len(valid_combinations) == 0:
+                    valid_commands = np.where(action_mask['command'])[0]
+                    valid_planes = np.where(action_mask['plane_id'])[0]
                     
-                if len(valid_planes) == 0:
-                    plane_id = 0  # Default to plane 0 (though this shouldn't happen)
+                    command = np.random.choice(valid_commands) if len(valid_commands) > 0 else 0
+                    plane_id = np.random.choice(valid_planes) if len(valid_planes) > 0 else 0
                 else:
-                    plane_id = np.random.choice(valid_planes)
+                    # Sample from valid combinations
+                    command, plane_id = random.choice(valid_combinations)
                     
                 action = {'command': command, 'plane_id': plane_id}
             else:
@@ -145,16 +154,31 @@ def collect_experiences(env_seed, policy_net_state, epsilon, num_episodes=1):
                     command_logits, plane_logits = policy_net(state_tensor)
                     #print(f"Output tensor device: {command_logits.device}")  # Should show 'cuda:0'
                     
-                    # Apply action masking
+                    # Apply command-plane combination masking
                     command_logits_masked = command_logits.clone()
                     plane_logits_masked = plane_logits.clone()
+                    
+                    # Get the 2D mask for valid command-plane combinations
+                    combo_mask = action_mask.get('command_plane_combinations', np.ones((4, 10), dtype=bool))
                     
                     # Set invalid actions to very negative values
                     command_logits_masked[0, ~action_mask['command']] = -float('inf')
                     plane_logits_masked[0, ~action_mask['plane_id']] = -float('inf')
                     
+                    # Select command first
                     command = torch.argmax(command_logits_masked, dim=1).item()
-                    plane_id = torch.argmax(plane_logits_masked, dim=1).item()
+                    
+                    # Then select plane based on what's valid for that specific command
+                    valid_planes_for_command = combo_mask[command, :]
+                    if np.any(valid_planes_for_command):
+                        # Mask plane logits to only valid planes for this command
+                        plane_logits_for_command = plane_logits_masked.clone()
+                        plane_logits_for_command[0, ~valid_planes_for_command] = -float('inf')
+                        plane_id = torch.argmax(plane_logits_for_command, dim=1).item()
+                    else:
+                        # Fallback to any valid plane if no command-specific plane is available
+                        plane_id = torch.argmax(plane_logits_masked, dim=1).item()
+                    
                     action = {'command': command, 'plane_id': plane_id}
 
             next_state, reward, done, _, info = env.step(action)
@@ -287,6 +311,8 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
             episode_time = time.time() - start_time
             print(f"Episode {episode}, Avg Reward: {avg_reward:.2f}, "
                   f"Time: {episode_time:.2f}s, Epsilon: {epsilon:.3f}")
+            
+        # write_episode_to_csv(episode, env, total_episode_reward, 0, filename='testing_data.csv')
 
     # Save final model
     final_path = os.path.join(checkpoint_dir, "final_model.pth")
@@ -503,7 +529,7 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     record_data = recordData
     
     # Initialize environment - same pattern as training functions
-    env = AirTrafficControlEnv(test=display, record_data=record_data)  # Set test=True for evaluation mode
+    env = AirTrafficControlEnv(test=test, record_data=record_data, no_display=not display)  # Pass display control to environment
 
     # Set display mode - FlightSimulator handles all display initialization
     env.fs.no_display = not display
@@ -512,14 +538,14 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     
     policy_net = AirTrafficControlDQN(
         input_dim=env._state_dim(), 
-        n_commands=env.action_space['command'].n, 
-        n_planes=env.action_space['plane_id'].n
+        n_commands=4,  # Fixed: Use direct value instead of action_space access
+        n_planes=10    # Fixed: Use direct value instead of action_space access
     ).to(device)
     
     # Load the trained model
     try:
         checkpoint = torch.load(model_filepath, map_location=device)
-        policy_net.load_state_dict(policy_net.state_dict())#checkpoint['policy_net_state_dict'])
+        policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
         print(f"Model loaded successfully from {model_filepath}")
         print(f"Model was trained for {checkpoint['episode']} episodes")
         print(f"Final epsilon value: {checkpoint['epsilon']:.4f}")
@@ -560,12 +586,30 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
                 command_logits_masked = command_logits.clone()
                 plane_logits_masked = plane_logits.clone()
                 
+                # Get the 2D mask for valid command-plane combinations
+                combo_mask = action_mask.get('command_plane_combinations', np.ones((4, 10), dtype=bool))
+                
+                # Apply masking: for each command, only allow valid plane targets
                 # Set invalid actions to very negative values
                 command_logits_masked[0, ~action_mask['command']] = -float('inf')
                 plane_logits_masked[0, ~action_mask['plane_id']] = -float('inf')
                 
+                # Select command first
                 command = torch.argmax(command_logits_masked, dim=1).item()
-                plane_id = torch.argmax(plane_logits_masked, dim=1).item()
+                command = int(command)
+                
+                # Then select plane based on what's valid for that specific command
+                valid_planes_for_command = combo_mask[command, :]
+                if np.any(valid_planes_for_command):
+                    # Mask plane logits to only valid planes for this command
+                    plane_logits_for_command = plane_logits_masked.clone()
+                    plane_logits_for_command[0, ~valid_planes_for_command] = -float('inf')
+                    plane_id = torch.argmax(plane_logits_for_command, dim=1).item()
+                else:
+                    # Fallback to any valid plane if no command-specific plane is available
+                    plane_id = torch.argmax(plane_logits_masked, dim=1).item()
+                
+                plane_id = int(plane_id)
                 action = {'command': command, 'plane_id': plane_id}
             
             # Take the action - same as training functions
@@ -592,11 +636,24 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
             
             state = next_state
             
-            if step_count % 10 == 0:
-                print(f"  Step {step_count}: Command={command}, Plane={plane_id}, Reward={reward:.2f}")
+            # Debug: Track command selection
+            if step_count % 50 == 0:
+                command_names = {0: "NONE", 1: "LINE_UP_AND_WAIT", 2: "CLEARED_TO_LAND", 3: "GO_AROUND"}
+                valid_planes = np.where(action_mask['plane_id'])[0]
+                print(f"  Step {step_count}: {command_names[command]} → Plane {plane_id}")
+                print(f"    Valid planes: {valid_planes}")
+                print(f"    Reward: {reward:.2f}")
+                print(f"    Planes in sim: {len(env.fs.plane_manager.planes)}")
+                
+                # Quick state check
+                plane_states = {}
+                for plane in env.fs.plane_manager.planes:
+                    state_name = plane.state.name
+                    plane_states[state_name] = plane_states.get(state_name, 0) + 1
+                print(f"    Plane states: {plane_states}")
         
         if recordData:
-            write_episode_to_csv(episode, env, episode_reward, step_count)
+            write_episode_to_csv(episode, env, episode_reward, step_count, filename='m10-final_data.csv')
 
         episode_rewards.append(episode_reward)
         print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {episode_reward:.2f}")
@@ -629,16 +686,16 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      batch_size=64,
-                      num_workers=1,
-                      episodes_per_worker=1,
-                      checkpoint_dir="checkpoints",
-                      checkpoint_file="checkpoint_episode_650_dashan.pth",
-                      epsilon_start=0.0,
-                      epsilon_end=0.0,
-                    #   epsilon_decay=0
-                      )
+    # train_dqn_parallel(env, policy_net, target_net, episodes=2000, 
+    #                   batch_size=64,
+    #                   num_workers=1,
+    #                   episodes_per_worker=1,
+    #                   checkpoint_dir="checkpoints",
+    #                   checkpoint_file="latest_checkpoint.pth",
+    #                   epsilon_start=1.0,
+    #                   epsilon_end=0.01,
+    #                    epsilon_decay=0.995
+    #                   )
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display

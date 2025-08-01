@@ -3,11 +3,10 @@ Simple CSV writer that adds just one function call to your training loop.
 No external classes, no complex setup; just write data directly to CSV.
 """
 
-import pandas as pd
+import csv
 import os
-from datetime import datetime
 
-def write_episode_to_csv(episode_num, env, total_reward, ending_time, filename="testing_data.csv"):
+def write_episode_to_csv(episode_num, env, total_reward, ending_time, filename="m9-3350_data.csv"):
     """
     Write episode statistics directly to CSV file.
     
@@ -34,24 +33,36 @@ def write_episode_to_csv(episode_num, env, total_reward, ending_time, filename="
     # Extract stats from environment
     stats = env.episode_stats if hasattr(env, 'episode_stats') else {}
     
-    # Collect the data you requested
-    data = {
-        'episode': episode_num,
-        'total_reward': total_reward,
-        'max_reward': 175,  # Your target
-        'ending_time': ending_time,
-        'planes_taken_off': stats.get('planes_taken_off', 0),
-        'planes_landed': stats.get('planes_landed', 0),
-        'planes_encountered': stats.get('planes_encountered', 10),
-        'go_arounds': stats.get('go_arounds', 0),
-        'crashes': stats.get('crashes', 0),
-        'processed_planes': stats.get('processed_planes', 0),
-        'reward_efficiency': stats.get('reward_efficiency', 0)
-    }
-    df = pd.DataFrame(data)
+    # Define headers
+    headers = ['episode', 'total_reward', 'max_reward', 'end_time', 'planes_taken_off', 
+               'planes_landed', 'planes_encountered', 'go_arounds', 'crashes', 
+               'processed_planes', 'reward_efficiency']
     
     # Check if file exists to decide if we need to write headers
     file_exists = os.path.exists(filename)
     
     # Write to CSV
-    df.to_csv(filename, mode='a', header=not file_exists, index=False)
+    with open(filename, 'a', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        
+        # Write headers if file is new
+        if not file_exists:
+            # Add comment header
+            writer.writerow(['# episode, total_reward, max_reward, end_time, planes_taken_off, planes_landed, planes_encountered, go_arounds, crashes, processed_planes, reward_efficiency'])
+            writer.writerow(headers)
+        
+        # Write the data row directly from stats
+        row = [
+            episode_num,
+            stats['total_reward'],
+            stats['max_reward'],
+            ending_time,
+            stats['planes_taken_off'],
+            stats['planes_landed'],
+            stats['planes_encountered'],
+            stats['go_arounds'],
+            stats['crashes'],
+            stats['processed_planes'],
+            stats['reward_efficiency']
+        ]
+        writer.writerow(row)
