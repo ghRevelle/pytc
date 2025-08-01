@@ -520,7 +520,7 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
     record_data = recordData
     
     # Initialize environment - same pattern as training functions
-    env = AirTrafficControlEnv(test=test, record_data=record_data)  # Use test=True to match training configuration
+    env = AirTrafficControlEnv(test=test, record_data=record_data, no_display=not display)  # Pass display control to environment
 
     # Set display mode - FlightSimulator handles all display initialization
     env.fs.no_display = not display
@@ -644,7 +644,7 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
                 print(f"    Plane states: {plane_states}")
         
         if recordData:
-            write_episode_to_csv(episode, env, episode_reward, step_count)
+            write_episode_to_csv(episode, env, episode_reward, step_count, filename='m9-3350_data.csv')
 
         episode_rewards.append(episode_reward)
         print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {episode_reward:.2f}")
@@ -690,6 +690,6 @@ if __name__ == "__main__":
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    model_path = "../checkpoints/mynah_m9_3350.pth"  # or any checkpoint file
-    rewards = test_dqn(model_path, episodes=3, display=True, recordData=True)
+    model_path = "/Users/salar/Documents/RISE Python/pytc/checkpoints/mynah_m9_3350.pth"  # Use absolute path
+    rewards = test_dqn(model_path, episodes=50, display=True, recordData=True)
     print(f"Test completed. Rewards: {rewards}")

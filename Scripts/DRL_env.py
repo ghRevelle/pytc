@@ -13,12 +13,14 @@ from rolling_initial_state_20250301 import *
 class AirTrafficControlEnv(gym.Env):
     """Custom Gymnasium environment for tower control using simulator."""
 
-    def __init__(self, max_planes=10, max_ticks=2000, test=False, record_data=False):
+    def __init__(self, max_planes=10, max_ticks=2000, test=False, record_data=False, no_display=None):
         super().__init__()
         self.max_planes = max_planes
         self.max_ticks = max_ticks
         self.test = test
         self.record_data = record_data
+        # If no_display is not specified, use the opposite of test (test=True shows display by default)
+        self.no_display = no_display if no_display is not None else not test
 
         self.test_runways = {
         9: Runway((32.73713, -117.20433), (32.73, -117.175), 9),  # NW-SE runway
@@ -80,7 +82,7 @@ class AirTrafficControlEnv(gym.Env):
             self.rolling_initial_state = random.choice(initial_states)
         else:
             self.rolling_initial_state = []
-        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=not self.test)
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=self.no_display)
         
         # Reset episode stats
         self.episode_stats = {
@@ -165,13 +167,11 @@ class AirTrafficControlEnv(gym.Env):
         if self.fs.landing_issued:
             self.fs.landing_issued = False
             reward += 50.0  # RESTORED to original training value
-            self.episode_stats['planes_landed'] += 1
 
         # Reward for successful takeoff orders
         if self.fs.takeoff_issued:
             self.fs.takeoff_issued = False
             reward += 25.0  # RESTORED to original training value
-            self.episode_stats['planes_taken_off'] += 1
 
         # Reward for successful go-around orders
         if self.fs.go_around_issued:
@@ -182,7 +182,12 @@ class AirTrafficControlEnv(gym.Env):
         for plane in self.fs.plane_manager.planes:
             # Recording if the plane landed
             if plane.landed_this_tick and not plane.close_call:
+                plane.landed_this_tick = False
                 self.episode_stats['planes_landed'] += 1
+
+            if plane.tookoff_this_tick and not plane.close_call:
+                plane.tookoff_this_tick = False
+                self.episode_stats['planes_taken_off'] += 1
 
             # Penalty for crashing
             if plane.crashed_this_tick and not plane.close_call:
@@ -209,11 +214,9 @@ class AirTrafficControlEnv(gym.Env):
                 queued_planes += 1
 
         self.episode_stats['max_reward'] = self.compute_max_reward(self.fs)
-
         self.episode_stats['total_reward'] += reward
-
-        # if self._check_done():
-        #     reward += 0.1 * (self.max_ticks - self.current_tick)  # Reward for finishing early
+        self.episode_stats['processed_planes'] = (self.episode_stats['planes_landed'] + self.episode_stats['planes_taken_off']) / self.episode_stats['planes_encountered']
+        self.episode_stats['reward_efficiency'] = self.episode_stats['total_reward'] / self.episode_stats['max_reward']
 
         return reward
 

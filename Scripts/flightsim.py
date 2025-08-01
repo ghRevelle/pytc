@@ -281,6 +281,9 @@ class FlightSimulator:
 
                     self.plane_manager.planes[-1].has_gone_around = True
 
+                    if len(self.plane_manager.airport.queue) > 1:
+                        self.plane_manager.get_plane_by_id(self.plane_manager.airport.get_top_of_queue()).has_gone_around = False
+
         # Check for end of simulation
         if self.check_end_state():
             #print(f"Ending simulation at tick {self.current_tick}")
