@@ -17,10 +17,10 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import os
 
-test = True
+test = False
 
 class AirTrafficControlDQN(nn.Module):
-    def __init__(self, input_dim=30, n_commands=4, n_planes=10):  # Changed back to 30 to match trained model
+    def __init__(self, input_dim=31, n_commands=4, n_planes=10):  # Updated to 31: 30 plane features + 1 tick
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, 128),
@@ -123,19 +123,28 @@ def collect_experiences(env_seed, policy_net_state, epsilon, num_episodes=1):
                                                  'plane_id': np.ones(10, dtype=bool)})
             
             if random.random() < epsilon:
-                # Masked random action - only sample from valid actions
-                valid_commands = np.where(action_mask['command'])[0]
-                valid_planes = np.where(action_mask['plane_id'])[0]
+                # Masked random action - use command-plane combination masking for better exploration
+                combo_mask = action_mask.get('command_plane_combinations', np.ones((4, 10), dtype=bool))
                 
-                if len(valid_commands) == 0:
-                    command = 0  # Default to NONE command
-                else:
-                    command = np.random.choice(valid_commands)
+                # Find all valid command-plane combinations
+                valid_combinations = []
+                for cmd in range(4):
+                    if action_mask['command'][cmd]:
+                        valid_planes_for_cmd = np.where(combo_mask[cmd, :])[0]
+                        for plane in valid_planes_for_cmd:
+                            if action_mask['plane_id'][plane]:
+                                valid_combinations.append((cmd, plane))
+                
+                # If no valid combinations, fall back to basic masking
+                if len(valid_combinations) == 0:
+                    valid_commands = np.where(action_mask['command'])[0]
+                    valid_planes = np.where(action_mask['plane_id'])[0]
                     
-                if len(valid_planes) == 0:
-                    plane_id = 0  # Default to plane 0 (though this shouldn't happen)
+                    command = np.random.choice(valid_commands) if len(valid_commands) > 0 else 0
+                    plane_id = np.random.choice(valid_planes) if len(valid_planes) > 0 else 0
                 else:
-                    plane_id = np.random.choice(valid_planes)
+                    # Sample from valid combinations
+                    command, plane_id = random.choice(valid_combinations)
                     
                 action = {'command': command, 'plane_id': plane_id}
             else:
@@ -677,19 +686,19 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    # train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-    #                   batch_size=64,
-    #                   num_workers=1,
-    #                   episodes_per_worker=1,
-    #                   checkpoint_dir="checkpoints",
-    #                   checkpoint_file="checkpoint_episode_650_dashan.pth",
-    #                   epsilon_start=0.0,
-    #                   epsilon_end=0.0,
-    #                 #   epsilon_decay=0
-    #                   )
+    train_dqn_parallel(env, policy_net, target_net, episodes=2000, 
+                      batch_size=64,
+                      num_workers=1,
+                      episodes_per_worker=1,
+                      checkpoint_dir="checkpoints",
+                      checkpoint_file="latest_checkpoint.pth",
+                      epsilon_start=1.0,
+                      epsilon_end=0.01,
+                       epsilon_decay=0.9995
+                      )
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    model_path = "/Users/salar/Documents/RISE Python/pytc/checkpoints/mynah_m9_3350.pth"  # Use absolute path
-    rewards = test_dqn(model_path, episodes=50, display=True, recordData=True)
-    print(f"Test completed. Rewards: {rewards}")
+    # model_path = "/Users/salar/Documents/RISE Python/pytc/checkpoints/mynah_m9_3350.pth"  # Use absolute path
+    # rewards = test_dqn(model_path, episodes=50, display=True, recordData=True)
+    # print(f"Test completed. Rewards: {rewards}")

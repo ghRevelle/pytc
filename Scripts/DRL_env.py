@@ -141,16 +141,25 @@ class AirTrafficControlEnv(gym.Env):
     def _get_obs(self):
         planes = self.fs.plane_manager.planes
         # Pre-allocate the full observation array
-        obs = np.zeros((self.max_planes, 3), dtype=np.float32)  # Changed from 6 to 3 features
+        obs = np.zeros((self.max_planes, 3), dtype=np.float32)  # 3 features per plane
         
         # Fill only the slots for existing planes
         for i, plane in enumerate(planes[:self.max_planes]):
             obs[i] = self._encode_plane_state(plane)
         
-        return obs.flatten()
+        # Flatten plane data and append current tick
+        plane_data = obs.flatten()
+        
+        # Add current tick as a normalized feature (normalize by max_ticks)
+        current_tick_normalized = self.current_tick / self.max_ticks
+        
+        # Combine plane data with current tick
+        full_obs = np.append(plane_data, current_tick_normalized)
+        
+        return full_obs
 
     def _encode_plane_state(self, plane):
-        """Convert a plane's state into a flat array with only PlaneState and has_gone_around."""
+        """Convert a plane's state into a flat array with PlaneState and has_gone_around."""
         return np.array([
             plane.id,
             plane.state.value,  # PlaneState enum value (0-5)
@@ -158,7 +167,7 @@ class AirTrafficControlEnv(gym.Env):
         ], dtype=np.float32)
 
     def _state_dim(self):
-        return self.max_planes * 3  # 3 features per plane: id, state, has_gone_around
+        return self.max_planes * 3 + 1  # 3 features per plane + 1 for current tick
 
     def _compute_reward(self):
         reward = 0.0
@@ -193,7 +202,7 @@ class AirTrafficControlEnv(gym.Env):
             if plane.crashed_this_tick and not plane.close_call:
                 plane.close_call = True
                 plane.crashed_this_tick = False
-                reward -= 25.0
+                reward -= 30.0
                 self.episode_stats['crashes'] += 1
                 #print("Close call punishment")
 

@@ -65,8 +65,6 @@ class FlightSimulator:
                         last_update=1, 
                         argument=self.plane_manager.airport.runways[27] # HACK: runway 27 is always used for realignment in this example
                     )
-                elif plane_state['state'] == PlaneState.QUEUED:
-                    self.plane_manager.planes[-1].has_gone_around = True
 
         self.invalid_command_executed = False  # Flag for invalid command execution
         self.go_around_issued = False  # Flag to track if the model has ordered a go-around
@@ -278,11 +276,6 @@ class FlightSimulator:
                 
                 elif plane_state['state'] == PlaneState.QUEUED:
                     self.landing_planes += 1
-
-                    self.plane_manager.planes[-1].has_gone_around = True
-
-                    if len(self.plane_manager.airport.queue) > 1:
-                        self.plane_manager.get_plane_by_id(self.plane_manager.airport.get_top_of_queue()).has_gone_around = False
 
         # Check for end of simulation
         if self.check_end_state():
