@@ -17,7 +17,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import os
 
-test = False
+test = True
 
 class AirTrafficControlDQN(nn.Module):
     def __init__(self, input_dim=31, n_commands=4, n_planes=10):  # Updated to 31: 30 plane features + 1 tick
@@ -653,7 +653,7 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
                 print(f"    Plane states: {plane_states}")
         
         if recordData:
-            write_episode_to_csv(episode, env, episode_reward, step_count, filename='m9-3350_data.csv')
+            write_episode_to_csv(episode, env, episode_reward, step_count, filename='m10-final_data.csv')
 
         episode_rewards.append(episode_reward)
         print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {episode_reward:.2f}")
@@ -686,19 +686,19 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    train_dqn_parallel(env, policy_net, target_net, episodes=2000, 
-                      batch_size=64,
-                      num_workers=1,
-                      episodes_per_worker=1,
-                      checkpoint_dir="checkpoints",
-                      checkpoint_file="latest_checkpoint.pth",
-                      epsilon_start=1.0,
-                      epsilon_end=0.01,
-                       epsilon_decay=0.995
-                      )
+    # train_dqn_parallel(env, policy_net, target_net, episodes=2000, 
+    #                   batch_size=64,
+    #                   num_workers=1,
+    #                   episodes_per_worker=1,
+    #                   checkpoint_dir="checkpoints",
+    #                   checkpoint_file="latest_checkpoint.pth",
+    #                   epsilon_start=1.0,
+    #                   epsilon_end=0.01,
+    #                    epsilon_decay=0.995
+    #                   )
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    # model_path = "/Users/salar/Documents/RISE Python/pytc/checkpoints/mynah_m9_3350.pth"  # Use absolute path
-    # rewards = test_dqn(model_path, episodes=50, display=True, recordData=True)
-    # print(f"Test completed. Rewards: {rewards}")
+    model_path = "/Users/salar/Documents/RISE Python/pytc/checkpoints/mynah_m10_final.pth"  # Use absolute path
+    rewards = test_dqn(model_path, episodes=10, display=True, recordData=False)
+    print(f"Test completed. Rewards: {rewards}")
