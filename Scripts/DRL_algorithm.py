@@ -17,21 +17,23 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import os
 
-test = True
+test = False
 
 class AirTrafficControlDQN(nn.Module):
     def __init__(self, input_dim=31, n_commands=4, n_planes=10):  # Updated to 31: 30 plane features + 1 tick
         super().__init__()
         self.fc = nn.Sequential(
-            nn.Linear(input_dim, 128),
+            nn.Linear(input_dim, 256),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
             nn.ReLU()
         )
 
         # Output heads
-        self.command_head = nn.Linear(128, n_commands)   # logits for command
-        self.plane_head = nn.Linear(128, n_planes)       # logits for target plane
+        self.command_head = nn.Linear(256, n_commands)   # logits for command
+        self.plane_head = nn.Linear(256, n_planes)       # logits for target plane
 
     def forward(self, x):
         x = self.fc(x)
@@ -686,16 +688,16 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    # train_dqn_parallel(env, policy_net, target_net, episodes=2000, 
-    #                   batch_size=64,
-    #                   num_workers=1,
-    #                   episodes_per_worker=1,
-    #                   checkpoint_dir="checkpoints",
-    #                   checkpoint_file="latest_checkpoint.pth",
-    #                   epsilon_start=1.0,
-    #                   epsilon_end=0.01,
-    #                    epsilon_decay=0.995
-    #                   )
+    train_dqn_parallel(env, policy_net, target_net, episodes=2000, 
+                      batch_size=64,
+                      num_workers=1,
+                      episodes_per_worker=1,
+                      checkpoint_dir="checkpoints",
+                      checkpoint_file="latest_checkpoint.pth",
+                      epsilon_start=1.0,
+                      epsilon_end=0.01,
+                       epsilon_decay=0.995
+                      )
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
