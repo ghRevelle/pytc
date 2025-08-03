@@ -143,8 +143,8 @@ class AirTrafficControlEnv(gym.Env):
     def _get_obs(self):
         planes = self.fs.plane_manager.planes
         # Pre-allocate the full observation array
-        obs = np.zeros((self.max_planes, 3), dtype=np.float32)  # 3 features per plane
-        
+        obs = np.zeros((self.max_planes, 6), dtype=np.float32)  # 6 features per plane
+
         # Fill only the slots for existing planes
         for i, plane in enumerate(planes[:self.max_planes]):
             obs[i] = self._encode_plane_state(plane)
@@ -165,11 +165,14 @@ class AirTrafficControlEnv(gym.Env):
         return np.array([
             plane.id,
             plane.state.value,  # PlaneState enum value (0-5)
+            plane.lat,
+            plane.lon,
+            plane.alt,
             float(plane.has_gone_around)  # Boolean converted to float (0.0 or 1.0)
         ], dtype=np.float32)
 
     def _state_dim(self):
-        return self.max_planes * 3 + 1  # 3 features per plane + 1 for current tick
+        return self.max_planes * 6 + 1  # 6 features per plane + 1 for current tick
 
     def _compute_reward(self):
         reward = 0.0

@@ -20,20 +20,22 @@ import os
 test = True
 
 class AirTrafficControlDQN(nn.Module):
-    def __init__(self, input_dim=31, n_commands=4, n_planes=10):  # Updated to 31: 30 plane features + 1 tick
+    def __init__(self, input_dim=61, n_commands=4, n_planes=10):  # Updated to 61: 60 plane features + 1 tick
         super().__init__()
         self.fc = nn.Sequential(
-            nn.Linear(input_dim, 256),
+            nn.Linear(input_dim, 512),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            nn.Linear(512, 512),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
             nn.ReLU()
         )
 
         # Output heads
-        self.command_head = nn.Linear(256, n_commands)   # logits for command
-        self.plane_head = nn.Linear(256, n_planes)       # logits for target plane
+        self.command_head = nn.Linear(512, n_commands)   # logits for command
+        self.plane_head = nn.Linear(512, n_planes)       # logits for target plane
 
     def forward(self, x):
         x = self.fc(x)
@@ -233,7 +235,7 @@ def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=12
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     
-    optimizer = optim.Adam(policy_net.parameters(), lr=5e-5)  # Reduced learning rate
+    optimizer = optim.Adam(policy_net.parameters(), lr=5e-4)  # Reduced learning rate
     memory = deque(maxlen=100000)  # Reduced from 100,000 to 20,000
     
     # Try to load from checkpoint
