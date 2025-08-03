@@ -3,8 +3,8 @@ Simple CSV writer that adds just one function call to your training loop.
 No external classes, no complex setup; just write data directly to CSV.
 """
 
-import csv
 import os
+import pandas as pd
 
 def write_episode_to_csv(episode_num, env, total_reward, ending_time, filename="m9-3350_data.csv"):
     """
@@ -33,36 +33,31 @@ def write_episode_to_csv(episode_num, env, total_reward, ending_time, filename="
     # Extract stats from environment
     stats = env.episode_stats if hasattr(env, 'episode_stats') else {}
     
-    # Define headers
-    headers = ['episode', 'total_reward', 'max_reward', 'end_time', 'planes_taken_off', 
-               'planes_landed', 'planes_encountered', 'go_arounds', 'crashes', 
-               'processed_planes', 'reward_efficiency']
+    # Create data dictionary
+    data = {
+        'episode': episode_num,
+        'total_reward': stats.get('total_reward', 0),
+        'max_reward': stats.get('max_reward', 0),
+        'end_time': ending_time,
+        'planes_taken_off': stats.get('planes_taken_off', 0),
+        'planes_landed': stats.get('planes_landed', 0),
+        'planes_encountered': stats.get('planes_encountered', 0),
+        'go_arounds': stats.get('go_arounds', 0),
+        'crashes': stats.get('crashes', 0),
+        'processed_planes': stats.get('processed_planes', 0),
+        'reward_efficiency': stats.get('reward_efficiency', 0)
+    }
     
-    # Check if file exists to decide if we need to write headers
+    # Create DataFrame
+    df = pd.DataFrame([data])
+    
+    # Check if file exists
     file_exists = os.path.exists(filename)
     
     # Write to CSV
-    with open(filename, 'a', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        
-        # Write headers if file is new
-        if not file_exists:
-            # Add comment header
-            writer.writerow(['# episode, total_reward, max_reward, end_time, planes_taken_off, planes_landed, planes_encountered, go_arounds, crashes, processed_planes, reward_efficiency'])
-            writer.writerow(headers)
-        
-        # Write the data row directly from stats
-        row = [
-            episode_num,
-            stats['total_reward'],
-            stats['max_reward'],
-            ending_time,
-            stats['planes_taken_off'],
-            stats['planes_landed'],
-            stats['planes_encountered'],
-            stats['go_arounds'],
-            stats['crashes'],
-            stats['processed_planes'],
-            stats['reward_efficiency']
-        ]
-        writer.writerow(row)
+    if file_exists:
+        # Append without header
+        df.to_csv(filename, mode='a', header=False, index=False)
+    else:
+        # Write with header
+        df.to_csv(filename, mode='w', header=True, index=False)
