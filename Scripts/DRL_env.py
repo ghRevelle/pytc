@@ -316,6 +316,6 @@ class AirTrafficControlEnv(gym.Env):
 
         takeoff_rewards = 25 * fs.planes_taking_off
         landing_rewards = 50 * fs.landing_planes
-        time_rewards = 0.05 * 1000
+        time_rewards = 0.05 * 750
 
         return takeoff_rewards + landing_rewards + time_rewards
