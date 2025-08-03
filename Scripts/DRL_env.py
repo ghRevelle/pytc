@@ -13,26 +13,14 @@ from rolling_initial_state_20250301 import *
 class AirTrafficControlEnv(gym.Env):
     """Custom Gymnasium environment for tower control using simulator."""
 
-    def __init__(self, max_planes=10, max_ticks=2000, test=False, record_data=False):
+    def __init__(self, max_planes=10, max_ticks=2000, test=False, record_data=False, no_display=None):
         super().__init__()
         self.max_planes = max_planes
         self.max_ticks = max_ticks
         self.test = test
         self.record_data = record_data
-        
-        # Episode tracking for debugging and data recording
-        self.episode_stats = {
-            'total_reward': 0.0,
-            'max_reward': 175.0,  # Set to your target maximum
-            'ending_time': 0,
-            'planes_taken_off': 0,
-            'planes_landed': 0,
-            'planes_encountered': 10,
-            'go_arounds': 0,
-            'crashes': 0,
-            'processed_planes': 0,
-            'reward_efficiency': 0
-        }
+        # If no_display is not specified, use the opposite of test (test=True shows display by default)
+        self.no_display = no_display if no_display is not None else not test
 
         self.test_runways = {
         9: Runway((32.73713, -117.20433), (32.73, -117.175), 9),  # NW-SE runway
@@ -60,6 +48,20 @@ class AirTrafficControlEnv(gym.Env):
         self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=not self.test)
         self.current_tick = 0
 
+                # Episode tracking for debugging and data recording
+        self.episode_stats = {
+            'total_reward': 0.0,
+            'max_reward': 0,  # Set to your target maximum
+            'ending_time': 0,
+            'planes_taken_off': 0,
+            'planes_landed': 0,
+            'planes_encountered': 10,
+            'go_arounds': 0,
+            'crashes': 0,
+            'processed_planes': 0,
+            'reward_efficiency': 0
+        }
+
         # === Spaces ===
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self._state_dim(),), dtype=np.float32)
 
@@ -72,11 +74,20 @@ class AirTrafficControlEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.current_tick = 0
+
+        # Select initial state from train or test set
+        initial_states = self.test_initial_states if self.test else self.train_initial_states
+        if initial_states:
+            import random
+            self.rolling_initial_state = random.choice(initial_states)
+        else:
+            self.rolling_initial_state = []
+        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=self.no_display)
         
         # Reset episode stats
         self.episode_stats = {
             'total_reward': 0.0,
-            'max_reward': 0,
+            'max_reward': self.compute_max_reward(self.fs),
             'ending_time': 0,
             'planes_taken_off': 0,
             'planes_landed': 0,
@@ -86,15 +97,6 @@ class AirTrafficControlEnv(gym.Env):
             'processed_planes': 0,
             'reward_efficiency': 0
         }
-
-        # Select initial state from train or test set
-        initial_states = self.test_initial_states if self.test else self.train_initial_states
-        if initial_states:
-            import random
-            self.rolling_initial_state = random.choice(initial_states)
-        else:
-            self.rolling_initial_state = []
-        self.fs = FlightSimulator(airport=self.test_airport, plane_manager=PlaneManager(), rolling_initial_state=self.rolling_initial_state, no_display=not self.test)
 
         # Set total planes encountered in this episode
         self.episode_stats['planes_encountered'] = 10
@@ -106,10 +108,11 @@ class AirTrafficControlEnv(gym.Env):
 
     def step(self, action):
         # === Decode action ===
+            
         command = Command(
             command_type=CommandType(action['command']),
             target_id=action['plane_id'],
-            last_update=self.current_tick + 1
+            last_update=self.current_tick + 1,
         )
         if command.command_type == CommandType.NONE:
             self.fs.no_command_executed = True
@@ -130,6 +133,8 @@ class AirTrafficControlEnv(gym.Env):
         # Add episode stats to info when episode ends
         if done:
             self.episode_stats['ending_time'] = self.current_tick
+            self.episode_stats['total_reward'] = self.compute_external_reward(self.episode_stats)
+            self.episode_stats['reward_efficiency'] = self.episode_stats['total_reward'] / self.episode_stats['max_reward']
             info['episode_stats'] = self.episode_stats.copy()
 
         self.fs.no_command_executed = False  # Reset flag for next step
@@ -138,23 +143,33 @@ class AirTrafficControlEnv(gym.Env):
     def _get_obs(self):
         planes = self.fs.plane_manager.planes
         # Pre-allocate the full observation array
-        obs = np.zeros((self.max_planes, 6), dtype=np.float32)
-
+        obs = np.zeros((self.max_planes, 3), dtype=np.float32)  # 3 features per plane
+        
         # Fill only the slots for existing planes
         for i, plane in enumerate(planes[:self.max_planes]):
             obs[i] = self._encode_plane_state(plane)
         
-        return obs.flatten()
+        # Flatten plane data and append current tick
+        plane_data = obs.flatten()
+        
+        # Add current tick as a normalized feature (normalize by max_ticks)
+        current_tick_normalized = self.current_tick / self.max_ticks
+        
+        # Combine plane data with current tick
+        full_obs = np.append(plane_data, current_tick_normalized)
+        
+        return full_obs
 
     def _encode_plane_state(self, plane):
-        """Convert a plane's state into a flat array with only PlaneState and has_gone_around."""
+        """Convert a plane's state into a flat array with PlaneState and has_gone_around."""
         return np.array([
-            plane.id, plane.lat, plane.lon, plane.alt, plane.state.value,
-            plane.command.command_type.value
+            plane.id,
+            plane.state.value,  # PlaneState enum value (0-5)
+            float(plane.has_gone_around)  # Boolean converted to float (0.0 or 1.0)
         ], dtype=np.float32)
 
     def _state_dim(self):
-        return self.max_planes * 6  # 6 features per plane (adjust as needed)
+        return self.max_planes * 3 + 1  # 3 features per plane + 1 for current tick
 
     def _compute_reward(self):
         reward = 0.0
@@ -162,13 +177,12 @@ class AirTrafficControlEnv(gym.Env):
         # Reward for successful landing orders
         if self.fs.landing_issued:
             self.fs.landing_issued = False
-            reward += 50.0
+            reward += 50.0  # RESTORED to original training value
 
         # Reward for successful takeoff orders
         if self.fs.takeoff_issued:
             self.fs.takeoff_issued = False
-            reward += 10.0
-            self.episode_stats['planes_taken_off'] += 1
+            reward += 25.0  # RESTORED to original training value
 
         # Reward for successful go-around orders
         if self.fs.go_around_issued:
@@ -179,13 +193,18 @@ class AirTrafficControlEnv(gym.Env):
         for plane in self.fs.plane_manager.planes:
             # Recording if the plane landed
             if plane.landed_this_tick and not plane.close_call:
+                plane.landed_this_tick = False
                 self.episode_stats['planes_landed'] += 1
+
+            if plane.tookoff_this_tick and not plane.close_call:
+                plane.tookoff_this_tick = False
+                self.episode_stats['planes_taken_off'] += 1
 
             # Penalty for crashing
             if plane.crashed_this_tick and not plane.close_call:
                 plane.close_call = True
                 plane.crashed_this_tick = False
-                reward -= 25.0
+                reward -= 30.0
                 self.episode_stats['crashes'] += 1
                 #print("Close call punishment")
 
@@ -205,10 +224,8 @@ class AirTrafficControlEnv(gym.Env):
                 reward -= 0.01
                 queued_planes += 1
 
-        self.episode_stats['total_reward'] += reward
-
-        # if self._check_done():
-        #     reward += 0.1 * (self.max_ticks - self.current_tick)  # Reward for finishing early
+        self.episode_stats['max_reward'] = self.compute_max_reward(self.fs)
+        self.episode_stats['processed_planes'] = (self.episode_stats['planes_landed'] + self.episode_stats['planes_taken_off']) / self.episode_stats['planes_encountered']
 
         return reward
 
@@ -224,21 +241,81 @@ class AirTrafficControlEnv(gym.Env):
         
         Returns:
             dict: Action mask with same structure as action_space
-                 - 'command': always all True (all commands valid)
-                 - 'plane_id': True only for IDs that actually have planes assigned
+                 - 'command': always all True (all commands valid)  
+                 - 'plane_id': True only for planes that can execute ANY command
+                 - 'command_plane_combinations': 2D mask for valid command-plane pairs
         """
-        # All command types are always valid
+        # Start with all commands available
         command_mask = np.ones(4, dtype=bool)  # 4 command types: NONE to GO_AROUND
         
-        # Only IDs with actual planes are valid
+        # Create plane mask 
         plane_id_mask = np.zeros(self.max_planes, dtype=bool)
         
-        # Check which specific IDs have planes assigned by looking at plane_manager's id_to_callsign
+        # Create 2D mask for command-plane combinations (4 commands x 10 planes)
+        command_plane_mask = np.zeros((4, self.max_planes), dtype=bool)
+        
+        # Get all planes and their states
+        planes_by_id = {}
+        for plane in self.fs.plane_manager.planes:
+            planes_by_id[plane.id] = plane
+        
+        # Get the first plane in queue for LINE_UP_AND_WAIT commands
+        top_of_queue = self.fs.plane_manager.airport.get_top_of_queue()
+        
         for plane_id in range(self.max_planes):
-            if self.fs.plane_manager.id_to_callsign[plane_id] != '':  # Empty string means no plane in this slot
-                plane_id_mask[plane_id] = True
+            if self.fs.plane_manager.id_to_callsign[plane_id] != '':  # Plane exists
+                plane = planes_by_id.get(plane_id)
+                if plane and plane.state not in [PlaneState.REALIGNING, PlaneState.TAKINGOFF, 
+                                               PlaneState.LANDING, PlaneState.TAXIING]:
+                    
+                    # NONE command (0) - valid for any existing plane
+                    command_plane_mask[0, plane_id] = True
+                    plane_id_mask[plane_id] = True
+                    
+                    # LINE_UP_AND_WAIT command (1) - ONLY the first plane in queue (if queue exists)
+                    if (plane.state == PlaneState.QUEUED and 
+                        top_of_queue is not None and 
+                        plane.id == top_of_queue):
+                        command_plane_mask[1, plane_id] = True
+
+            # lets the model access cleared_for_landing and go_around so that it can learn
+            command_plane_mask[2, plane_id] = True
+            command_plane_mask[3, plane_id] = True
+        
+        # Ensure at least one plane can be targeted for NONE command
+        if not np.any(plane_id_mask):
+            for plane_id in range(self.max_planes):
+                if self.fs.plane_manager.id_to_callsign[plane_id] != '':
+                    plane_id_mask[plane_id] = True
+                    command_plane_mask[0, plane_id] = True
+                    break
         
         return {
             'command': command_mask,
-            'plane_id': plane_id_mask
+            'plane_id': plane_id_mask,
+            'command_plane_combinations': command_plane_mask
         }
+    
+    def compute_external_reward(self, episode_stats):
+        """Return the external reward in this case.
+        """
+
+        takeoff_rewards = 25 * episode_stats['planes_taken_off']
+        landing_rewards = 50 * episode_stats['planes_landed']
+        time_rewards = 0.05 * (2000 - episode_stats['ending_time'])
+        crash_punishments = 30 * episode_stats['crashes']
+
+        return takeoff_rewards + landing_rewards + time_rewards - crash_punishments
+
+    def compute_max_reward(self, fs : FlightSimulator):
+        """Return the maximum possible reward in this case.
+        """
+
+        # assumes that there are 3 queued, 7 flying
+        #return len(self.fs.plane_manager.airport.queue) * 8 + (len(self.fs.plane_manager.planes) - len(self.fs.plane_manager.airport.queue)) * 50 + 75
+
+        takeoff_rewards = 25 * fs.planes_taking_off
+        landing_rewards = 50 * fs.landing_planes
+        time_rewards = 0.05 * 1000
+
+        return takeoff_rewards + landing_rewards + time_rewards
