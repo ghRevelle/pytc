@@ -207,7 +207,7 @@ class AirTrafficControlEnv(gym.Env):
             if plane.crashed_this_tick and not plane.close_call:
                 plane.close_call = True
                 plane.crashed_this_tick = False
-                reward -= 30.0
+                reward -= 50.0
                 self.episode_stats['crashes'] += 1
                 #print("Close call punishment")
 

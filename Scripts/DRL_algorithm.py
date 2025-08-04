@@ -25,12 +25,23 @@ class AirTrafficControlDQN(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(input_dim, 512),
             nn.ReLU(),
+            nn.LayerNorm(512),
+            nn.Dropout(p=0.1),
+
             nn.Linear(512, 512),
             nn.ReLU(),
+            nn.LayerNorm(512),
+            nn.Dropout(p=0.1),
+
             nn.Linear(512, 512),
             nn.ReLU(),
+            nn.LayerNorm(512),
+            nn.Dropout(p=0.1),
+
             nn.Linear(512, 512),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.LayerNorm(512),
+            nn.Dropout(p=0.1),
         )
 
         # Output heads
@@ -230,7 +241,7 @@ def load_model(policy_net, target_net, optimizer, filepath):
         return 0, None
 
 def train_dqn_parallel(env, policy_net, target_net, episodes=1000, batch_size=128, gamma=0.99,
-              epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.9995, target_update=10,
+              epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, target_update=10,
               num_workers=1, episodes_per_worker=1, checkpoint_dir="checkpoints", checkpoint_file="latest_checkpoint.pth"):  # Changed parameter name
 
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -690,7 +701,7 @@ if __name__ == "__main__":
     target_net.load_state_dict(policy_net.state_dict())
 
     # Uncomment the line below to train the model
-    train_dqn_parallel(env, policy_net, target_net, episodes=2000, 
+    train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
                       batch_size=64,
                       num_workers=1,
                       episodes_per_worker=1,
