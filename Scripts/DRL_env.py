@@ -30,6 +30,8 @@ class AirTrafficControlEnv(gym.Env):
 
         self.test_airport = Airport(self.test_runways)
 
+        self.episode_num = 0
+
         self.all_initial_states = []
         # Load all initial states from the rolling initial state file
         for i in range(1162):
