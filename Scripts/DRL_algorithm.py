@@ -699,6 +699,6 @@ if __name__ == "__main__":
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    model_path = "checkpoints/m10.1.pth"  # Use absolute path
-    rewards = test_dqn(model_path, episodes=54, display=True, recordData=True, filename='m10.1_data.csv')
+    model_path = "checkpoints/mynah_m10_smol.pth"  # Use absolute path
+    rewards = test_dqn(model_path, episodes=100, display=True, recordData=True, filename='m10smol_data.csv')
     print(f"Test completed. Rewards: {rewards}")

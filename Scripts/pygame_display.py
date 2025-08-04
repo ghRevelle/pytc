@@ -351,6 +351,23 @@ class Pygame_Display:
 		self.clock.tick()
 
 	def stop_display(self):
+		# Clear all class-level dictionaries to prevent memory leaks
+		Pygame_Display.plane_colors.clear()
+		Pygame_Display.trails.clear()
+		Pygame_Display.last_states.clear()
+		
+		# Clear instance surfaces
+		if hasattr(self, 'screen'):
+			del self.screen
+		if hasattr(self, 'bg'):
+			del self.bg
+		if hasattr(self, 'airport_surface'):
+			del self.airport_surface
+		if hasattr(self, 'traj_surface'):
+			del self.traj_surface
+		if hasattr(self, 'fg'):
+			del self.fg
+			
 		pygame.quit()
 
 	def wgs84_to_display(self, lon, lat) -> tuple:

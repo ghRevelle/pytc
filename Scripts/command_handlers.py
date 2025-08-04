@@ -407,6 +407,8 @@ class TakeoffCommandHandler(CommandHandler):
 	
 	def execute(self, plane, command, tick) -> None:
 
+		plane.has_gone_around = True
+
 		# Ground roll -> accelerate to minimum takeoff speed
 		if plane.gspd < plane.stall_speed:
 			plane.acc_xy = plane.proportional_change(

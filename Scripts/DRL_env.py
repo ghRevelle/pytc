@@ -11,19 +11,14 @@ from planestates import PlaneState
 from rolling_initial_state_20250301 import *
 import random
 
-
 class AirTrafficControlEnv(gym.Env):
     """Custom Gymnasium environment for tower control using simulator."""
 
     def __init__(self, max_planes=10, max_ticks=2000, test=False, record_data=False, no_display=None):
         super().__init__()
-                
         self.max_planes = max_planes
         self.max_ticks = max_ticks
         self.test = test
-
-        self.episode_num = 0
-
         self.record_data = record_data
         # If no_display is not specified, use the opposite of test (test=True shows display by default)
         self.no_display = no_display if no_display is not None else not test
@@ -37,8 +32,8 @@ class AirTrafficControlEnv(gym.Env):
 
         self.all_initial_states = []
         # Load all initial states from the rolling initial state file
-        for i in range(541):
-            state = getattr(__import__('rolling_initial_state_20250301'), f'rolling_initial_state_{i:02d}')
+        for i in range(1162):
+            state = getattr(__import__('combined_rolling_states'), f'rolling_initial_state_{i:04d}')
             self.all_initial_states.append(state)
             for j in range(len(state)):
                 if self.all_initial_states[-1][j]['state'] == 'takeoff':
@@ -82,6 +77,11 @@ class AirTrafficControlEnv(gym.Env):
         self.current_tick = 0
 
         self.episode_num += 1
+
+        # Clean up previous flight simulator if it exists
+        if hasattr(self, 'fs') and self.fs is not None:
+            if hasattr(self.fs, 'pg_display') and self.fs.pg_display is not None:
+                self.fs.pg_display.stop_display()
 
         # Select initial state from train or test set
         initial_states = self.test_initial_states if self.test else self.train_initial_states
@@ -315,6 +315,12 @@ class AirTrafficControlEnv(gym.Env):
         crash_punishments = 30 * episode_stats['crashes']
 
         return takeoff_rewards + landing_rewards + time_rewards - crash_punishments
+
+    def close(self):
+        """Properly close the environment and clean up resources."""
+        if hasattr(self, 'fs') and self.fs is not None:
+            if hasattr(self.fs, 'pg_display') and self.fs.pg_display is not None:
+                self.fs.pg_display.stop_display()
 
     def compute_max_reward(self, fs : FlightSimulator):
         """Return the maximum possible reward in this case.
