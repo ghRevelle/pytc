@@ -1,4 +1,4 @@
-# episode, total_reward, max_reward, ending_time, planes_taken_off, planes_landed, planes_encountered, go_arounds, crashes, processed_planes, reward_efficiency
+#episode,total_reward,max_reward,ending_time,planes_taken_off,planes_landed,planes_encountered,go_arounds,crashes,processed_planes,reward_efficiency
 0,314.0,462.5,1520,2,6,10,0,2,0.8,0.6789189189189189
 1,248.64999999999998,412.5,1827,4,4,10,0,2,0.8,0.6027878787878788
 2,243.25,387.5,1435,5,3,10,0,2,0.8,0.6277419354838709
