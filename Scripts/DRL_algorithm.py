@@ -509,7 +509,7 @@ def run_episode(env, policy_net, eval=False):
     return total_reward
 
 
-def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
+def test_dqn(model_filepath, episodes=5, display=True, recordData=False, filename='testing_data.csv'):
     """
     Test a trained DQN model by running episodes with optional display.
     
@@ -653,7 +653,7 @@ def test_dqn(model_filepath, episodes=5, display=True, recordData=False):
                 print(f"    Plane states: {plane_states}")
         
         if recordData:
-            write_episode_to_csv(episode, env, episode_reward, step_count, filename='m-aleph-null_data.csv')
+            write_episode_to_csv(episode, env, episode_reward, step_count, filename=filename)
 
         episode_rewards.append(episode_reward)
         print(f"Episode {episode + 1} completed: {step_count} steps, Total Reward: {episode_reward:.2f}")
@@ -699,6 +699,6 @@ if __name__ == "__main__":
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    model_path = "../checkpoints/m10_1000.pth"  # Use absolute path
-    rewards = test_dqn(model_path, episodes=54, display=True, recordData=True)
+    model_path = "checkpoints/m10.1.pth"  # Use absolute path
+    rewards = test_dqn(model_path, episodes=54, display=True, recordData=True, filename='m10.1_data.csv')
     print(f"Test completed. Rewards: {rewards}")
