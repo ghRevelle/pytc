@@ -702,18 +702,18 @@ if __name__ == "__main__":
 
     # Uncomment the line below to train the model
     train_dqn_parallel(env, policy_net, target_net, episodes=1000, 
-                      batch_size=64,
+                      batch_size=256,
                       num_workers=1,
                       episodes_per_worker=1,
                       checkpoint_dir="checkpoints",
                       checkpoint_file="latest_checkpoint.pth",
                       epsilon_start=1.0,
                       epsilon_end=0.01,
-                       epsilon_decay=0.995
+                        epsilon_decay=0.995
                       )
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    model_path = "/Users/salar/Documents/RISE Python/pytc/checkpoints/mynah_m10_final.pth"  # Use absolute path
-    rewards = test_dqn(model_path, episodes=30, display=True, recordData=True)
-    print(f"Test completed. Rewards: {rewards}")
+    # model_path = ".../checkpoints/m10_smol.pth"  # Use absolute path
+    # rewards = test_dqn(model_path, episodes=120, display=True, recordData=True)
+    # print(f"Test completed. Rewards: {rewards}")
