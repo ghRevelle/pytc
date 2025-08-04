@@ -9,15 +9,21 @@ from airport import Runway, Airport
 from commands import *
 from planestates import PlaneState
 from rolling_initial_state_20250301 import *
+import random
+
 
 class AirTrafficControlEnv(gym.Env):
     """Custom Gymnasium environment for tower control using simulator."""
 
     def __init__(self, max_planes=10, max_ticks=2000, test=False, record_data=False, no_display=None):
         super().__init__()
+                
         self.max_planes = max_planes
         self.max_ticks = max_ticks
         self.test = test
+
+        self.episode_num = 0
+
         self.record_data = record_data
         # If no_display is not specified, use the opposite of test (test=True shows display by default)
         self.no_display = no_display if no_display is not None else not test
@@ -75,10 +81,13 @@ class AirTrafficControlEnv(gym.Env):
         super().reset(seed=seed)
         self.current_tick = 0
 
+        self.episode_num += 1
+
         # Select initial state from train or test set
         initial_states = self.test_initial_states if self.test else self.train_initial_states
-        if initial_states:
-            import random
+        if initial_states and self.test:
+            self.rolling_initial_state = initial_states[self.episode_num]
+        elif initial_states and not self.test:
             self.rolling_initial_state = random.choice(initial_states)
         else:
             self.rolling_initial_state = []
