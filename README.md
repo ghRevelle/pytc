@@ -70,6 +70,7 @@ PyTC is comprised of several major parts:
 - requests
 - matplotlib
 - seaborn
+- ipykernel
 - pip
 
 ## Installation
