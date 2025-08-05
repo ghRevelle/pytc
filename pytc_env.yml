@@ -7,6 +7,10 @@ dependencies:
 - geopy
 - shapely
 - requests
+- scipy
+- matplotlib
+- seaborn
+- ipykernel
 - pip
 - pip:
   - pygame
