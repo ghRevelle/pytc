@@ -68,6 +68,8 @@ PyTC is comprised of several major parts:
 - geopy
 - shapely
 - requests
+- matplotlib
+- seaborn
 - pip
 
 ## Installation
