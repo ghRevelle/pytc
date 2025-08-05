@@ -10,6 +10,8 @@ from commands import *
 from planestates import PlaneState
 from rolling_initial_state_20250301 import *
 
+features_per_plane = 3  # id, state, lat, lon, alt, has_gone_around
+
 class AirTrafficControlEnv(gym.Env):
     """Custom Gymnasium environment for tower control using simulator."""
 
@@ -143,7 +145,7 @@ class AirTrafficControlEnv(gym.Env):
     def _get_obs(self):
         planes = self.fs.plane_manager.planes
         # Pre-allocate the full observation array
-        obs = np.zeros((self.max_planes, 6), dtype=np.float32)  # 6 features per plane
+        obs = np.zeros((self.max_planes, features_per_plane), dtype=np.float32)  # 6 features per plane
 
         # Fill only the slots for existing planes
         for i, plane in enumerate(planes[:self.max_planes]):
@@ -165,14 +167,11 @@ class AirTrafficControlEnv(gym.Env):
         return np.array([
             plane.id,
             plane.state.value,  # PlaneState enum value (0-5)
-            plane.lat,
-            plane.lon,
-            plane.alt,
             float(plane.has_gone_around)  # Boolean converted to float (0.0 or 1.0)
         ], dtype=np.float32)
 
     def _state_dim(self):
-        return self.max_planes * 6 + 1  # 6 features per plane + 1 for current tick
+        return self.max_planes * features_per_plane + 1  # features per plane + 1 for current tick
 
     def _compute_reward(self):
         reward = 0.0

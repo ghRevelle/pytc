@@ -20,22 +20,18 @@ import os
 test = True
 
 class AirTrafficControlDQN(nn.Module):
-    def __init__(self, input_dim=61, n_commands=4, n_planes=10):  # Updated to 61: 60 plane features + 1 tick
+    def __init__(self, input_dim=31, n_commands=4, n_planes=10):  # Updated to 61: 60 plane features + 1 tick
         super().__init__()
         self.fc = nn.Sequential(
-            nn.Linear(input_dim, 512),
+            nn.Linear(input_dim, 128),
             nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512),
+            nn.Linear(128, 128),
             nn.ReLU()
         )
 
         # Output heads
-        self.command_head = nn.Linear(512, n_commands)   # logits for command
-        self.plane_head = nn.Linear(512, n_planes)       # logits for target plane
+        self.command_head = nn.Linear(128, n_commands)   # logits for command
+        self.plane_head = nn.Linear(128, n_planes)       # logits for target plane
 
     def forward(self, x):
         x = self.fc(x)
@@ -703,6 +699,6 @@ if __name__ == "__main__":
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    model_path = "checkpoints/m10.1.pth"  # Use absolute path
-    rewards = test_dqn(model_path, episodes=30, display=True, recordData=True, filename='m10.1_data.csv')
+    model_path = "checkpoints/mynah_m10_smol.pth"  # Use absolute path
+    rewards = test_dqn(model_path, episodes=30, display=True, recordData=False, filename='m10smol_data.csv')
     print(f"Test completed. Rewards: {rewards}")
