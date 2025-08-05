@@ -26,23 +26,15 @@ class AirTrafficControlDQN(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(input_dim, 512),
             nn.ReLU(),
-            nn.LayerNorm(512),
-            nn.Dropout(p=0.1),
 
             nn.Linear(512, 512),
             nn.ReLU(),
-            nn.LayerNorm(512),
-            nn.Dropout(p=0.1),
 
             nn.Linear(512, 512),
             nn.ReLU(),
-            nn.LayerNorm(512),
-            nn.Dropout(p=0.1),
 
             nn.Linear(512, 512),
             nn.ReLU(),
-            nn.LayerNorm(512),
-            nn.Dropout(p=0.1),
         )
 
         # Output heads
@@ -525,7 +517,7 @@ def run_episode(env, policy_net, eval=False):
     return total_reward
 
 
-def test_dqn(model_filepath, episodes=5, display=True, recordData=False, filename='testing_data.csv'):
+def test_dqn(model_filepath, episodes=5, display=True, recordData=False, filename='m11xl_data.csv'):
     """
     Test a trained DQN model by running episodes with optional display.
     
@@ -715,6 +707,6 @@ if __name__ == "__main__":
     
     # Example: Test a trained model
     # Uncomment the lines below to test a trained model with display
-    model_path = "checkpoints/legion_aleph.pth"  # Use absolute path
+    model_path = "checkpoints/M11XL.pth"  # Use absolute path
     rewards = test_dqn(model_path, episodes=100, display=True, recordData=True)
     print(f"Test completed. Rewards: {rewards}")

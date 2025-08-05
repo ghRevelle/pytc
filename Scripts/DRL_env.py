@@ -154,7 +154,7 @@ class AirTrafficControlEnv(gym.Env):
     def _get_obs(self):
         planes = self.fs.plane_manager.planes
         # Pre-allocate the full observation array
-        obs = np.zeros((self.max_planes, 3), dtype=np.float32)  # 3 features per plane
+        obs = np.zeros((self.max_planes, 6), dtype=np.float32)  # 3 features per plane
         
         # Fill only the slots for existing planes
         for i, plane in enumerate(planes[:self.max_planes]):
