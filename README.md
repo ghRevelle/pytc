@@ -16,9 +16,10 @@ We want to answer the question: how would DRL algorithms compare to real, human 
 1. [Description](#description)
 2. [File Tree](#file-tree)
 3. [Software and Packages Used](#software-and-packages-used)
-4. [Installation](#installation)
-5. [Usage](#usage)
-6. [Notes and Simplifying Assumptions](#notes-and-simplifying-assumptions)
+4. [Analysis Scripts](#analysis-scripts)
+5. [Installation](#installation)
+6. [Usage](#usage)
+7. [Notes and Simplifying Assumptions](#notes-and-simplifying-assumptions)
 
 ## Description  
 
@@ -29,6 +30,8 @@ PyTC is comprised of several major parts:
 
 ## File Tree  
 
+- **Checkpoints/**
+    - This folder contains the most up-to-date versions of all of our models. You can select a model in the DRL_algorithm.py file when you test or train.
 - **Data/**
     - AnalysisData/
         - aircraft_cleaned_20250301.csv: 5-second interval traces of aircraft that took off or landed at San Diego
@@ -40,6 +43,9 @@ PyTC is comprised of several major parts:
         - data_filter.py: filters operations (takeoff and landing) data by airport
         - data_scraper.py: scrapes data from ADS-B Exchange, filtered by ICAO hex codes
         - initial_state_creator.ipynb: prepares and writes a python file containing the rolling initial state dictionary
+    - AnalysisScripts/
+        - data_analysis.ipynb: runs all statistical analysis (see [Analysis Scripts](#analysis-scripts) for more info)
+        - simple_csv_writer.py: writes data from our simulation to the desired .csv file
     - \_\_init\_\_.py: registers our custom gymnasium environment
     - airport.py: airport and runway class
     - command_handlers.py: multiple command-handling classes to handle plane movements
@@ -73,6 +79,10 @@ PyTC is comprised of several major parts:
 - seaborn
 - ipykernel
 - pip
+
+## Analysis Scripts
+
+In the Scripts/AnalysisScripts folder lies our main analysis script: data_analysis.ipynb. This script contains functionality for bootstrapping, producing ECDFs, producing histograms, and running Cohen's d and Wilcoxon signed-rank tests.
 
 ## Installation
 
