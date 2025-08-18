@@ -31,8 +31,8 @@ class AirTrafficControlEnv(gym.Env):
 
         self.all_initial_states = []
         # Load all initial states from the rolling initial state file
-        for i in range(541):
-            state = getattr(__import__('rolling_initial_state_20250301'), f'rolling_initial_state_{i:02d}')
+        for i in range(1162):
+            state = getattr(__import__('combined_rolling_states'), f'rolling_initial_state_{i:04d}')
             self.all_initial_states.append(state)
             for j in range(len(state)):
                 if self.all_initial_states[-1][j]['state'] == 'takeoff':

@@ -1,0 +1,4 @@
+"# episode, total_reward, max_reward, end_time, planes_taken_off, planes_landed, planes_encountered, go_arounds, crashes, processed_planes, reward_efficiency"
+episode,total_reward,max_reward,end_time,planes_taken_off,planes_landed,planes_encountered,go_arounds,crashes,processed_planes,reward_efficiency
+0,0.0,487.5,2000,0,0,10,0,0,0.0,0.0
+1,0.0,362.5,2000,0,0,10,0,0,0.0,0.0
