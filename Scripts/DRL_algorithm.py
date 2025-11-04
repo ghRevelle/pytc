@@ -17,6 +17,9 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import os
 
+#TODO: Add more input information, adjust input dimension
+
+
 test = True
 
 class AirTrafficControlDQN(nn.Module):

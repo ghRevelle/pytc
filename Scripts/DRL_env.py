@@ -10,6 +10,7 @@ from commands import *
 from planestates import PlaneState
 from rolling_initial_state_20250301 import *
 
+#TODO: Update extra plane features
 features_per_plane = 3  # id, state, lat, lon, alt, has_gone_around
 
 class AirTrafficControlEnv(gym.Env):
